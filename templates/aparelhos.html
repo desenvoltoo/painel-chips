@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Aparelhos{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-3">Gerenciamento de Aparelhos</h2>
+
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalAparelho">
+    Novo Aparelho
+</button>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table id="tabelaAparelhos" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descrição</th>
+                    <th>Modelo</th>
+                    <th>Status</th>
+                    <th>IMEI</th>
+                    <th>Chip Vinculado</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="aparelhos-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Novo Aparelho -->
+<div class="modal fade" id="modalAparelho">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content" id="form-aparelho">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Aparelho</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Descrição</label>
+                    <input required name="descricao" class="form-control">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Modelo</label>
+                    <input required name="modelo" class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option>Ativo</option>
+                        <option>Em manutenção</option>
+                        <option>Inativo</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">IMEI</label>
+                    <input name="imei" class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Chip Vinculado</label>
+                    <select name="chip_id" id="select-chips" class="form-select"></select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    carregarAparelhos();
+    carregarChipsSelect();
+});
+
+function carregarChipsSelect() {
+    fetch("/api/chips/listar")
+        .then(r => r.json())
+        .then(chips => {
+            let select = document.getElementById("select-chips");
+            chips.forEach(c => {
+                select.innerHTML += `<option value="${c.id_chip}">${c.numero} (${c.operadora})</option>`;
+            });
+        });
+}
+
+function carregarAparelhos() {
+    fetch("/api/aparelhos/listar")
+        .then(r => r.json())
+        .then(aparelhos => {
+            let tbody = document.getElementById("aparelhos-body");
+            tbody.innerHTML = "";
+
+            aparelhos.forEach(a => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${a.id_aparelho}</td>
+                        <td>${a.descricao}</td>
+                        <td>${a.modelo}</td>
+                        <td>${a.status}</td>
+                        <td>${a.imei ?? "-"}</td>
+                        <td>${a.chip_numero ?? "-"}</td>
+                        <td><button class="btn btn-sm btn-secondary">Editar</button></td>
+                    </tr>
+                `;
+            });
+
+            new DataTable("#tabelaAparelhos");
+        });
+}
+
+document.getElementById("form-aparelho").addEventListener("submit", e => {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(e.target).entries());
+
+    fetch("/api/aparelhos/salvar", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    }).then(() => location.reload());
+});
+</script>
+
+{% endblock %}

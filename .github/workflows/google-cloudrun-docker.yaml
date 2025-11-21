@@ -29,12 +29,13 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        gcloud builds submit painel-chips --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips
+        gcloud builds submit painel-chips \
+          --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips:latest
 
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy painel-chips \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips:latest \
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated

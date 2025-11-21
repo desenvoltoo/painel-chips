@@ -1,9 +1,112 @@
 {% extends "base.html" %}
-{% block conteudo %}
-<h2>Chips</h2>
-<table>
-{% for c in chips %}
-<tr><td>{{ c.numero }}</td><td>{{ c.operadora }}</td><td>{{ c.situacao }}</td></tr>
-{% endfor %}
-</table>
+{% block title %}Chips{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-3">Gerenciamento de Chips</h2>
+
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoChip">
+    Novo Chip
+</button>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table id="tabelaChips" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Número</th>
+                    <th>Operadora</th>
+                    <th>Status</th>
+                    <th>Aparelho</th>
+                    <th>Última Recarga</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="chips-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Novo Chip -->
+<div class="modal fade" id="modalNovoChip">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content" id="form-chip">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Chip</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Número</label>
+                    <input required name="numero" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Operadora</label>
+                    <select name="operadora" class="form-select">
+                        <option>Vivo</option>
+                        <option>Claro</option>
+                        <option>Tim</option>
+                        <option>Oi</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option>Ativo</option>
+                        <option>Banido</option>
+                        <option>Restrito</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", carregarChips);
+
+function carregarChips() {
+    fetch("/api/chips/listar")
+        .then(r => r.json())
+        .then(chips => {
+            let tbody = document.getElementById("chips-body");
+            tbody.innerHTML = "";
+
+            chips.forEach(c => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${c.id_chip}</td>
+                        <td>${c.numero}</td>
+                        <td>${c.operadora}</td>
+                        <td>${c.status}</td>
+                        <td>${c.aparelho_descricao ?? "-"}</td>
+                        <td>${c.data_ultima_recarga ?? "-"}</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary">Editar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            new DataTable("#tabelaChips");
+        });
+}
+
+document.getElementById("form-chip").addEventListener("submit", e => {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(e.target).entries());
+
+    fetch("/api/chips/salvar", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    }).then(() => location.reload());
+});
+</script>
 {% endblock %}

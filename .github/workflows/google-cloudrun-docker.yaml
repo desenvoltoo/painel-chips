@@ -32,14 +32,16 @@ jobs:
     # Build + Push
     - name: Build and Push Docker Image
       run: |
-        gcloud builds submit ./painel-chips \
-          --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
+        gcloud builds submit painel-chips \
+         --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
+
 
     # Deploy para Cloud Run
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy painel-chips \
-          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
-          --platform managed \
-          --region us-central1 \
-          --allow-unauthenticated
+         --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
+         --region us-central1 \
+         --platform managed \
+         --allow-unauthenticated
+

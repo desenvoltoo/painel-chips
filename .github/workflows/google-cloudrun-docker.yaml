@@ -29,13 +29,15 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        gcloud builds submit . \
-          --tag us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest
+        IMAGE="us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest"
+        echo "Building image: $IMAGE"
+        gcloud builds submit . --tag $IMAGE
 
     - name: Deploy to Cloud Run
       run: |
+        IMAGE="us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest"
         gcloud run deploy painel-chips \
-          --image us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest \
+          --image $IMAGE \
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated

@@ -1,5 +1,7 @@
-from utils.bigquery_client import get_bq_client
+from utils.bigquery_client import listar_chips, listar_eventos_chip
 
-def listar_chips():
-    sql = "SELECT * FROM `painel-universidade.marts.vw_chips_painel` ORDER BY data_update DESC"
-    return list(get_bq_client().query(sql).result())
+def get_chips():
+    return listar_chips()
+
+def get_chip_eventos(sk_chip):
+    return listar_eventos_chip(sk_chip)

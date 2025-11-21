@@ -13,30 +13,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # 🔐 AUTENTICAÇÃO CORRETA COM O GCP
+    # AUTENTICAÇÃO COM GCP (CORRETO)
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    # Instala o gcloud corretamente
+    # INSTALAR GCLOUD
     - name: Setup gcloud
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-        install_components: ['gcloud']
+        install_components: gcloud
 
-    # Permite buildar e fazer push para Artifact Registry
+    # AUTENTICAR DOCKER (GCR / AR)
     - name: Configure Docker authentication
       run: |
         gcloud auth configure-docker gcr.io --quiet
 
-    # Build da imagem + envio para o Artifact Registry
+    # BUILD + PUSH
     - name: Build and Push Docker Image
       run: |
         gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips
 
-    # Deploy automático no Cloud Run
+    # DEPLOY
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy painel-chips \

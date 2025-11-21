@@ -1,4 +1,4 @@
-name: Build and Deploy to Cloud Run
+name: Deploy to Cloud Run
 
 on:
   push:
@@ -10,38 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Autenticação
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Setup gcloud
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: painel-universidade
 
-    # Configurar Docker p/ Artifact Registry
-    - name: Configure Docker to use Artifact Registry
-      run: |
-        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - name: Configure Docker to use Artifact Registry
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # Build + Push
-    - name: Build and Push Docker Image
-      run: |
-        gcloud builds submit . \
-          --project ${{ secrets.GCP_PROJECT_ID }} \
-          --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
+      - name: Build & Push image
+        run: |
+          gcloud builds submit . \
+            --tag us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest
 
-    # Deploy para Cloud Run
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy painel-chips \
-          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
-          --platform managed \
-          --region us-central1 \
-          --allow-unauthenticated \
-          --project ${{ secrets.GCP_PROJECT_ID }}
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy painel-chips \
+            --image us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated

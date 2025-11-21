@@ -23,19 +23,19 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Configure Docker authentication
+    - name: Configure Artifact Registry auth
       run: |
-        gcloud auth configure-docker gcr.io --quiet
+        gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
     - name: Build and Push Docker Image
       run: |
         gcloud builds submit painel-chips \
-          --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips:latest
+          --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
 
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy painel-chips \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/painel-chips:latest \
+          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated

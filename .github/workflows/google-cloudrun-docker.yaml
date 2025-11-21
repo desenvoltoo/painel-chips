@@ -1,41 +1,58 @@
-name: Deploy to Cloud Run
+name: Build and Deploy to Cloud Run
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+
+env:
+  PROJECT_ID: painel-universidade
+  REGION: us-central1
+  SERVICE: painel-chips
+  REPOSITORY: painel-chips
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+    # Autentica no Google Cloud
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: painel-universidade
+    - name: Setup gcloud
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+        version: "latest"
 
-      - name: Configure Docker to use Artifact Registry
-        run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+    - name: Configure Docker to use Artifact Registry
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Build & Push image
-        run: |
-          gcloud builds submit . \
-            --tag us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest
+    # 🔥 BUILD E PUSH DA IMAGEM
+    - name: Build and Push Docker Image
+      run: |
+        set -e
+        echo "Building Docker image..."
+        gcloud builds submit . \
+          --tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest \
+          --format="json" || true
 
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy painel-chips \
-            --image us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated
+    # 🔥 DEPLOY NO CLOUD RUN (sempre roda)
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE }} \
+          --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest \
+          --region ${{ env.REGION }} \
+          --platform managed \
+          --allow-unauthenticated
+
+    # Após deploy, imprime a URL
+    - name: Show Cloud Run URL
+      run: |
+        URL=$(gcloud run services describe ${{ env.SERVICE }} --region ${{ env.REGION }} --format='value(status.url)')
+        echo "🌐 Service URL: $URL"

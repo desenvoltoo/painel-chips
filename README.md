@@ -110,4 +110,4 @@ f_recarga
 
 vw_chips_painel
 
-vw_aparelhos 
+vw_aparelhos  

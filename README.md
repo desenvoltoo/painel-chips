@@ -8,7 +8,7 @@ Todo o fluxo foi projetado para ser moderno, rápido, escalável e integrado ao 
 
 Cadastro completo
 
-Situação (Ativo, Banido, Restrito, Pronto para maturar etc.)
+Situação (Ativo, Banido, Restrito, Pronto para maturar etc.) 
 
 Data da última atualização
 

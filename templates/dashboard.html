@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-3 fw-bold">Painel Inteligente — Chips & Aparelhos</h2>
+
+<div class="row g-3">
+  <div class="col-md-3"><div class="card-metric"><div id="metric-ativos" class="metric-number">0</div><small>Chips Ativos</small></div></div>
+  <div class="col-md-3"><div class="card-metric"><div id="metric-banidos" class="metric-number">0</div><small>Banidos</small></div></div>
+  <div class="col-md-3"><div class="card-metric"><div id="metric-restritos" class="metric-number">0</div><small>Restritos</small></div></div>
+  <div class="col-md-3"><div class="card-metric"><div id="metric-aparelhos" class="metric-number">0</div><small>Aparelhos Ativos</small></div></div>
+</div>
+
+<div class="row mt-4 g-3">
+    <div class="col-md-6">
+        <div class="chart-box">
+            <h5>Distribuição por Operadora</h5>
+            <canvas id="chart-operadora"></canvas>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="chart-box">
+            <h5>Tendência de Recargas</h5>
+            <canvas id="chart-recargas"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="table-box mt-4">
+    <h5 class="fw-bold">Últimos Chips Cadastrados</h5>
+    <table id="table-chips" class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Número</th>
+                <th>Operadora</th>
+                <th>Status</th>
+                <th>Aparelho</th>
+                <th>Última Recarga</th>
+            </tr>
+        </thead>
+        <tbody id="table-chips-body"></tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    carregarMetricas();
+    carregarTabelaChips();
+    carregarGraficoOperadora();
+    carregarGraficoRecargas();
+});
+
+function carregarMetricas() {
+    fetch("/api/dashboard/metricas")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("metric-ativos").innerText = d.ativos;
+            document.getElementById("metric-banidos").innerText = d.banidos;
+            document.getElementById("metric-restritos").innerText = d.restritos;
+            document.getElementById("metric-aparelhos").innerText = d.aparelhos;
+        });
+}
+
+function carregarTabelaChips() {
+    fetch("/api/chips/listar")
+        .then(r => r.json())
+        .then(dados => {
+            let tbody = document.getElementById("table-chips-body");
+            tbody.innerHTML = "";
+            dados.forEach(c => {
+                tbody.innerHTML += `
+                  <tr>
+                      <td>${c.id_chip}</td>
+                      <td>${c.numero}</td>
+                      <td>${c.operadora}</td>
+                      <td>${c.status}</td>
+                      <td>${c.aparelho_descricao ?? "-"}</td>
+                      <td>${c.data_ultima_recarga ?? "-"}</td>
+                  </tr>`;
+            });
+            new DataTable("#table-chips");
+        });
+}
+
+function carregarGraficoOperadora() {
+    fetch("/api/dashboard/operadoras")
+        .then(r => r.json())
+        .then(d => {
+            new Chart(document.getElementById("chart-operadora"), {
+                type: "pie",
+                data: {
+                    labels: d.labels,
+                    datasets: [{ data: d.valores }]
+                }
+            });
+        });
+}
+
+function carregarGraficoRecargas() {
+    fetch("/api/dashboard/recargas_trend")
+        .then(r => r.json())
+        .then(d => {
+            new Chart(document.getElementById("chart-recargas"), {
+                type: "line",
+                data: {
+                    labels: d.labels,
+                    datasets: [{
+                        label: "Recargas",
+                        data: d.valores,
+                        tension: 0.3
+                    }]
+                }
+            });
+        });
+}
+</script>
+{% endblock %}

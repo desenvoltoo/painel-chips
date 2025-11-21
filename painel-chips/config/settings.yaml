@@ -1,0 +1,6 @@
+bigquery:
+  dataset: "marts"
+  location: "us-central1"
+view:
+  chips: "painel-universidade.marts.vw_chips_painel"
+  aparelhos: "painel-universidade.marts.vw_aparelhos"

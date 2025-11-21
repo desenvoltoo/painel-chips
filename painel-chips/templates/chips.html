@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h2>Chips</h2>
+<table>
+{% for c in chips %}
+<tr><td>{{ c.numero }}</td><td>{{ c.operadora }}</td><td>{{ c.situacao }}</td></tr>
+{% endfor %}
+</table>
+{% endblock %}

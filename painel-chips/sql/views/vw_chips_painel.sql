@@ -1,0 +1,1 @@
+SELECT * FROM `painel-universidade.marts.dim_chip`;

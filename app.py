@@ -1,119 +1,86 @@
-# -*- coding: utf-8 -*-
-"""
-app.py — Painel Chips Integrado ao BigQuery (Modelo Estrela Moderno)
-
-Rotas:
-- /                         → home (lista chips + aparelhos)
-- /chip/<sk_chip>           → histórico de eventos do chip
-- /recarga (POST)           → registrar recarga
-- /vincular (POST)          → vincular chip a aparelho
-- /desvincular (POST)       → desvincular chip de aparelho
-"""
-
-import os
-from flask import (
-    Flask, render_template, request, jsonify
+# app.py — Painel Chips (Flask + BigQuery)
+from flask import Flask, render_template, request, jsonify
+from utils.bigquery_client import (
+    listar_chips,
+    salvar_chip,
+    listar_aparelhos,
+    salvar_aparelho,
+    listar_recargas,
+    salvar_recarga,
+    dashboard_resumo
 )
-from utils.chips import get_chips, get_chip_eventos
-from utils.aparelhos import listar_aparelhos
-from utils.recargas import adicionar_recarga
-from utils.relacionamentos import vincular, desvincular
 
-# ---------------------------------------------
-# Configuração do Flask
-# ---------------------------------------------
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecret")
 
+# ============================
+# ROTAS DO PAINEL (HTML)
+# ============================
 
-# ---------------------------------------------
-# ROTA PRINCIPAL — LISTA CHIP + APARELHOS
-# ---------------------------------------------
 @app.route("/")
-def index():
-    chips = get_chips()
-    aparelhos = listar_aparelhos()
+def home():
+    return render_template("dashboard.html")
 
-    return render_template(
-        "chips.html",
-        chips=chips,
-        aparelhos=aparelhos
-    )
+@app.route("/chips")
+def chips():
+    return render_template("chips.html")
 
+@app.route("/aparelhos")
+def aparelhos():
+    return render_template("aparelhos.html")
 
-# ---------------------------------------------
-# HISTÓRICO DE EVENTOS DO CHIP
-# ---------------------------------------------
-@app.route("/chip/<int:sk_chip>")
-def historico_chip(sk_chip):
-    eventos = get_chip_eventos(sk_chip)
-    return jsonify(eventos)
+@app.route("/recargas")
+def recargas():
+    return render_template("recargas.html")
 
 
-# ---------------------------------------------
-# REGISTRAR RECARGA
-# ---------------------------------------------
-@app.route("/recarga", methods=["POST"])
-def route_recarga():
-    form = request.json
+# ============================
+# ROTAS DA API
+# ============================
 
-    adicionar_recarga(
-        form["sk_chip"],
-        form["valor"],
-        form["data"],
-        form.get("origem", "painel"),
-        form.get("observacao", "")
-    )
+# ------ CHIPS ------
+@app.route("/api/chips/listar")
+def api_listar_chips():
+    return jsonify(listar_chips())
 
-    return jsonify({"ok": True, "msg": "Recarga registrada com sucesso."})
-
-
-# ---------------------------------------------
-# VINCULAR CHIP A APARELHO
-# ---------------------------------------------
-@app.route("/vincular", methods=["POST"])
-def route_vincular():
-    form = request.json
-
-    vincular(
-        form["sk_chip"],
-        form["sk_aparelho"],
-        form["data"],
-        form.get("origem", "painel"),
-        form.get("obs", "")
-    )
-
-    return jsonify({"ok": True, "msg": "Chip vinculado ao aparelho."})
-
-
-# ---------------------------------------------
-# DESVINCULAR CHIP
-# ---------------------------------------------
-@app.route("/desvincular", methods=["POST"])
-def route_desvincular():
-    form = request.json
-
-    desvincular(
-        form["sk_chip"],
-        form["data"],
-        form.get("origem", "painel"),
-        form.get("obs", "")
-    )
-
-    return jsonify({"ok": True, "msg": "Chip desvinculado."})
-
-
-# ---------------------------------------------
-# SAÚDE DO SISTEMA (Cloud Run)
-# ---------------------------------------------
-@app.route("/health")
-def health():
+@app.route("/api/chips/salvar", methods=["POST"])
+def api_salvar_chip():
+    data = request.get_json()
+    salvar_chip(data)
     return jsonify({"status": "ok"})
 
 
-# ---------------------------------------------
-# INICIALIZAÇÃO
-# ---------------------------------------------
+# ------ APARELHOS ------
+@app.route("/api/aparelhos/listar")
+def api_listar_aparelhos():
+    return jsonify(listar_aparelhos())
+
+@app.route("/api/aparelhos/salvar", methods=["POST"])
+def api_salvar_aparelho():
+    data = request.get_json()
+    salvar_aparelho(data)
+    return jsonify({"status": "ok"})
+
+
+# ------ RECARGAS ------
+@app.route("/api/recargas/listar")
+def api_listar_recargas():
+    return jsonify(listar_recargas())
+
+@app.route("/api/recargas/salvar", methods=["POST"])
+def api_salvar_recarga():
+    data = request.get_json()
+    salvar_recarga(data)
+    return jsonify({"status": "ok"})
+
+
+# ------ DASHBOARD ------
+@app.route("/api/dashboard/resumo")
+def api_dashboard_resumo():
+    return jsonify(dashboard_resumo())
+
+
+# ============================
+# MAIN
+# ============================
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=8080)

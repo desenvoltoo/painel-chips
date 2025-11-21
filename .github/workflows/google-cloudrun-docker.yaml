@@ -10,40 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Puxar código do repositório
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # 2. Autenticar no Google Cloud com sua service account
+    # Autenticação
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    # 3. Instalar gcloud CLI
     - name: Setup gcloud
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-        install_components: 'gcloud'
 
-    # 4. Configurar Docker para enviar para Artifact Registry
+    # Configurar Docker p/ Artifact Registry
     - name: Configure Docker to use Artifact Registry
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
-    # 5. Build e Push da imagem DOCKER
+    # Build + Push
     - name: Build and Push Docker Image
       run: |
-        gcloud builds submit painel-chips \
-          --project="${{ secrets.GCP_PROJECT_ID }}" \
-          --tag=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
+        gcloud builds submit . \
+          --project ${{ secrets.GCP_PROJECT_ID }} \
+          --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
 
-    # 6. Deploy no Cloud Run
+    # Deploy para Cloud Run
     - name: Deploy to Cloud Run
       run: |
         gcloud run deploy painel-chips \
           --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
           --platform managed \
           --region us-central1 \
-          --allow-unauthenticated
+          --allow-unauthenticated \
+          --project ${{ secrets.GCP_PROJECT_ID }}

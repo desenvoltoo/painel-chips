@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Recargas{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-3">Recargas dos Chips</h2>
+
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalRecarga">
+    Registrar Recarga
+</button>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table id="tabelaRecargas" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID Recarga</th>
+                    <th>Número</th>
+                    <th>Operadora</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                    <th>Observação</th>
+                </tr>
+            </thead>
+            <tbody id="recargas-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Nova Recarga -->
+<div class="modal fade" id="modalRecarga">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content" id="form-recarga">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar Recarga</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Chip</label>
+                    <select name="id_chip" id="select-chips-recarga" class="form-select"></select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Valor (R$)</label>
+                    <input required name="valor" type="number" class="form-control">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Data</label>
+                    <input required name="data" type="date" class="form-control">
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label">Observação</label>
+                    <textarea name="obs" class="form-control"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    carregarRecargas();
+    carregarChipsSelect();
+});
+
+function carregarChipsSelect() {
+    fetch("/api/chips/listar")
+        .then(r => r.json())
+        .then(chips => {
+            let select = document.getElementById("select-chips-recarga");
+            chips.forEach(c => {
+                select.innerHTML += `<option value="${c.id_chip}">${c.numero} (${c.operadora})</option>`;
+            });
+        });
+}
+
+function carregarRecargas() {
+    fetch("/api/recargas/listar")
+        .then(r => r.json())
+        .then(rec => {
+            let tbody = document.getElementById("recargas-body");
+            tbody.innerHTML = "";
+
+            rec.forEach(r => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${r.id_recarga}</td>
+                        <td>${r.numero}</td>
+                        <td>${r.operadora}</td>
+                        <td>R$ ${r.valor}</td>
+                        <td>${r.data}</td>
+                        <td>${r.obs ?? "-"}</td>
+                    </tr>
+                `;
+            });
+
+            new DataTable("#tabelaRecargas");
+        });
+}
+
+document.getElementById("form-recarga").addEventListener("submit", e => {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(e.target).entries());
+
+    fetch("/api/recargas/salvar", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    }).then(() => location.reload());
+});
+</script>
+
+{% endblock %}

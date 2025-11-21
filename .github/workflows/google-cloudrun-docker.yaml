@@ -13,6 +13,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Autenticação
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
@@ -21,23 +22,24 @@ jobs:
     - name: Setup gcloud
       uses: google-github-actions/setup-gcloud@v1
       with:
-        project_id: painel-universidade
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+    # Configurar Docker p/ Artifact Registry
     - name: Configure Docker to use Artifact Registry
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 
+    # Build + Push
     - name: Build and Push Docker Image
       run: |
-        IMAGE="us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest"
-        echo "Building image: $IMAGE"
-        gcloud builds submit . --tag $IMAGE
+        gcloud builds submit ./painel-chips \
+          --tag us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest
 
+    # Deploy para Cloud Run
     - name: Deploy to Cloud Run
       run: |
-        IMAGE="us-central1-docker.pkg.dev/painel-universidade/painel-chips/painel-chips:latest"
         gcloud run deploy painel-chips \
-          --image $IMAGE \
+          --image us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/painel-chips/painel-chips:latest \
           --platform managed \
           --region us-central1 \
           --allow-unauthenticated

@@ -1,167 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Chips{% endblock %}
+{% block conteudo %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Gerenciamento de Chips</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoChip">
-        + Novo Chip
-    </button>
-</div>
+<h2>Gerenciamento de Chips</h2>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <table id="tabelaChips" class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Número</th>
-                    <th>Operadora</th>
-                    <th>Status</th>
-                    <th>Última Recarga</th>
-                    <th>Valor</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in chips %}
-                <tr>
-                    <td>{{ c.sk_chip }}</td>
-                    <td>{{ c.numero_chip }}</td>
-                    <td>{{ c.operadora }}</td>
-                    <td>{{ c.status_chip }}</td>
-                    <td>{{ c.data_ultima_recarga or "-" }}</td>
-                    <td>
-                        {% if c.valor_ultima_recarga %}
-                            R$ {{ "%.2f"|format(c.valor_ultima_recarga) }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-secondary" 
-                            onclick="editarChip({{ c | tojson }})">
-                            Editar
-                        </button>
+<form id="form-add-chip" class="form-box">
 
-                        <button class="btn btn-sm btn-success" 
-                            onclick="abrirRecarga({{ c | tojson }})">
-                            Recarga
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <label>ICCID</label>
+    <input name="iccid" required>
 
-<!-- MODAL NOVO CHIP -->
-<div class="modal fade" id="modalNovoChip" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form class="modal-content" id="formNovoChip">
-            <div class="modal-header">
-                <h5 class="modal-title">Cadastrar Novo Chip</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+    <label>Número</label>
+    <input name="numero_chip" required>
 
-            <div class="modal-body row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">ID (sk_chip)</label>
-                    <input name="sk_chip" type="number" class="form-control" required>
-                </div>
+    <label>Operadora</label>
+    <input name="operadora" required>
 
-                <div class="col-md-4">
-                    <label class="form-label">Número</label>
-                    <input name="numero_chip" class="form-control" required>
-                </div>
+    <label>Status</label>
+    <select name="status_chip">
+        <option>ATIVO</option>
+        <option>BLOQUEADO</option>
+        <option>CANCELADO</option>
+    </select>
 
-                <div class="col-md-4">
-                    <label class="form-label">ICC ID</label>
-                    <input name="iccid" class="form-control">
-                </div>
+    <label>Data Ativação</label>
+    <input name="data_ativacao" type="date">
 
-                <div class="col-md-4">
-                    <label class="form-label">Operadora</label>
-                    <select name="operadora" class="form-select">
-                        <option>Claro</option>
-                        <option>Vivo</option>
-                        <option>Tim</option>
-                        <option>Oi</option>
-                        <option>Nextel</option>
-                    </select>
-                </div>
+    <label>Data Última Recarga</label>
+    <input name="data_ultima_recarga" type="date">
 
-                <div class="col-md-4">
-                    <label class="form-label">Status</label>
-                    <select name="status_chip" class="form-select">
-                        <option>Ativo</option>
-                        <option>Inativo</option>
-                        <option>Bloqueado</option>
-                    </select>
-                </div>
+    <label>Valor Última Recarga</label>
+    <input name="valor_ultima_recarga" type="number" step="0.01">
 
-                <div class="col-md-4">
-                    <label class="form-label">Data de Ativação</label>
-                    <input type="date" name="data_ativacao" class="form-control">
-                </div>
-            </div>
+    <button type="submit">Adicionar Chip</button>
+</form>
 
-            <div class="modal-footer">
-                <button class="btn btn-success">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
+<h2>Chips Cadastrados</h2>
 
-<!-- MODAL EDITAR RECHARGE -->
-<div class="modal fade" id="modalRecarga" tabindex="-1">
-    <div class="modal-dialog">
-        <form class="modal-content" id="formRecarga">
-            <div class="modal-header">
-                <h5 class="modal-title">Registrar Recarga</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <input type="hidden" name="sk_chip" id="recarga_id">
-
-            <div class="modal-body row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Data</label>
-                    <input type="date" name="data_ultima_recarga" class="form-control">
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Valor</label>
-                    <input type="number" name="valor_ultima_recarga" class="form-control" min="0" step="0.01">
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-success">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>ICCID</th>
+            <th>Número</th>
+            <th>Operadora</th>
+            <th>Status</th>
+            <th>Última Recarga</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for c in chips %}
+        <tr>
+            <td>{{ c.iccid }}</td>
+            <td>{{ c.numero_chip }}</td>
+            <td>{{ c.operadora }}</td>
+            <td>{{ c.status_chip }}</td>
+            <td>{{ c.data_ultima_recarga or "—" }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
 <script>
-let recargaModal = new bootstrap.Modal(document.getElementById('modalRecarga'));
-
-function abrirRecarga(chip) {
-    document.getElementById("recarga_id").value = chip.sk_chip;
-    recargaModal.show();
-}
-
-document.getElementById("formRecarga").addEventListener("submit", async e => {
+document.querySelector("#form-add-chip").onsubmit = async e => {
     e.preventDefault();
-    let payload = Object.fromEntries(new FormData(e.target).entries());
-    await fetch("/api/chip/recarga", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
+    const data = Object.fromEntries(new FormData(e.target));
+    await fetch("/chips/add", {method: "POST", body: new URLSearchParams(data)});
     location.reload();
-});
+}
 </script>
 
 {% endblock %}

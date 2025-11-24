@@ -11,10 +11,11 @@ def listar_aparelhos():
     return list(client.query(sql).result())
 
 def inserir_aparelho(data):
-    rows = [{
-        "nome_aparelho": data.get("nome_aparelho"),
-        "imei": data.get("imei"),
+    row = {
+        "nome": data.get("nome"),
+        "marca": data.get("marca"),
         "modelo": data.get("modelo"),
-        "status_aparelho": data.get("status_aparelho")
-    }]
-    client.insert_rows_json(TABLE, rows)
+        "imei": data.get("imei"),
+        "status": data.get("status")
+    }
+    client.insert_rows_json(TABLE, [row])

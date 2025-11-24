@@ -2,83 +2,158 @@
 {% block title %}Aparelhos{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1><i class="fas fa-mobile-alt"></i> Aparelhos</h1>
-</div>
 
-<div class="card form-card">
-    <h2 class="card-title"><i class="fas fa-plus-circle"></i> Novo Aparelho</h2>
+<link rel="stylesheet" href="{{ url_for('static', filename='chip.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <form action="/aparelhos/add" method="POST" class="form-grid">
-        <div class="form-group">
-            <label>ID Aparelho</label>
-            <input type="text" name="id_aparelho" required>
+<style>
+.btn-edit {
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+.btn-edit:hover {
+    background: #bae6fd;
+    color: #0369a1;
+}
+</style>
+
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <div class="icon-wrapper"><i class="fas fa-mobile"></i></div>
+            <div class="header-text">
+                <h1 class="title">Aparelhos</h1>
+                <p class="subtitle">Gestão de dispositivos vinculados</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container main-content">
+
+    <!-- FORMULÁRIO ÚNICO (CADASTRO + EDIÇÃO) -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-mobile"></i></div>
+            <h2 class="card-title" id="titulo-aparelho">Novo Aparelho</h2>
         </div>
 
-        <div class="form-group">
-            <label>Modelo</label>
-            <input type="text" name="modelo" required>
+        <div class="card-content">
+
+            <form action="/aparelhos/add" method="POST" class="form-grid">
+
+                <div class="form-group">
+                    <label>ID *</label>
+                    <input type="text" name="sk_aparelho" id="sk_aparelho" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Modelo *</label>
+                    <input type="text" name="modelo" id="modelo" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Marca *</label>
+                    <input type="text" name="marca" id="marca" required>
+                </div>
+
+                <div class="form-group">
+                    <label>IMEI</label>
+                    <input type="text" name="imei" id="imei">
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" id="status_ap">
+                        <option value="ATIVO">ATIVO</option>
+                        <option value="INATIVO">INATIVO</option>
+                        <option value="QUEBRADO">QUEBRADO</option>
+                        <option value="PERDIDO">PERDIDO</option>
+                        <option value="EM USO">EM USO</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary full-width" id="botao-aparelho">
+                    <i class="fas fa-plus"></i> Cadastrar Aparelho
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- LISTAGEM -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-icon"><i class="fas fa-list"></i></div>
+            <h2 class="card-title">Aparelhos cadastrados</h2>
         </div>
 
-        <div class="form-group">
-            <label>Marca</label>
-            <input type="text" name="marca" required>
+        <div class="card-content">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Modelo</th>
+                            <th>Marca</th>
+                            <th>IMEI</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for ap in aparelhos %}
+                        <tr>
+                            <td>{{ ap.sk_aparelho }}</td>
+                            <td>{{ ap.modelo }}</td>
+                            <td>{{ ap.marca }}</td>
+                            <td>{{ ap.imei }}</td>
+                            <td>{{ ap.status }}</td>
+
+                            <td style="text-align:center;">
+                                <button class="btn-edit"
+                                    onclick="editarAparelho(
+                                        '{{ ap.sk_aparelho }}',
+                                        '{{ ap.modelo }}',
+                                        '{{ ap.marca }}',
+                                        '{{ ap.imei }}',
+                                        '{{ ap.status }}'
+                                    )">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label>IMEI</label>
-            <input type="text" name="imei">
-        </div>
-
-        <div class="form-group">
-            <label>Status</label>
-            <select name="status">
-                <option value="ATIVO">ATIVO</option>
-                <option value="MANUTENCAO">MANUTENÇÃO</option>
-                <option value="QUEBRADO">QUEBRADO</option>
-                <option value="BAIXADO">BAIXADO</option>
-            </select>
-        </div>
-
-        <button class="btn-primary" type="submit">Salvar</button>
-    </form>
-</div>
-
-<div class="card table-card">
-    <h2 class="card-title"><i class="fas fa-list"></i> Aparelhos Cadastrados</h2>
-
-    <table id="tabela-aparelhos" class="display compact stripe">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Modelo</th>
-                <th>Marca</th>
-                <th>IMEI</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for a in aparelhos %}
-            <tr>
-                <td>{{ a.id_aparelho }}</td>
-                <td>{{ a.modelo }}</td>
-                <td>{{ a.marca }}</td>
-                <td>{{ a.imei }}</td>
-                <td>{{ a.status }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+</main>
 
 <script>
-$(document).ready(function () {
-    $('#tabela-aparelhos').DataTable({
-        pageLength: 25,
-        responsive: true
-    });
-});
+function editarAparelho(id, modelo, marca, imei, status) {
+    document.getElementById("sk_aparelho").value = id;
+    document.getElementById("modelo").value = modelo;
+    document.getElementById("marca").value = marca;
+    document.getElementById("imei").value = imei;
+    document.getElementById("status_ap").value = status;
+
+    document.getElementById("titulo-aparelho").innerHTML = `<i class="fas fa-pen"></i> Editar Aparelho`;
+    document.getElementById("botao-aparelho").innerHTML = `<i class="fas fa-save"></i> Salvar Alterações`;
+
+    window.scrollTo({ top: 80, behavior: "smooth" });
+}
 </script>
 
 {% endblock %}

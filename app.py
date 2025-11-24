@@ -26,7 +26,10 @@ def home():
 @app.route("/aparelhos")
 def aparelhos():
     dados = bq.get_aparelhos()
-    return render_template("aparelhos.html", aparelhos=dados.to_dict(orient="records"))
+    return render_template(
+        "aparelhos.html",
+        dados=dados.to_dict(orient="records")
+    )
 
 # =======================
 # LISTA DE CHIPS
@@ -34,7 +37,21 @@ def aparelhos():
 @app.route("/chips")
 def chips():
     dados = bq.get_chips()
-    return render_template("chips.html", chips=dados.to_dict(orient="records"))
+    return render_template(
+        "chips.html",
+        dados=dados.to_dict(orient="records")
+    )
+
+# =======================
+# LISTA DE MOVIMENTAÇÃO (EVENTOS)
+# =======================
+@app.route("/movimentacao")
+def movimentacao():
+    dados = bq.get_view()   # A view já traz chip + aparelho + vinculação
+    return render_template(
+        "movimentacao.html",
+        dados=dados.to_dict(orient="records")
+    )
 
 # =======================
 # START FLASK

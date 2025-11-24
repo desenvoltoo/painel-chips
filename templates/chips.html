@@ -171,112 +171,89 @@
     </footer>
 
     <script>
-        // Array para armazenar os chips
-        let chips = [];
+        <script>
+    // Chips vindos do servidor / BigQuery
+    let chips = {{ chips|tojson }};
+    
+    // Função para formatar moeda
+    function formatCurrency(value) {
+        if (!value) return '-';
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(value);
+    }
 
-        // Função para formatar moeda
-        function formatCurrency(value) {
-            if (!value) return '-';
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(value);
+    // Função para formatar data
+    function formatDate(date) {
+        if (!date) return '-';
+        return new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
+    }
+
+    // Função para obter cor do status
+    function getStatusColor(status) {
+        const colors = {
+            'DISPONIVEL': 'status-disponivel',
+            'MATURANDO': 'status-maturando',
+            'MATURADO': 'status-maturado',
+            'DESCANSO_1': 'status-descanso_1',
+            'DESCANSO_2': 'status-descanso_2',
+            'PRONTO_PARA_MATURAR': 'status-pronto_para_maturar',
+            'DISPARANDO': 'status-disparando',
+            'BANIDO': 'status-banido',
+            'RESTRINGIDO': 'status-restringido',
+            'ATIVO': 'status-ativo',
+            'BLOQUEADO': 'status-bloqueado'
+        };
+        return colors[status] || 'status-default';
+    }
+
+    // Função para renderizar tabela
+    function renderTable(data = chips) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Nenhum chip cadastrado ainda.</td></tr>';
+            return;
         }
 
-        // Função para formatar data
-        function formatDate(date) {
-            if (!date) return '-';
-            return new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
-        }
-
-        // Função para obter cor do status
-        function getStatusColor(status) {
-            const colors = {
-                'DISPONIVEL': 'status-disponivel',
-                'MATURANDO': 'status-maturando',
-                'MATURADO': 'status-maturado',
-                'DESCANSO_1': 'status-descanso_1',
-                'DESCANSO_2': 'status-descanso_2',
-                'PRONTO_PARA_MATURAR': 'status-pronto_para_maturar',
-                'DISPARANDO': 'status-disparando',
-                'BANIDO': 'status-banido',
-                'RESTRINGIDO': 'status-restringido',
-                'ATIVO': 'status-ativo',
-                'BLOQUEADO': 'status-bloqueado'
-            };
-            return colors[status] || 'status-default';
-        }
-
-        // Função para renderizar a tabela
-        function renderTable(data = chips) {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Nenhum chip cadastrado ainda.</td></tr>';
-                return;
-            }
-
-            data.forEach(chip => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${chip.id_chip}</td>
-                    <td>${chip.numero}</td>
-                    <td>${chip.operadora}</td>
-                    <td><span class="status-badge ${getStatusColor(chip.status)}">${chip.status}</span></td>
-                    <td>${chip.plano || '-'}</td>
-                    <td>${formatDate(chip.ultima_recarga_data)}</td>
-                    <td>${formatCurrency(chip.ultima_recarga_valor)}</td>
-                    <td>${formatCurrency(chip.total_gasto)}</td>
-                    <td>${chip.sk_aparelho_atual || '-'}</td>
-                    <td>${formatDate(chip.dt_inicio)}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Função para adicionar chip
-        document.getElementById('chipForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const formData = new FormData(e.target);
-            const chip = {
-                id_chip: formData.get('id_chip'),
-                numero: formData.get('numero'),
-                operadora: formData.get('operadora'),
-                plano: formData.get('plano'),
-                status: formData.get('status'),
-                dt_inicio: formData.get('dt_inicio'),
-                ultima_recarga_valor: formData.get('ultima_recarga_valor'),
-                ultima_recarga_data: formData.get('ultima_recarga_data'),
-                total_gasto: formData.get('total_gasto'),
-                sk_aparelho_atual: formData.get('sk_aparelho_atual')
-            };
-
-            chips.push(chip);
-            renderTable();
-            e.target.reset();
-            
-            // Mostrar mensagem de sucesso (opcional)
-            alert('Chip cadastrado com sucesso!');
+        data.forEach(chip => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${chip.id_chip}</td>
+                <td>${chip.numero}</td>
+                <td>${chip.operadora}</td>
+                <td><span class="status-badge ${getStatusColor(chip.status)}">${chip.status}</span></td>
+                <td>${chip.plano || '-'}</td>
+                <td>${formatDate(chip.ultima_recarga_data)}</td>
+                <td>${formatCurrency(chip.ultima_recarga_valor)}</td>
+                <td>${formatCurrency(chip.total_gasto)}</td>
+                <td>${chip.aparelho_nome || '-'}</td>
+                <td>${formatDate(chip.dt_inicio)}</td>
+            `;
+            tbody.appendChild(row);
         });
+    }
 
-        // Função de busca
-        document.getElementById('searchInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            const filtered = chips.filter(chip => {
-                return Object.values(chip).some(value => 
-                    String(value).toLowerCase().includes(searchTerm)
-                );
-            });
-            renderTable(filtered);
+    // Busca
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = chips.filter(chip => {
+            return Object.values(chip).some(value =>
+                String(value).toLowerCase().includes(searchTerm)
+            );
         });
+        renderTable(filtered);
+    });
 
-        // Definir ano atual no footer
-        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    // Ano no footer
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
 
-        // Renderizar tabela inicial
-        renderTable();
+    // Render inicial
+    renderTable();
+</script>
+
     </script>
 </body>
 </html>

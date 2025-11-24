@@ -1,59 +1,61 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Gerenciar Aparelhos</h2>
+<h2>Cadastrar Aparelho</h2>
 
 <form id="form-aparelho" class="form-box">
+    <label>Nome</label>
+    <input name="nome">
 
-    <label>Nome do Aparelho</label>
-    <input name="nome_aparelho" required>
-
-    <label>IMEI</label>
-    <input name="imei" required>
+    <label>Marca</label>
+    <input name="marca">
 
     <label>Modelo</label>
-    <input name="modelo" required>
+    <input name="modelo">
+
+    <label>IMEI</label>
+    <input name="imei">
 
     <label>Status</label>
-    <select name="status_aparelho">
+    <select name="status">
         <option>ATIVO</option>
-        <option>MANUTENÇÃO</option>
         <option>INATIVO</option>
     </select>
 
-    <button type="submit">Cadastrar</button>
+    <button>Salvar</button>
 </form>
 
 <h2>Aparelhos Cadastrados</h2>
 
 <table class="tabela">
-    <thead>
-        <tr>
-            <th>Nome</th>
-            <th>IMEI</th>
-            <th>Modelo</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for a in aparelhos %}
-    <tr>
-        <td>{{ a.nome_aparelho }}</td>
-        <td>{{ a.imei }}</td>
-        <td>{{ a.modelo }}</td>
-        <td>{{ a.status_aparelho }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
+<thead>
+<tr>
+    <th>Nome</th>
+    <th>Marca</th>
+    <th>Modelo</th>
+    <th>IMEI</th>
+    <th>Status</th>
+</tr>
+</thead>
+<tbody>
+{% for a in aparelhos %}
+<tr>
+    <td>{{ a.nome }}</td>
+    <td>{{ a.marca }}</td>
+    <td>{{ a.modelo }}</td>
+    <td>{{ a.imei }}</td>
+    <td>{{ a.status }}</td>
+</tr>
+{% endfor %}
+</tbody>
 </table>
 
 <script>
 document.querySelector("#form-aparelho").onsubmit = async e => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    await fetch("/aparelhos/add", {method:"POST", body: new URLSearchParams(data)});
+    await fetch("/aparelhos/add", {method:"POST", body:new URLSearchParams(new FormData(e.target))});
     location.reload();
-}
+};
 </script>
 
 {% endblock %}

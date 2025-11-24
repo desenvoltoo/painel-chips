@@ -3,12 +3,13 @@
 
 <h2>Cadastrar Aparelho</h2>
 
-<form method="POST" action="/aparelhos/add" class="form-box">
+<form id="form-aparelho" class="form-box">
+
     <label>ID Interno</label>
     <input name="id_aparelho">
 
     <label>Modelo</label>
-    <input name="modelo">
+    <input name="modelo" required>
 
     <label>Marca</label>
     <input name="marca">
@@ -20,33 +21,47 @@
     <select name="status">
         <option value="ATIVO">ATIVO</option>
         <option value="INATIVO">INATIVO</option>
+        <option value="RESTRITO">RESTRITO</option>
     </select>
 
-    <button type="submit">Salvar</button>
+    <button type="submit">Salvar Aparelho</button>
 </form>
-
 
 <h2>Aparelhos Cadastrados</h2>
 
-<table class="tabela">
-<thead>
-<tr>
-    <th>Marca</th>
-    <th>Modelo</th>
-    <th>IMEI</th>
-    <th>Status</th>
-</tr>
-</thead>
-<tbody>
-{% for a in aparelhos %}
-<tr>
-    <td>{{ a.marca }}</td>
-    <td>{{ a.modelo }}</td>
-    <td>{{ a.imei }}</td>
-    <td>{{ a.status }}</td>
-</tr>
-{% endfor %}
-</tbody>
+<table>
+    <thead>
+        <tr>
+            <th>SK</th>
+            <th>ID Interno</th>
+            <th>Modelo</th>
+            <th>Marca</th>
+            <th>IMEI</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for a in aparelhos %}
+        <tr>
+            <td>{{ a.sk_aparelho }}</td>
+            <td>{{ a.id_aparelho }}</td>
+            <td>{{ a.modelo }}</td>
+            <td>{{ a.marca }}</td>
+            <td>{{ a.imei }}</td>
+            <td>{{ a.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+
+<script>
+document.querySelector("#form-aparelho").onsubmit = async e => {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(e.target));
+    await fetch("/aparelhos/add", { method:"POST", body:new URLSearchParams(data) });
+    location.reload();
+};
+</script>
 
 {% endblock %}

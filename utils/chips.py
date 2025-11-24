@@ -19,8 +19,6 @@
 
     <label>Status</label>
     <select name="status">
-
-        <!-- Status operacionais -->
         <option value="DISPONIVEL">DISPONÍVEL</option>
         <option value="MATURANDO">MATURANDO</option>
         <option value="MATURADO">MATURADO</option>
@@ -31,6 +29,9 @@
         <option value="BANIDO">BANIDO</option>
         <option value="RESTRINGIDO">RESTRINGIDO</option>
 
+        <!-- Legados -->
+        <option value="ATIVO">ATIVO</option>
+        <option value="BLOQUEADO">BLOQUEADO</option>
     </select>
 
     <label>Data de Início</label>
@@ -45,15 +46,11 @@
     <label>Total Gasto</label>
     <input type="number" step="0.01" name="total_gasto">
 
-    <!-- Aparelho Atual, exibindo nome -->
     <label>Aparelho Atual</label>
     <select name="sk_aparelho_atual">
         <option value="">Nenhum</option>
-
         {% for a in aparelhos %}
-            <option value="{{ a.sk_aparelho }}">
-                {{ a.nome }} - {{ a.modelo }}
-            </option>
+            <option value="{{ a.sk_aparelho }}">{{ a.modelo }}</option>
         {% endfor %}
     </select>
 
@@ -61,21 +58,20 @@
 </form>
 
 
-
 <h2>Chips Cadastrados</h2>
 
 <table class="tabela">
 <thead>
-<tr>
-    <th>ID</th>
-    <th>Número</th>
-    <th>Operadora</th>
-    <th>Plano</th>
-    <th>Status</th>
-    <th>Última Recarga</th>
-    <th>Total Gasto</th>
-    <th>Aparelho Atual</th>
-</tr>
+    <tr>
+        <th>ID</th>
+        <th>Número</th>
+        <th>Operadora</th>
+        <th>Plano</th>
+        <th>Status</th>
+        <th>Última Recarga</th>
+        <th>Total Gasto</th>
+        <th>Aparelho Atual</th>
+    </tr>
 </thead>
 <tbody>
 {% for c in chips %}
@@ -87,26 +83,15 @@
     <td>{{ c.status }}</td>
     <td>{{ c.ultima_recarga_data }}</td>
     <td>{{ c.total_gasto }}</td>
-
-    <!-- Nome do aparelho vindo da VIEW -->
-    <td>
-        {% if c.nome_aparelho %}
-            {{ c.nome_aparelho }} ({{ c.modelo }})
-        {% else %}
-            -
-        {% endif %}
-    </td>
-
+    <td>{{ c.sk_aparelho_atual }}</td>
 </tr>
 {% endfor %}
 </tbody>
 </table>
 
-
 <script>
 document.querySelector("#form-chip").onsubmit = async e => {
     e.preventDefault();
-
     let data = Object.fromEntries(new FormData(e.target));
 
     await fetch("/chips/add", {

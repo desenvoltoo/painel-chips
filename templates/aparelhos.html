@@ -1,164 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Aparelhos{% endblock %}
+{% block conteudo %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="fw-bold">Gerenciamento de Aparelhos</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoAparelho">
-        + Novo Aparelho
-    </button>
-</div>
+<h2>Gerenciar Aparelhos</h2>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <table id="tabelaAparelhos" class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>IMEI</th>
-                    <th>Modelo</th>
-                    <th>Status</th>
-                    <th>Chip Vinculado</th>
-                    <th>Data Vínculo</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in aparelhos %}
-                <tr>
-                    <td>{{ a.sk_aparelho }}</td>
-                    <td>{{ a.nome_aparelho }}</td>
-                    <td>{{ a.imei }}</td>
-                    <td>{{ a.modelo }}</td>
-                    <td>{{ a.status_aparelho }}</td>
-                    <td>{{ a.numero_chip or "-" }}</td>
-                    <td>{{ a.data_vinculo or "-" }}</td>
-                    <td>
-                        <button class="btn btn-sm btn-secondary"
-                                onclick="editarAparelho({{ a | tojson }})">
-                            Editar
-                        </button>
+<form id="form-aparelho" class="form-box">
 
-                        <button class="btn btn-sm btn-success"
-                                onclick="vincularChip({{ a | tojson }})">
-                            Vincular Chip
-                        </button>
+    <label>Nome do Aparelho</label>
+    <input name="nome_aparelho" required>
 
-                        <button class="btn btn-sm btn-danger"
-                                onclick="desvincularChip({{ a | tojson }})">
-                            Desvincular
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <label>IMEI</label>
+    <input name="imei" required>
 
+    <label>Modelo</label>
+    <input name="modelo" required>
 
-<!-- MODAL NOVO APARELHO -->
-<div class="modal fade" id="modalNovoAparelho" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <form class="modal-content" id="formNovoAparelho">
-            <div class="modal-header">
-                <h5 class="modal-title">Cadastrar Novo Aparelho</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+    <label>Status</label>
+    <select name="status_aparelho">
+        <option>ATIVO</option>
+        <option>MANUTENÇÃO</option>
+        <option>INATIVO</option>
+    </select>
 
-            <div class="modal-body row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">ID</label>
-                    <input name="sk_aparelho" type="number" class="form-control" required>
-                </div>
+    <button type="submit">Cadastrar</button>
+</form>
 
-                <div class="col-md-5">
-                    <label class="form-label">Nome</label>
-                    <input name="nome_aparelho" class="form-control" required>
-                </div>
+<h2>Aparelhos Cadastrados</h2>
 
-                <div class="col-md-4">
-                    <label class="form-label">Modelo</label>
-                    <input name="modelo" class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">IMEI</label>
-                    <input name="imei" class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">Status</label>
-                    <select name="status_aparelho" class="form-select">
-                        <option>Ativo</option>
-                        <option>Em Manutenção</option>
-                        <option>Inoperante</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-success">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-
-<!-- MODAL VINCULAR CHIP -->
-<div class="modal fade" id="modalVincularChip" tabindex="-1">
-    <div class="modal-dialog">
-        <form class="modal-content" id="formVincularChip">
-            <input type="hidden" name="sk_aparelho" id="vinculo_aparelho_id">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Vincular Chip ao Aparelho</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-                <label class="form-label">Selecione o Chip</label>
-                <select name="sk_chip" class="form-select">
-                    {% for chip in lista_chips %}
-                        <option value="{{ chip.sk_chip }}">
-                            {{ chip.numero_chip }} — {{ chip.operadora }}
-                        </option>
-                    {% endfor %}
-                </select>
-
-                <label class="form-label mt-3">Data do Vínculo</label>
-                <input type="date" class="form-control" name="data_vinculo">
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-success">Salvar</button>
-            </div>
-        </form>
-    </div>
-</div>
-
+<table class="tabela">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>IMEI</th>
+            <th>Modelo</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for a in aparelhos %}
+    <tr>
+        <td>{{ a.nome_aparelho }}</td>
+        <td>{{ a.imei }}</td>
+        <td>{{ a.modelo }}</td>
+        <td>{{ a.status_aparelho }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
 <script>
-let modalVinculo = new bootstrap.Modal(document.getElementById("modalVincularChip"));
-
-function vincularChip(aparelho) {
-    document.getElementById("vinculo_aparelho_id").value = aparelho.sk_aparelho;
-    modalVinculo.show();
-}
-
-document.getElementById("formVincularChip").addEventListener("submit", async (e) => {
+document.querySelector("#form-aparelho").onsubmit = async e => {
     e.preventDefault();
-    let payload = Object.fromEntries(new FormData(e.target).entries());
-
-    await fetch("/api/aparelho/vincular", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload),
-    });
-
+    const data = Object.fromEntries(new FormData(e.target));
+    await fetch("/aparelhos/add", {method:"POST", body: new URLSearchParams(data)});
     location.reload();
-});
+}
 </script>
 
 {% endblock %}

@@ -1,21 +1,49 @@
-from google.cloud import bigquery
+# routes/aparelhos.py
+# ---------------------------------------------
+# Rotas da gestão de Aparelhos (CRUD)
+# ---------------------------------------------
 
-PROJECT = "painel-universidade"
-DATASET = "marts"
-TABLE = f"{PROJECT}.{DATASET}.dim_aparelho"
+from flask import Blueprint, render_template, request, redirect
+from utils.bigquery_client import BigQueryClient
 
-client = bigquery.Client()
+bp_aparelhos = Blueprint("aparelhos", __name__)
+bq = BigQueryClient()
 
-def listar_aparelhos():
-    sql = f"SELECT * FROM `{TABLE}` ORDER BY sk_aparelho DESC"
-    return list(client.query(sql).result())
 
-def inserir_aparelho(data):
-    row = {
-        "nome": data.get("nome"),
-        "marca": data.get("marca"),
-        "modelo": data.get("modelo"),
-        "imei": data.get("imei"),
-        "status": data.get("status")
-    }
-    client.insert_rows_json(TABLE, [row])
+# =======================================================
+# LISTAGEM
+# =======================================================
+@bp_aparelhos.route("/aparelhos")
+def aparelhos():
+    try:
+        aparelhos_df = bq.get_aparelhos()
+        return render_template(
+            "aparelhos.html",
+            aparelhos=aparelhos_df.to_dict(orient="records")
+        )
+    except Exception as e:
+        print("Erro ao carregar aparelhos:", e)
+        return "Erro ao carregar aparelhos", 500
+
+
+# =======================================================
+# UPSERT (INSERT + UPDATE AUTOMÁTICO)
+# =======================================================
+@bp_aparelhos.route("/aparelhos/add", methods=["POST"])
+def add_aparelho():
+    try:
+        dados = {
+            "id_aparelho": request.form.get("id_aparelho"),
+            "modelo": request.form.get("modelo"),
+            "marca": request.form.get("marca"),
+            "imei": request.form.get("imei"),
+            "status": request.form.get("status"),
+        }
+
+        bq.upsert_aparelho(dados)
+
+        return redirect("/aparelhos")
+
+    except Exception as e:
+        print("Erro ao salvar aparelho:", e)
+        return "Erro ao salvar aparelho", 500

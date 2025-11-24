@@ -5,10 +5,31 @@ app = Flask(__name__)
 bq = BigQueryClient()
 
 # DASHBOARD
-@app.route("/")
-def home():
-    dados = bq.get_view()
-    return render_template("dashboard.html", tabela=dados.to_dict(orient="records"))
+@app.route("/dashboard")
+def dashboard():
+    df = bq.get_view()
+
+    total_chips = len(df)
+    chips_ativos = len(df[df["ativo"] == True])
+    disparando = len(df[df["status"] == "DISPARANDO"])
+    banidos = len(df[df["status"] == "BANIDO"])
+
+    lista_status = sorted(df["status"].dropna().unique())
+    lista_operadora = sorted(df["operadora"].dropna().unique())
+    lista_aparelho = sorted(df["nome_aparelho"].dropna().unique())
+
+    return render_template(
+        "dashboard.html",
+        tabela=df.to_dict(orient="records"),
+        total_chips=total_chips,
+        chips_ativos=chips_ativos,
+        disparando=disparando,
+        banidos=banidos,
+        lista_status=lista_status,
+        lista_operadora=lista_operadora,
+        lista_aparelho=lista_aparelho
+    )
+
 
 # APARELHOS LISTA + FORM
 @app.route("/aparelhos")

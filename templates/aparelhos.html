@@ -3,82 +3,95 @@
 
 {% block content %}
 
-<!-- HEADER -->
-<header class="header">
+<header class="chip-header">
     <div class="container">
-        <div class="header-content">
+        <div class="chip-header-content">
             <div class="icon-wrapper">
                 <i class="fas fa-mobile-alt"></i>
             </div>
             <div class="header-text">
-                <h1 class="title">Gestão de Aparelhos</h1>
-                <p class="subtitle">Cadastro, edição e controle dos dispositivos</p>
+                <h1 class="chip-title">Gestão de Aparelhos</h1>
+                <p class="chip-subtitle">Cadastro, edição e controle de dispositivos</p>
             </div>
         </div>
     </div>
 </header>
 
-<main class="container main-content">
+<main class="container chip-container">
 
-    <!-- FORM -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-icon"><i class="fas fa-plus"></i></div>
-            <h2 class="card-title" id="titulo-form-ap">Novo Aparelho</h2>
+    <!-- FORMULÁRIO -->
+    <section class="chip-card">
+        <div class="chip-card-header">
+            <div class="card-icon">
+                <i class="fas fa-plus"></i>
+            </div>
+            <h2 class="card-title" id="titulo-form">Novo Aparelho</h2>
         </div>
 
         <div class="card-content">
-            <form action="/aparelhos/add" method="POST" class="form-grid">
+            <form action="/aparelhos/add" method="POST" class="chip-form">
 
-                <div class="form-group">
-                    <label>ID do Aparelho *</label>
-                    <input type="text" name="id_aparelho" id="id_aparelho" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ID do Aparelho *</label>
+                        <input type="text" name="id_aparelho" id="id_aparelho" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Modelo *</label>
+                        <input type="text" name="modelo" id="modelo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Marca *</label>
+                        <input type="text" name="marca" id="marca" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>IMEI</label>
+                        <input type="text" name="imei" id="imei">
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Modelo *</label>
-                    <input type="text" name="modelo" id="modelo" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" id="status">
+                            <option value="ATIVO">ATIVO</option>
+                            <option value="EM_USO">EM USO</option>
+                            <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                            <option value="PARADO">PARADO</option>
+                            <option value="DESCARTADO">DESCARTADO</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Marca</label>
-                    <input type="text" name="marca" id="marca">
-                </div>
-
-                <div class="form-group">
-                    <label>IMEI</label>
-                    <input type="text" name="imei" id="imei">
-                </div>
-
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status" id="status_aparelho">
-                        <option value="ATIVO">ATIVO</option>
-                        <option value="MANUTENCAO">MANUTENÇÃO</option>
-                        <option value="BLOQUEADO">BLOQUEADO</option>
-                        <option value="DESCARTADO">DESCARTADO</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary full-width" id="botao-salvar-aparelho">
-                    <i class="fas fa-plus"></i> Cadastrar Aparelho
+                <button type="submit" class="chip-btn" id="botao-salvar">
+                    <i class="fas fa-plus"></i>
+                    Cadastrar Aparelho
                 </button>
-
             </form>
         </div>
-    </div>
+    </section>
 
     <!-- LISTAGEM -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-icon"><i class="fas fa-list"></i></div>
+    <section class="chip-card">
+        <div class="chip-card-header">
+            <div class="card-icon">
+                <i class="fas fa-list"></i>
+            </div>
             <h2 class="card-title">Aparelhos Cadastrados</h2>
         </div>
 
         <div class="card-content">
 
-            <div class="table-wrapper">
-                <table>
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar aparelhos...">
+            </div>
+
+            <div class="chip-table-wrapper">
+                <table class="chip-table">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -90,62 +103,62 @@
                         </tr>
                     </thead>
 
-                    <tbody>
-                        {% for ap in aparelhos %}
+                    <tbody id="tableBody">
+                        {% for a in aparelhos %}
                         <tr>
-                            <td>{{ ap.id_aparelho }}</td>
-                            <td>{{ ap.modelo }}</td>
-                            <td>{{ ap.marca }}</td>
-                            <td>{{ ap.imei }}</td>
-
+                            <td>{{ a.id_aparelho }}</td>
+                            <td>{{ a.modelo }}</td>
+                            <td>{{ a.marca }}</td>
+                            <td>{{ a.imei or "-" }}</td>
                             <td>
-                                <span class="status-badge status-default">
-                                    {{ ap.status }}
+                                <span class="status-badge status-{{ a.status|lower }}">
+                                    {{ a.status }}
                                 </span>
                             </td>
-
-                            <td style="text-align:center;">
+                            <td>
                                 <button class="btn-edit"
-                                    onclick="editarAparelho(
-                                        '{{ ap.id_aparelho }}',
-                                        '{{ ap.modelo }}',
-                                        '{{ ap.marca }}',
-                                        '{{ ap.imei }}',
-                                        '{{ ap.status }}'
-                                    )">
+                                        onclick="editarAparelho(
+                                            '{{ a.id_aparelho }}',
+                                            '{{ a.modelo }}',
+                                            '{{ a.marca }}',
+                                            '{{ a.imei }}',
+                                            '{{ a.status }}'
+                                        )">
                                     <i class="fas fa-pen"></i>
                                 </button>
                             </td>
-
                         </tr>
                         {% endfor %}
                     </tbody>
-
                 </table>
             </div>
-
         </div>
-    </div>
-
+    </section>
 </main>
 
 <script>
 function editarAparelho(id, modelo, marca, imei, status) {
-
     document.getElementById("id_aparelho").value = id;
     document.getElementById("modelo").value = modelo;
     document.getElementById("marca").value = marca;
     document.getElementById("imei").value = imei;
-    document.getElementById("status_aparelho").value = status;
+    document.getElementById("status").value = status;
 
-    document.getElementById("titulo-form-ap").innerHTML =
-        `<i class="fas fa-pen"></i> Editar Aparelho`;
-
-    document.getElementById("botao-salvar-aparelho").innerHTML =
-        `<i class="fas fa-save"></i> Salvar Alterações`;
+    document.getElementById("titulo-form").innerHTML = `<i class="fas fa-pen"></i> Editar Aparelho`;
+    document.getElementById("botao-salvar").innerHTML = `<i class="fas fa-save"></i> Salvar Alterações`;
 
     window.scrollTo({ top: 80, behavior: "smooth" });
 }
+
+document.getElementById('searchInput').addEventListener('input', function (e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#tableBody tr');
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? "" : "none";
+    });
+});
 </script>
 
 {% endblock %}

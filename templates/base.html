@@ -20,17 +20,24 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
+        /* ======================
+           TEMA GLOBAL AJUSTADO
+        =======================*/
+
         body {
             margin: 0;
             font-family: "Inter", sans-serif;
-            background: #0f0f0f;
+            
+            /* 👉 REMOVIDO O FUNDO PRETO */
+            background: #f1f5f9 !important; 
+            color: #1e293b !important;
         }
 
         /* ===== SIDEBAR ===== */
         .sidebar {
             width: 240px;
             height: 100vh;
-            background: #111827;
+            background: #1e293b; /* cinza premium */
             padding: 25px 15px;
             position: fixed;
             top: 0;
@@ -50,7 +57,7 @@
             display: block;
             padding: 12px;
             margin-bottom: 10px;
-            color: #d1d5db;
+            color: #e2e8f0;
             text-decoration: none;
             border-radius: 8px;
             font-size: 16px;
@@ -58,7 +65,7 @@
         }
 
         .sidebar a:hover {
-            background: #374151;
+            background: #334155;
             color: white;
         }
 
@@ -66,7 +73,13 @@
         .content {
             margin-left: 260px;
             padding: 35px;
-            color: white;
+            
+            /* 👉 REMOVIDO COLOR: WHITE */
+            color: #1e293b !important;
+
+            /* fundo leve igual ao tema premium */
+            background: #eff6ff;
+            min-height: 100vh;
         }
 
         .page-header {
@@ -77,13 +90,12 @@
             font-size: 28px;
             font-weight: 700;
             margin: 0;
-            color: white;
+            color: #1e293b !important;
         }
 
-        /* Remove interferências globais */
         h1, h2, h3, p, span, td, th, label {
             opacity: 1 !important;
-            color: inherit !important;
+            color: #1e293b !important;
         }
     </style>
 </head>

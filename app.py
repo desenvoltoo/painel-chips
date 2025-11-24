@@ -25,10 +25,10 @@ def home():
 # =======================
 @app.route("/aparelhos")
 def aparelhos():
-    dados = bq.get_aparelhos()
+    aparelhos = bq.get_aparelhos()
     return render_template(
         "aparelhos.html",
-        dados=dados.to_dict(orient="records")
+        dados=aparelhos.to_dict(orient="records")
     )
 
 # =======================
@@ -38,7 +38,7 @@ def aparelhos():
 def chips():
     chips = bq.get_chips()
     aparelhos = bq.get_aparelhos()
-    
+
     return render_template(
         "chips.html",
         chips=chips.to_dict(orient="records"),
@@ -46,11 +46,11 @@ def chips():
     )
 
 # =======================
-# LISTA DE MOVIMENTAÇÃO (EVENTOS)
+# MOVIMENTAÇÃO (EVENTOS)
 # =======================
 @app.route("/movimentacao")
 def movimentacao():
-    dados = bq.get_view()   # A view já traz chip + aparelho + vinculação
+    dados = bq.get_view()  # view deve retornar chip + aparelho + vínculos
     return render_template(
         "movimentacao.html",
         dados=dados.to_dict(orient="records")

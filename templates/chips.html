@@ -3,33 +3,6 @@
 
 {% block content %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='chip.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-/* Ajuste de texto herdado */
-body, html {
-    color: #1e293b !important;
-}
-
-/* Botão editar */
-.btn-edit {
-    background: #e0f2fe;
-    color: #0284c7;
-    padding: 0.45rem 0.6rem;
-    border-radius: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-    cursor: pointer;
-}
-.btn-edit:hover {
-    background: #bae6fd;
-    color: #0369a1;
-}
-</style>
-
 <!-- HEADER -->
 <header class="header">
     <div class="container">
@@ -39,7 +12,7 @@ body, html {
             </div>
             <div class="header-text">
                 <h1 class="title">Gestão de Chips</h1>
-                <p class="subtitle">Cadastro e monitoramento em tempo real</p>
+                <p class="subtitle">Cadastro, edição e monitoramento</p>
             </div>
         </div>
     </div>
@@ -138,7 +111,7 @@ body, html {
         </div>
     </div>
 
-    <!-- TABELA -->
+    <!-- LISTAGEM -->
     <div class="card">
         <div class="card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -146,7 +119,6 @@ body, html {
         </div>
 
         <div class="card-content">
-
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -208,7 +180,6 @@ body, html {
 
                 </table>
             </div>
-
         </div>
     </div>
 
@@ -216,6 +187,7 @@ body, html {
 
 <script>
 function editarChip(id, numero, operadora, status, plano, inicio, val, datarec, gasto, aparelho) {
+
     document.getElementById("id_chip").value = id;
     document.getElementById("numero").value = numero;
     document.getElementById("operadora").value = operadora;

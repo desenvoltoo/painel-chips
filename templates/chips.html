@@ -7,11 +7,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-/* Correções para texto escuro */
-body, html, .content, .page, .main-container {
-    color: #1e293b !important;
-}
-.card, table, th, td, input, select, label, h1, h2, h3, p, span {
+/* Ajuste de texto herdado */
+body, html {
     color: #1e293b !important;
 }
 
@@ -21,12 +18,11 @@ body, html, .content, .page, .main-container {
     color: #0284c7;
     padding: 0.45rem 0.6rem;
     border-radius: 0.5rem;
-    font-size: 0.9rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: 0.2s;
-    text-decoration: none;
+    cursor: pointer;
 }
 .btn-edit:hover {
     background: #bae6fd;
@@ -34,6 +30,7 @@ body, html, .content, .page, .main-container {
 }
 </style>
 
+<!-- HEADER -->
 <header class="header">
     <div class="container">
         <div class="header-content">
@@ -53,10 +50,8 @@ body, html, .content, .page, .main-container {
     <!-- FORMULÁRIO -->
     <div class="card">
         <div class="card-header">
-            <div class="card-icon">
-                <i class="fas fa-plus"></i>
-            </div>
-            <h2 class="card-title">Novo Chip</h2>
+            <div class="card-icon"><i class="fas fa-plus"></i></div>
+            <h2 class="card-title" id="titulo-form">Novo Chip</h2>
         </div>
 
         <div class="card-content">
@@ -64,17 +59,17 @@ body, html, .content, .page, .main-container {
 
                 <div class="form-group">
                     <label>ID do Chip *</label>
-                    <input type="text" name="id_chip" required>
+                    <input type="text" name="id_chip" id="id_chip" required>
                 </div>
 
                 <div class="form-group">
                     <label>Número *</label>
-                    <input type="text" name="numero" required>
+                    <input type="text" name="numero" id="numero" required>
                 </div>
 
                 <div class="form-group">
                     <label>Operadora</label>
-                    <select name="operadora">
+                    <select name="operadora" id="operadora">
                         <option value="VIVO">VIVO</option>
                         <option value="TIM">TIM</option>
                         <option value="CLARO">CLARO</option>
@@ -84,13 +79,8 @@ body, html, .content, .page, .main-container {
                 </div>
 
                 <div class="form-group">
-                    <label>Plano</label>
-                    <input type="text" name="plano">
-                </div>
-
-                <div class="form-group">
                     <label>Status</label>
-                    <select name="status">
+                    <select name="status" id="status">
                         <option value="DISPONIVEL">DISPONÍVEL</option>
                         <option value="MATURANDO">MATURANDO</option>
                         <option value="MATURADO">MATURADO</option>
@@ -106,48 +96,49 @@ body, html, .content, .page, .main-container {
                 </div>
 
                 <div class="form-group">
-                    <label>Data de Início</label>
-                    <input type="date" name="dt_inicio">
+                    <label>Plano</label>
+                    <input type="text" name="plano" id="plano">
                 </div>
 
                 <div class="form-group">
-                    <label>Valor Última Recarga (R$)</label>
-                    <input type="number" name="ultima_recarga_valor" step="0.01">
+                    <label>Data Início</label>
+                    <input type="date" name="dt_inicio" id="dt_inicio">
                 </div>
 
                 <div class="form-group">
-                    <label>Data Última Recarga</label>
-                    <input type="date" name="ultima_recarga_data">
+                    <label>Valor Últ. Recarga</label>
+                    <input type="number" step="0.01" name="ultima_recarga_valor" id="ultima_recarga_valor">
                 </div>
 
                 <div class="form-group">
-                    <label>Total Gasto (R$)</label>
-                    <input type="number" name="total_gasto" step="0.01">
+                    <label>Data Últ. Recarga</label>
+                    <input type="date" name="ultima_recarga_data" id="ultima_recarga_data">
+                </div>
+
+                <div class="form-group">
+                    <label>Total Gasto</label>
+                    <input type="number" step="0.01" name="total_gasto" id="total_gasto">
                 </div>
 
                 <div class="form-group full-width">
                     <label>Aparelho Vinculado</label>
-                    <select name="sk_aparelho_atual">
+                    <select name="sk_aparelho_atual" id="sk_aparelho_atual">
                         <option value="">-- Nenhum --</option>
                         {% for ap in aparelhos %}
-                            <option value="{{ ap.sk_aparelho }}">
-                                {{ ap.modelo }} ({{ ap.marca }})
-                            </option>
+                            <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="form-group full-width">
-                    <button type="submit" class="btn-primary">
-                        <i class="fas fa-plus"></i> Cadastrar Chip
-                    </button>
-                </div>
+                <button type="submit" class="btn-primary full-width" id="botao-salvar">
+                    <i class="fas fa-plus"></i> Cadastrar Chip
+                </button>
 
             </form>
         </div>
     </div>
 
-    <!-- LISTAGEM -->
+    <!-- TABELA -->
     <div class="card">
         <div class="card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -156,14 +147,8 @@ body, html, .content, .page, .main-container {
 
         <div class="card-content">
 
-            <div class="search-wrapper">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
-            </div>
-
-            <!-- TABELA -->
             <div class="table-wrapper">
-                <table id="chipsTable">
+                <table>
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -176,17 +161,23 @@ body, html, .content, .page, .main-container {
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
                             <th>Início</th>
-                            <th style="text-align:center;">Ações</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
 
-                    <tbody id="tableBody">
+                    <tbody>
                         {% for c in chips %}
                         <tr>
                             <td>{{ c.id_chip }}</td>
                             <td>{{ c.numero }}</td>
                             <td>{{ c.operadora }}</td>
-                            <td><span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span></td>
+
+                            <td>
+                                <span class="status-badge status-{{ c.status|lower }}">
+                                    {{ c.status }}
+                                </span>
+                            </td>
+
                             <td>{{ c.plano }}</td>
                             <td>{{ c.ultima_recarga_data }}</td>
                             <td>{{ c.ultima_recarga_valor }}</td>
@@ -194,11 +185,22 @@ body, html, .content, .page, .main-container {
                             <td>{{ c.aparelho_nome if c.aparelho_nome else '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
 
-                            <!-- BOTÃO EDITAR -->
                             <td style="text-align:center;">
-                                <a href="/chips/edit/{{ c.id_chip }}" class="btn-edit">
-                                    <i class="fas fa-pen-to-square"></i>
-                                </a>
+                                <button class="btn-edit"
+                                    onclick="editarChip(
+                                        '{{ c.id_chip }}',
+                                        '{{ c.numero }}',
+                                        '{{ c.operadora }}',
+                                        '{{ c.status }}',
+                                        '{{ c.plano }}',
+                                        '{{ c.dt_inicio }}',
+                                        '{{ c.ultima_recarga_valor }}',
+                                        '{{ c.ultima_recarga_data }}',
+                                        '{{ c.total_gasto }}',
+                                        '{{ c.sk_aparelho_atual }}'
+                                    )">
+                                    <i class="fas fa-pen"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -213,15 +215,23 @@ body, html, .content, .page, .main-container {
 </main>
 
 <script>
-/* Filtro de busca */
-document.getElementById('searchInput').addEventListener('input', function(e) {
-    const term = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#tableBody tr');
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
-    });
-});
+function editarChip(id, numero, operadora, status, plano, inicio, val, datarec, gasto, aparelho) {
+    document.getElementById("id_chip").value = id;
+    document.getElementById("numero").value = numero;
+    document.getElementById("operadora").value = operadora;
+    document.getElementById("status").value = status;
+    document.getElementById("plano").value = plano;
+    document.getElementById("dt_inicio").value = inicio;
+    document.getElementById("ultima_recarga_valor").value = val;
+    document.getElementById("ultima_recarga_data").value = datarec;
+    document.getElementById("total_gasto").value = gasto;
+    document.getElementById("sk_aparelho_atual").value = aparelho;
+
+    document.getElementById("titulo-form").innerHTML = `<i class="fas fa-pen"></i> Editar Chip`;
+    document.getElementById("botao-salvar").innerHTML = `<i class="fas fa-save"></i> Salvar Alterações`;
+
+    window.scrollTo({ top: 80, behavior: "smooth" });
+}
 </script>
 
 {% endblock %}

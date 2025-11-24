@@ -1,86 +1,84 @@
-# app.py — Painel Chips (Flask + BigQuery)
 from flask import Flask, render_template, request, jsonify
-from utils.bigquery_client import (
-    listar_chips,
-    salvar_chip,
-    listar_aparelhos,
-    salvar_aparelho,
-    listar_recargas,
-    salvar_recarga,
-    dashboard_resumo
-)
+from utils.bigquery_client import BigQueryClient
 
 app = Flask(__name__)
+bq = BigQueryClient()
 
-# ============================
-# ROTAS DO PAINEL (HTML)
-# ============================
+# =======================
+# PÁGINAS
+# =======================
 
 @app.route("/")
-def home():
-    return render_template("dashboard.html")
+def dashboard():
+    resumo = bq.dashboard_data()
+    return render_template("dashboard.html", resumo=resumo)
 
 @app.route("/chips")
-def chips():
-    return render_template("chips.html")
+def chips_page():
+    chips = bq.get_chips()
+    return render_template("chips.html", chips=chips)
 
 @app.route("/aparelhos")
-def aparelhos():
-    return render_template("aparelhos.html")
+def aparelhos_page():
+    aparelhos = bq.get_aparelhos()
+    return render_template("aparelhos.html", aparelhos=aparelhos)
 
 @app.route("/recargas")
-def recargas():
-    return render_template("recargas.html")
-
-
-# ============================
-# ROTAS DA API
-# ============================
-
-# ------ CHIPS ------
-@app.route("/api/chips/listar")
-def api_listar_chips():
-    return jsonify(listar_chips())
-
-@app.route("/api/chips/salvar", methods=["POST"])
-def api_salvar_chip():
-    data = request.get_json()
-    salvar_chip(data)
-    return jsonify({"status": "ok"})
-
-
-# ------ APARELHOS ------
-@app.route("/api/aparelhos/listar")
-def api_listar_aparelhos():
-    return jsonify(listar_aparelhos())
-
-@app.route("/api/aparelhos/salvar", methods=["POST"])
-def api_salvar_aparelho():
-    data = request.get_json()
-    salvar_aparelho(data)
-    return jsonify({"status": "ok"})
-
-
-# ------ RECARGAS ------
-@app.route("/api/recargas/listar")
-def api_listar_recargas():
-    return jsonify(listar_recargas())
-
-@app.route("/api/recargas/salvar", methods=["POST"])
-def api_salvar_recarga():
-    data = request.get_json()
-    salvar_recarga(data)
-    return jsonify({"status": "ok"})
-
-
-# ------ DASHBOARD ------
-@app.route("/api/dashboard/resumo")
-def api_dashboard_resumo():
-    return jsonify(dashboard_resumo())
-
+def recargas_page():
+    chips = bq.get_chips()
+    return render_template("recargas.html", chips=chips)
 
 # ============================
-# MAIN
+# API – CHIPS
+# ============================
+
+@app.route("/api/chip/add", methods=["POST"])
+def api_add_chip():
+    bq.insert_chip(request.json)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/chip/update", methods=["POST"])
+def api_update_chip():
+    bq.update_chip(request.json)
+    return jsonify({"status": "ok"})
+
+# ============================
+# API – RECARGA (última recarga)
+# ============================
+
+@app.route("/api/chip/recarga", methods=["POST"])
+def api_update_recarga():
+    bq.update_recarga(request.json)
+    return jsonify({"status": "ok"})
+
+# ============================
+# API – APARELHOS
+# ============================
+
+@app.route("/api/aparelho/add", methods=["POST"])
+def api_add_aparelho():
+    bq.insert_aparelho(request.json)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/aparelho/update", methods=["POST"])
+def api_update_aparelho():
+    bq.update_aparelho(request.json)
+    return jsonify({"status": "ok"})
+
+# ============================
+# API – VÍNCULO CHIP/APARELHO
+# ============================
+
+@app.route("/api/vincular", methods=["POST"])
+def api_vincular():
+    bq.vincular_chip_aparelho(request.json)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/desvincular", methods=["POST"])
+def api_desvincular():
+    bq.desvincular_chip_aparelho(request.json)
+    return jsonify({"status": "ok"})
+
 # ============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

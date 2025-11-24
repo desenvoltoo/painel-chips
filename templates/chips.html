@@ -19,8 +19,21 @@
 
     <label>Status</label>
     <select name="status">
-        <option>ATIVO</option>
-        <option>BLOQUEADO</option>
+
+        <!-- Status completos (modelo operacional) -->
+        <option value="DISPONIVEL">DISPONÍVEL</option>
+        <option value="MATURANDO">MATURANDO</option>
+        <option value="MATURADO">MATURADO</option>
+        <option value="DESCANSO_1">DESCANSO 1</option>
+        <option value="DESCANSO_2">DESCANSO 2</option>
+        <option value="PRONTO_PARA_MATURAR">PRONTO PARA MATURAR</option>
+        <option value="DISPARANDO">DISPARANDO</option>
+        <option value="BANIDO">BANIDO</option>
+
+        <!-- Os antigos (caso queira manter) -->
+        <option value="ATIVO">ATIVO</option>
+        <option value="BLOQUEADO">BLOQUEADO</option>
+
     </select>
 
     <label>Data de Início</label>
@@ -35,11 +48,19 @@
     <label>Total Gasto</label>
     <input type="number" step="0.01" name="total_gasto">
 
-    <label>Aparelho Atual (SK)</label>
-    <input type="number" name="sk_aparelho_atual">
+    <!-- AGORA MOSTRA O NOME REAL DO APARELHO -->
+    <label>Aparelho Atual</label>
+    <select name="sk_aparelho_atual">
+        <option value="">Nenhum</option>
+        {% for a in aparelhos %}
+            <option value="{{ a.sk_aparelho }}">{{ a.nome_aparelho }}</option>
+        {% endfor %}
+    </select>
 
     <button type="submit">Salvar Chip</button>
 </form>
+
+
 
 <h2>Chips Cadastrados</h2>
 
@@ -53,6 +74,7 @@
         <th>Status</th>
         <th>Última Recarga</th>
         <th>Total Gasto</th>
+        <th>Aparelho Atual</th>
     </tr>
 </thead>
 <tbody>
@@ -65,10 +87,12 @@
     <td>{{ c.status }}</td>
     <td>{{ c.ultima_recarga_data }}</td>
     <td>{{ c.total_gasto }}</td>
+    <td>{{ c.aparelho_atual }}</td>
 </tr>
 {% endfor %}
 </tbody>
 </table>
+
 
 <script>
 document.querySelector("#form-chip").onsubmit = async e => {

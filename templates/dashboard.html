@@ -1,78 +1,37 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Dashboard Geral</h2>
-
-<div class="kpi-container">
-
-    <div class="kpi-card">
-        <h3>Total de Chips</h3>
-        <p>{{ kpis.total_chips }}</p>
-    </div>
-
-    <div class="kpi-card">
-        <h3>Chips Ativos</h3>
-        <p>{{ kpis.chips_ativos }}</p>
-    </div>
-
-    <div class="kpi-card">
-        <h3>Total de Aparelhos</h3>
-        <p>{{ kpis.total_aparelhos }}</p>
-    </div>
-
-    <div class="kpi-card">
-        <h3>Aparelhos Vinculados</h3>
-        <p>{{ kpis.aparelhos_vinculados }}</p>
-    </div>
-
-</div>
-
-<h2>Últimas Recargas</h2>
-
-<table class="tabela">
-    <thead>
-        <tr>
-            <th>Número</th>
-            <th>Operadora</th>
-            <th>Data</th>
-            <th>Valor</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for r in ultimas_recargas %}
-        <tr>
-            <td>{{ r.numero_chip }}</td>
-            <td>{{ r.operadora }}</td>
-            <td>{{ r.data_ultima_recarga }}</td>
-            <td>R$ {{ r.valor_ultima_recarga }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-
 <h2>Resumo Geral</h2>
 
+<div class="kpi-container">
+    <div class="kpi-card"><h3>Total de Chips</h3><p>{{ kpis.total_chips }}</p></div>
+    <div class="kpi-card"><h3>Total de Aparelhos</h3><p>{{ kpis.total_aparelhos }}</p></div>
+    <div class="kpi-card"><h3>Eventos Registrados</h3><p>{{ kpis.total_eventos }}</p></div>
+</div>
+
+<h2>Consolidação</h2>
+
 <table class="tabela">
-    <thead>
-        <tr>
-            <th>Chip</th>
-            <th>Operadora</th>
-            <th>Status</th>
-            <th>Aparelho</th>
-            <th>Vínculo</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for r in tabela %}
-        <tr>
-            <td>{{ r.numero_chip }}</td>
-            <td>{{ r.operadora }}</td>
-            <td>{{ r.status_chip }}</td>
-            <td>{{ r.nome_aparelho or "—" }}</td>
-            <td>{{ r.data_vinculo or "—" }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
+<thead>
+<tr>
+    <th>Chip</th>
+    <th>Operadora</th>
+    <th>Status</th>
+    <th>Aparelho</th>
+    <th>Evento</th>
+</tr>
+</thead>
+<tbody>
+{% for r in tabela %}
+<tr>
+    <td>{{ r.numero }}</td>
+    <td>{{ r.operadora }}</td>
+    <td>{{ r.status }}</td>
+    <td>{{ r.aparelho_modelo }}</td>
+    <td>{{ r.valor_evento }}</td>
+</tr>
+{% endfor %}
+</tbody>
 </table>
 
 {% endblock %}

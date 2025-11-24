@@ -1,9 +1,17 @@
 from google.cloud import bigquery
 import pandas as pd
 from datetime import datetime
+import uuid
 
 PROJECT = "painel-universidade"
 DATASET = "marts"
+
+
+def q(x: str):
+    """Escapa aspas simples para evitar quebra de SQL."""
+    if x is None:
+        return None
+    return x.replace("'", "''")
 
 
 class BigQueryClient:
@@ -15,7 +23,8 @@ class BigQueryClient:
     # ============================================================
     def _run(self, sql: str):
         try:
-            return self.client.query(sql).to_dataframe()
+            job = self.client.query(sql)
+            return job.to_dataframe()
         except Exception as e:
             print("\n🚨 ERRO NO SQL 🚨")
             print(sql)
@@ -23,7 +32,7 @@ class BigQueryClient:
             raise e
 
     # ============================================================
-    # VIEW PRINCIPAL
+    # VIEW PRINCIPAL — DASHBOARD
     # ============================================================
     def get_view(self):
         sql = f"""
@@ -53,11 +62,11 @@ class BigQueryClient:
         return self._run(sql)
 
     def upsert_aparelho(self, form):
-        id_aparelho = form.get("id_aparelho")
-        modelo = form.get("modelo")
-        marca = form.get("marca")
-        imei = form.get("imei")
-        status = form.get("status") or "ATIVO"
+        id_aparelho = q(form.get("id_aparelho"))
+        modelo = q(form.get("modelo"))
+        marca = q(form.get("marca"))
+        imei = q(form.get("imei"))
+        status = q(form.get("status") or "ATIVO")
 
         sql = f"""
         MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
@@ -73,15 +82,20 @@ class BigQueryClient:
             update_at = CURRENT_TIMESTAMP()
 
         WHEN NOT MATCHED THEN
-          INSERT (id_aparelho, modelo, marca, imei, status, ativo, create_at, update_at)
-          VALUES ('{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}', TRUE,
-                  CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
+          INSERT (
+            id_aparelho, modelo, marca, imei, status,
+            ativo, create_at, update_at
+          )
+          VALUES (
+            '{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}',
+            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+          );
         """
 
         self._run(sql)
 
     # ============================================================
-    # ========================= CHIPS =============================
+    # =========================== CHIPS ===========================
     # ============================================================
 
     def get_chips(self):
@@ -105,62 +119,70 @@ class BigQueryClient:
         return self._run(sql)
 
     def upsert_chip(self, form):
-        id_chip = form.get("id_chip")
-        numero = form.get("numero")
-        operadora = form.get("operadora")
-        plano = form.get("plano")
-        status = form.get("status")
 
-        dt_inicio = form.get("dt_inicio") or None
-        ultima_data = form.get("ultima_recarga_data") or None
+        # ============= ID CHIP =============
+        id_chip = form.get("id_chip")
+        if not id_chip or id_chip.strip() == "":
+            id_chip = str(uuid.uuid4())
+
+        id_chip = q(id_chip)
+
+        numero = q(form.get("numero"))
+        operadora = q(form.get("operadora"))
+        plano = q(form.get("plano"))
+        status = q(form.get("status"))
+
+        # ======== Datas ========
+        dt_inicio = form.get("dt_inicio")
+        dt_inicio_sql = f"DATE('{dt_inicio}')" if dt_inicio else "NULL"
+
+        ultima_data = form.get("ultima_recarga_data")
+        ultima_data_sql = f"DATE('{ultima_data}')" if ultima_data else "NULL"
+
+        # ======== Valores ========
         val_recarga = form.get("ultima_recarga_valor") or "0"
         total_gasto = form.get("total_gasto") or "0"
 
+        # ======== Aparelho ========
         sk_aparelho_atual = form.get("sk_aparelho_atual")
-        sk_aparelho_atual = sk_aparelho_atual if sk_aparelho_atual not in ["", None] else None
+        sk_aparelho_atual = sk_aparelho_atual if sk_aparelho_atual else None
+        aparelho_sql = sk_aparelho_atual if sk_aparelho_atual else "NULL"
 
         sql = f"""
         MERGE `{PROJECT}.{DATASET}.dim_chip` T
         USING (SELECT '{id_chip}' AS id_chip) S
         ON T.id_chip = S.id_chip
 
-        WHEN MATCHED THEN
-          UPDATE SET
+        WHEN MATCHED THEN UPDATE SET
             numero = '{numero}',
             operadora = '{operadora}',
             plano = '{plano}',
             status = '{status}',
-            dt_inicio = {f"DATE('{dt_inicio}')" if dt_inicio else "NULL"},
+            dt_inicio = {dt_inicio_sql},
             ultima_recarga_valor = {val_recarga},
-            ultima_recarga_data = {f"DATE('{ultima_data}')" if ultima_data else "NULL"},
+            ultima_recarga_data = {ultima_data_sql},
             total_gasto = {total_gasto},
-            sk_aparelho_atual = {sk_aparelho_atual if sk_aparelho_atual else "NULL"},
+            sk_aparelho_atual = {aparelho_sql},
             update_at = CURRENT_TIMESTAMP()
 
-        WHEN NOT MATCHED THEN
-          INSERT (
+        WHEN NOT MATCHED THEN INSERT (
             id_chip, numero, operadora, plano, status,
             dt_inicio, ultima_recarga_valor, ultima_recarga_data,
             total_gasto, sk_aparelho_atual,
             ativo, create_at, update_at
-          )
-          VALUES (
+        )
+        VALUES (
             '{id_chip}', '{numero}', '{operadora}', '{plano}', '{status}',
-            {f"DATE('{dt_inicio}')" if dt_inicio else "NULL"},
-            {val_recarga},
-            {f"DATE('{ultima_data}')" if ultima_data else "NULL"},
-            {total_gasto},
-            {sk_aparelho_atual if sk_aparelho_atual else "NULL"},
-            TRUE,
-            CURRENT_TIMESTAMP(),
-            CURRENT_TIMESTAMP()
-          );
+            {dt_inicio_sql}, {val_recarga}, {ultima_data_sql},
+            {total_gasto}, {aparelho_sql},
+            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+        );
         """
 
         self._run(sql)
 
     # ============================================================
-    # ================== FATO DE MOVIMENTAÇÃO =====================
+    # ======================= MOVIMENTAÇÃO ========================
     # ============================================================
 
     def get_eventos(self):
@@ -175,9 +197,9 @@ class BigQueryClient:
         sk_chip = form.get("sk_chip")
         sk_aparelho = form.get("sk_aparelho")
         data_uso = form.get("data_uso")
-        tipo = form.get("tipo_movimento")
-        origem = form.get("origem") or None
-        obs = form.get("observacao") or None
+        tipo = q(form.get("tipo_movimento"))
+        origem = q(form.get("origem"))
+        obs = q(form.get("observacao"))
 
         sql = f"""
         INSERT INTO `{PROJECT}.{DATASET}.f_chip_aparelho`

@@ -1,9 +1,25 @@
+# ---------------------------
+# Core do Flask
+# ---------------------------
 Flask==3.0.3
-google-cloud-bigquery==3.18.0
+
+# ---------------------------
+# BigQuery + Auth + Storage
+# ---------------------------
+google-cloud-bigquery==3.25.0
 google-cloud-core==2.4.1
+google-auth==2.36.0
+google-cloud-storage==2.18.2
+
+# ---------------------------
+# Pandas + db-dtypes (OBRIGATÓRIOS)
+# ---------------------------
 pandas==2.2.2
-gunicorn==22.0.0
-db-dtypes
-pandas
-google-cloud-bigquery
-flask
+db-dtypes==1.2.0
+
+# ---------------------------
+# Outros utilitários
+# ---------------------------
+python-dateutil==2.9.0
+requests==2.32.3
+gunicorn==22.0.0   # Recomendado para produção no Cloud Run

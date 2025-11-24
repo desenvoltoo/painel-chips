@@ -1,67 +1,84 @@
 {% extends "base.html" %}
-{% block conteudo %}
+{% block title %}Aparelhos{% endblock %}
 
-<h2>Cadastrar Aparelho</h2>
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-mobile-alt"></i> Aparelhos</h1>
+</div>
 
-<form id="form-aparelho" class="form-box">
+<div class="card form-card">
+    <h2 class="card-title"><i class="fas fa-plus-circle"></i> Novo Aparelho</h2>
 
-    <label>ID Interno</label>
-    <input name="id_aparelho">
+    <form action="/aparelhos/add" method="POST" class="form-grid">
+        <div class="form-group">
+            <label>ID Aparelho</label>
+            <input type="text" name="id_aparelho" required>
+        </div>
 
-    <label>Modelo</label>
-    <input name="modelo" required>
+        <div class="form-group">
+            <label>Modelo</label>
+            <input type="text" name="modelo" required>
+        </div>
 
-    <label>Marca</label>
-    <input name="marca">
+        <div class="form-group">
+            <label>Marca</label>
+            <input type="text" name="marca" required>
+        </div>
 
-    <label>IMEI</label>
-    <input name="imei">
+        <div class="form-group">
+            <label>IMEI</label>
+            <input type="text" name="imei">
+        </div>
 
-    <label>Status</label>
-    <select name="status">
-        <option value="ATIVO">ATIVO</option>
-        <option value="INATIVO">INATIVO</option>
-        <option value="RESTRITO">RESTRITO</option>
-    </select>
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="ATIVO">ATIVO</option>
+                <option value="MANUTENCAO">MANUTENÇÃO</option>
+                <option value="QUEBRADO">QUEBRADO</option>
+                <option value="BAIXADO">BAIXADO</option>
+            </select>
+        </div>
 
-    <button type="submit">Salvar Aparelho</button>
-</form>
+        <button class="btn-primary" type="submit">Salvar</button>
+    </form>
+</div>
 
-<h2>Aparelhos Cadastrados</h2>
+<div class="card table-card">
+    <h2 class="card-title"><i class="fas fa-list"></i> Aparelhos Cadastrados</h2>
 
-<table>
-    <thead>
-        <tr>
-            <th>SK</th>
-            <th>ID Interno</th>
-            <th>Modelo</th>
-            <th>Marca</th>
-            <th>IMEI</th>
-            <th>Status</th>
-        </tr>
-    </thead>
+    <table id="tabela-aparelhos" class="display compact stripe">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Modelo</th>
+                <th>Marca</th>
+                <th>IMEI</th>
+                <th>Status</th>
+            </tr>
+        </thead>
 
-    <tbody>
-        {% for a in aparelhos %}
-        <tr>
-            <td>{{ a.sk_aparelho }}</td>
-            <td>{{ a.id_aparelho }}</td>
-            <td>{{ a.modelo }}</td>
-            <td>{{ a.marca }}</td>
-            <td>{{ a.imei }}</td>
-            <td>{{ a.status }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <tbody>
+            {% for a in aparelhos %}
+            <tr>
+                <td>{{ a.id_aparelho }}</td>
+                <td>{{ a.modelo }}</td>
+                <td>{{ a.marca }}</td>
+                <td>{{ a.imei }}</td>
+                <td>{{ a.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 <script>
-document.querySelector("#form-aparelho").onsubmit = async e => {
-    e.preventDefault();
-    let data = Object.fromEntries(new FormData(e.target));
-    await fetch("/aparelhos/add", { method:"POST", body:new URLSearchParams(data) });
-    location.reload();
-};
+$(document).ready(function () {
+    $('#tabela-aparelhos').DataTable({
+        pageLength: 25,
+        responsive: true
+    });
+});
 </script>
 
 {% endblock %}

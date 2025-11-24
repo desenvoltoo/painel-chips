@@ -9,8 +9,8 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: #0f0f0f !important;
-    color: #e2e8f0 !important;
+    background: #0d1117 !important;
+    color: #ffffff !important;
     line-height: 1.6;
 }
 
@@ -24,7 +24,7 @@ body {
    HEADER
 =============================================== */
 .header {
-    background: #111827;
+    background: #0a0f1c;
     border-bottom: 1px solid #1e3a8a;
     padding-bottom: 0.5rem;
 }
@@ -63,24 +63,24 @@ body {
    CARD
 =============================================== */
 .card {
-    background: #1e293b !important;
+    background: #111827 !important;
     border-radius: 1rem;
-    border: 1px solid #334155;
+    border: 1px solid #1e3a8a !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
 .card-header {
-    background: #111827;
+    background: #0a0f1c;
     padding: 1.5rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #1e3a8a;
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
 .card-icon {
-    background: rgba(37, 99, 235, 0.25);
-    padding: 0.5rem;
+    background: rgba(37, 99, 235, 0.3);
+    padding: 0.55rem;
     border-radius: 0.5rem;
 }
 
@@ -90,9 +90,9 @@ body {
 }
 
 .card-title {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     font-weight: 600;
-    color: #f1f5f9;
+    color: #ffffff;
 }
 
 .card-content {
@@ -108,18 +108,23 @@ body {
     gap: 1rem;
 }
 
+/* Força texto branco */
 .form-group label {
-    font-size: 0.875rem;
-    color: #cbd5e1;
+    font-size: 0.9rem;
+    color: #ffffff !important;
 }
 
 .form-group input,
 .form-group select {
-    padding: 0.625rem 0.75rem;
-    background: #0f172a;
-    border: 1px solid #334155;
+    padding: 0.75rem;
+    background: #0f172a !important;
+    border: 1px solid #334155 !important;
     border-radius: 0.5rem;
-    color: #e2e8f0;
+    color: #ffffff !important;
+}
+
+.form-group input::placeholder {
+    color: #cbd5e1 !important;
 }
 
 .form-group input:focus,
@@ -133,19 +138,34 @@ body {
    BUTTONS
 =============================================== */
 .btn-primary {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
     color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 0.6rem;
     border: none;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
+    width: 100%;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+/* Botão editar */
+.btn-edit {
+    background: #1e3a8a;
+    color: #93c5fd;
+    padding: 0.5rem 0.7rem;
+    border-radius: 0.5rem;
+    transition: 0.2s;
+    cursor: pointer;
+}
+.btn-edit:hover {
+    background: #3b82f6;
+    color: white;
 }
 
 /* ============================================
@@ -158,23 +178,24 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
-    color: #e2e8f0;
+    color: #ffffff !important;
 }
 
 thead {
-    background: #111827;
+    background: #0a0f1c;
 }
 
 th {
     padding: 0.75rem;
-    text-align: left;
-    color: #93c5fd;
+    color: #60a5fa;
     border-bottom: 1px solid #1e3a8a;
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
 td {
     padding: 0.75rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid #1e293b;
 }
 
 tbody tr:hover {
@@ -201,11 +222,18 @@ tbody tr:hover {
 .status-disparando { background:#312e81; color:#c7d2fe; }
 .status-banido { background:#7f1d1d; color:#fecaca; }
 .status-restringido { background:#9a3412; color:#fed7aa; }
-.status-ativo { background:#064e3b; color:#a7f3d0; }
+.status-ativo { background:#047857; color:#a7f3d0; }
 .status-bloqueado { background:#7f1d1d; color:#fee2e2; }
 
-/* Default */
 .status-default {
     background:#1e293b;
     color:#e2e8f0;
+}
+
+/* ============================================
+   AJUSTE EXCLUSIVO DA PÁGINA DE CHIPS
+=============================================== */
+.chips-page,
+.chips-page * {
+    color: #ffffff !important;
 }

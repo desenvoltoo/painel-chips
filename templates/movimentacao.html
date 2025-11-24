@@ -1,59 +1,80 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Movimentações</h2>
+<h2>Registrar Movimentação</h2>
 
-<form method="POST" action="/movimentacao/add" class="form-box">
+<form id="form-mov" class="form-box">
 
     <label>Chip (SK)</label>
-    <input name="sk_chip" required>
+    <select name="sk_chip" required>
+        {% for c in chips %}
+            <option value="{{ c.sk_chip }}">{{ c.numero }} ({{ c.operadora }})</option>
+        {% endfor %}
+    </select>
 
     <label>Aparelho (SK)</label>
-    <input name="sk_aparelho" required>
+    <select name="sk_aparelho" required>
+        {% for a in aparelhos %}
+            <option value="{{ a.sk_aparelho }}">{{ a.modelo }} - {{ a.marca }}</option>
+        {% endfor %}
+    </select>
 
-    <label>Data Uso</label>
-    <input type="date" name="data_uso">
+    <label>Data de Uso</label>
+    <input type="date" name="data_uso" required>
 
     <label>Tipo Movimento</label>
-    <input name="tipo_movimento">
+    <select name="tipo_movimento">
+        <option value="VINCULO">VÍNCULO</option>
+        <option value="DESVINCULO">DESVÍNCULO</option>
+        <option value="TROCA">TROCA</option>
+    </select>
 
     <label>Origem</label>
     <input name="origem">
 
     <label>Observação</label>
-    <textarea name="observacao"></textarea>
+    <input name="observacao">
 
-    <button>Salvar</button>
+    <button type="submit">Salvar Movimentação</button>
 </form>
 
+<h2>Movimentações Registradas</h2>
 
-<h2>Eventos Registrados</h2>
+<table>
+    <thead>
+        <tr>
+            <th>SK Fato</th>
+            <th>SK Chip</th>
+            <th>SK Aparelho</th>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Origem</th>
+            <th>Obs</th>
+        </tr>
+    </thead>
 
-<table class="tabela">
-<thead>
-<tr>
-    <th>Fato</th>
-    <th>Chip</th>
-    <th>Aparelho</th>
-    <th>Data</th>
-    <th>Tipo</th>
-    <th>Origem</th>
-    <th>Obs</th>
-</tr>
-</thead>
-<tbody>
-{% for e in eventos %}
-<tr>
-    <td>{{ e.sk_fato }}</td>
-    <td>{{ e.sk_chip }}</td>
-    <td>{{ e.sk_aparelho }}</td>
-    <td>{{ e.data_uso }}</td>
-    <td>{{ e.tipo_movimento }}</td>
-    <td>{{ e.origem }}</td>
-    <td>{{ e.observacao }}</td>
-</tr>
-{% endfor %}
-</tbody>
+    <tbody>
+        {% for m in eventos %}
+        <tr>
+            <td>{{ m.sk_fato }}</td>
+            <td>{{ m.sk_chip }}</td>
+            <td>{{ m.sk_aparelho }}</td>
+            <td>{{ m.data_uso }}</td>
+            <td>{{ m.tipo_movimento }}</td>
+            <td>{{ m.origem }}</td>
+            <td>{{ m.observacao }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+
+<script>
+document.querySelector("#form-mov").onsubmit = async e => {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(e.target));
+    await fetch("/movimentacao/add", { method:"POST", body:new URLSearchParams(data) });
+    location.reload();
+};
+</script>
 
 {% endblock %}

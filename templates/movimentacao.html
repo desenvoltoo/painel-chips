@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block conteudo %}
+
+<h2>Movimentação de Chips</h2>
+
+<p class="subinfo">
+    Aqui você acompanha o histórico de vínculos entre chips e aparelhos,
+    incluindo entradas, saídas e trocas de dispositivos.
+</p>
+
+<table class="tabela">
+<thead>
+    <tr>
+        <th>ID Chip</th>
+        <th>Número</th>
+        <th>Operadora</th>
+        <th>Status Chip</th>
+
+        <th>Aparelho</th>
+        <th>Modelo</th>
+        <th>IMEI</th>
+
+        <th>Data de Vínculo</th>
+        <th>Data de Desvínculo</th>
+    </tr>
+</thead>
+
+<tbody>
+{% for m in dados %}
+<tr>
+    <td>{{ m.sk_chip }}</td>
+    <td>{{ m.numero }}</td>
+    <td>{{ m.operadora }}</td>
+    <td>{{ m.status }}</td>
+
+    <td>{{ m.nome_aparelho }}</td>
+    <td>{{ m.modelo }}</td>
+    <td>{{ m.imei }}</td>
+
+    <td>{{ m.data_vinculo }}</td>
+    <td>{{ m.data_desvinculo }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

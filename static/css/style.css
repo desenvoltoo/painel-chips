@@ -1,1 +1,183 @@
-body{background:#f1f1f1;font-family:Arial;} .container{margin:30px;}
+/* ===========================
+   BASE GLOBAL
+=========================== */
+
+body {
+    font-family: "Inter", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f4f6f9;
+    color: #333;
+}
+
+h1, h2, h3 {
+    font-weight: 600;
+    color: #222;
+}
+
+a {
+    text-decoration: none;
+    color: #0077cc;
+}
+
+main {
+    padding: 30px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+/* ===========================
+   HEADER
+=========================== */
+
+header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    font-size: 22px;
+}
+
+nav a {
+    margin: 0 15px;
+    font-size: 16px;
+    color: #555;
+    padding-bottom: 5px;
+    border-bottom: 2px solid transparent;
+}
+
+nav a:hover {
+    color: #000;
+    border-bottom: 2px solid #0077cc;
+}
+
+/* ===========================
+   FORMULÁRIOS
+=========================== */
+
+.form-box {
+    background: #fff;
+    padding: 20px;
+    margin: 20px 0 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-box label {
+    font-weight: 500;
+}
+
+.form-box input,
+.form-box select {
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.form-box button {
+    grid-column: span 2;
+    padding: 14px;
+    background: #0077cc;
+    border: none;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 17px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.form-box button:hover {
+    background: #005da3;
+}
+
+/* ===========================
+   TABELAS
+=========================== */
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 40px;
+}
+
+.tabela thead {
+    background: #0077cc;
+    color: #fff;
+}
+
+.tabela th,
+.tabela td {
+    padding: 14px;
+    font-size: 15px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.tabela tr:hover {
+    background: #f0f7ff;
+}
+
+/* ===========================
+   KPI CARDS
+=========================== */
+
+.kpi-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 40px;
+}
+
+.kpi-card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+}
+
+.kpi-card h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #444;
+}
+
+.kpi-card p {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0077cc;
+}
+
+/* ===========================
+   BOTÕES UTILITÁRIOS
+=========================== */
+
+button {
+    cursor: pointer;
+}
+
+.btn-danger {
+    padding: 8px 16px;
+    background: #e63946;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+}
+
+.btn-danger:hover {
+    background: #c92230;
+}

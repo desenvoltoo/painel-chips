@@ -12,7 +12,7 @@
     <link rel="stylesheet"
           href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
-    <!-- CSS GLOBAL DARK PREMIUM -->
+    <!-- CSS GERAL (Dark Premium) -->
     <link rel="stylesheet" href="/static/css/style.css">
 
     <!-- JS -->
@@ -20,10 +20,7 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
-        /* ============================================================
-           AJUSTES QUE NÃO QUEBRAM SEU DARK PREMIUM
-        ============================================================ */
-
+        /* Ajustes simples que NÃO quebram o estilo do style.css */
         body {
             margin: 0;
             font-family: "Inter", sans-serif;
@@ -31,7 +28,6 @@
             color: #e2e8f0 !important;
         }
 
-        /* Conteúdo com margem para SIDEBAR */
         .content {
             margin-left: 260px;
             padding: 35px;
@@ -39,9 +35,7 @@
             color: #e2e8f0 !important;
         }
 
-        /* Corrige textos */
-        h1, h2, h3, h4, h5,
-        p, span, td, th, label, a {
+        h1, h2, h3, p, span, td, th, label {
             color: #e2e8f0 !important;
         }
     </style>
@@ -49,9 +43,7 @@
 
 <body>
 
-<!-- ============================================================
-     SIDEBAR — FIXA E FUNCIONAL
-============================================================ -->
+<!-- SIDEBAR -->
 <div class="sidebar">
     <h2 class="side-title">Painel Chips</h2>
 
@@ -61,9 +53,7 @@
     <a href="/movimentacao"><i class="fas fa-random"></i> Movimentação</a>
 </div>
 
-<!-- ============================================================
-     CONTEÚDO DINÂMICO
-============================================================ -->
+<!-- CONTEÚDO -->
 <div class="content">
     {% block content %}
     {% endblock %}

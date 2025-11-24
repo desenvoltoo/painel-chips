@@ -62,12 +62,26 @@ class BigQueryClient:
         return self._run(sql)
 
     def upsert_aparelho(self, form):
+
         id_aparelho = q(form.get("id_aparelho"))
         modelo = q(form.get("modelo"))
         marca = q(form.get("marca"))
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
+        # =====================================================
+        # 1. BUSCAR PRÓXIMO SK DISPONÍVEL (caso seja INSERT)
+        # =====================================================
+        sql_next_sk = f"""
+            SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
+            FROM `{PROJECT}.{DATASET}.dim_aparelho`;
+        """
+        df = self._run(sql_next_sk)
+        next_sk = int(df.iloc[0]["next_sk"])
+
+        # =====================================================
+        # 2. MERGE — agora inclui sk_aparelho no INSERT
+        # =====================================================
         sql = f"""
         MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
         USING (SELECT '{id_aparelho}' AS id_aparelho) S
@@ -83,12 +97,26 @@ class BigQueryClient:
 
         WHEN NOT MATCHED THEN
           INSERT (
-            id_aparelho, modelo, marca, imei, status,
-            ativo, create_at, update_at
+            sk_aparelho,
+            id_aparelho,
+            modelo,
+            marca,
+            imei,
+            status,
+            ativo,
+            create_at,
+            update_at
           )
           VALUES (
-            '{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}',
-            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+            {next_sk},
+            '{id_aparelho}',
+            '{modelo}',
+            '{marca}',
+            '{imei}',
+            '{status}',
+            TRUE,
+            CURRENT_TIMESTAMP(),
+            CURRENT_TIMESTAMP()
           );
         """
 

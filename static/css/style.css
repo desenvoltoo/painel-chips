@@ -1,176 +1,137 @@
-/* ============================================ 
-   RESET E BASE DARK PREMIUM
-=============================================== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* ============================================================
+   ESTILO EXCLUSIVO PARA A PÁGINA DE CHIPS
+=============================================================== */
 
-body {
-    font-family: 'Inter', sans-serif;
-    background: #0d1117 !important;
+.chips-page * {
     color: #ffffff !important;
-    line-height: 1.6;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-}
-
-/* ============================================
-   HEADER
-=============================================== */
+/* ============================ 
+   HEADER INTERNO 
+=============================== */
 .header {
     background: #0a0f1c;
     border-bottom: 1px solid #1e3a8a;
-    padding-bottom: 0.5rem;
+    padding: 1.5rem 1rem;
 }
 
 .header-content {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1.5rem 0;
 }
 
-.icon-wrapper {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+.header-content .title {
+    color: #fff;
+    font-size: 1.9rem;
+    margin: 0;
 }
 
-.icon-wrapper i {
-    color: white;
-    font-size: 1.75rem;
+.header-content .subtitle {
+    color: #a5b4fc;
+    margin-top: 5px;
 }
 
-.header-text .title {
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.header-text .subtitle {
-    font-size: 0.875rem;
-    color: #94a3b8;
-}
-
-/* ============================================
-   CARD
-=============================================== */
+/* ============================ 
+   CARD PRINCIPAL 
+=============================== */
 .card {
     background: #111827 !important;
-    border-radius: 1rem;
     border: 1px solid #1e3a8a !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    border-radius: 1rem;
+    margin-bottom: 2rem;
 }
 
 .card-header {
     background: #0a0f1c;
-    padding: 1.5rem;
     border-bottom: 1px solid #1e3a8a;
+    padding: 1.2rem 1.5rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-}
-
-.card-icon {
-    background: rgba(37, 99, 235, 0.3);
-    padding: 0.55rem;
-    border-radius: 0.5rem;
-}
-
-.card-icon i {
-    color: #60a5fa;
-    font-size: 1.25rem;
+    gap: 0.8rem;
 }
 
 .card-title {
+    color: white;
     font-size: 1.35rem;
     font-weight: 600;
-    color: #ffffff;
 }
 
-.card-content {
-    padding: 1.5rem;
-}
-
-/* ============================================
-   FORM
-=============================================== */
+/* ============================ 
+   FORMULÁRIO
+=============================== */
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 1rem;
 }
 
-/* Força texto branco */
 .form-group label {
-    font-size: 0.9rem;
     color: #ffffff !important;
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: block;
 }
 
 .form-group input,
 .form-group select {
     padding: 0.75rem;
     background: #0f172a !important;
-    border: 1px solid #334155 !important;
-    border-radius: 0.5rem;
     color: #ffffff !important;
+    border: 1px solid #334155 !important;
+    border-radius: 0.55rem;
+    font-size: 1rem;
 }
 
 .form-group input::placeholder {
-    color: #cbd5e1 !important;
+    color: #94a3b8 !important;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-    border-color: #3b82f6;
+    border-color: #3b82f6 !important;
     box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
     outline: none;
 }
 
-/* ============================================
-   BUTTONS
-=============================================== */
+/* Botão principal */
 .btn-primary {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-    color: white;
-    padding: 0.85rem 1.5rem;
+    background: linear-gradient(135deg, #2563eb, #1e40af) !important;
+    color: #ffffff !important;
+    padding: 0.85rem;
     border-radius: 0.6rem;
     border: none;
     font-weight: 600;
     cursor: pointer;
+    margin-top: 0.5rem;
     transition: 0.2s;
-    width: 100%;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
-/* Botão editar */
+/* ============================ 
+   BOTÃO EDITAR
+=============================== */
 .btn-edit {
-    background: #1e3a8a;
-    color: #93c5fd;
-    padding: 0.5rem 0.7rem;
+    background: #1e3a8a !important;
+    color: #93c5fd !important;
+    padding: 0.5rem 0.6rem;
     border-radius: 0.5rem;
-    transition: 0.2s;
     cursor: pointer;
-}
-.btn-edit:hover {
-    background: #3b82f6;
-    color: white;
+    transition: 0.2s;
 }
 
-/* ============================================
-   TABLE DARK
-=============================================== */
+.btn-edit:hover {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+/* ============================ 
+   TABELA
+=============================== */
 .table-wrapper {
     overflow-x: auto;
 }
@@ -178,62 +139,58 @@ body {
 table {
     width: 100%;
     border-collapse: collapse;
-    color: #ffffff !important;
+    color: white !important;
 }
 
 thead {
-    background: #0a0f1c;
+    background: #0a0f1c !important;
 }
 
-th {
-    padding: 0.75rem;
-    color: #60a5fa;
-    border-bottom: 1px solid #1e3a8a;
-    font-weight: 600;
+thead th {
+    padding: 1rem;
+    color: #60a5fa !important;
+    border-bottom: 1px solid #1e3a8a !important;
     font-size: 0.9rem;
 }
 
-td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #1e293b;
+tbody tr {
+    background: #111827 !important;
+    transition: 0.2s;
 }
 
 tbody tr:hover {
-    background: #0f172a;
+    background: #1e293b !important;
 }
 
-/* ============================================
-   STATUS BADGES
-=============================================== */
+tbody td {
+    padding: 0.85rem;
+    border-bottom: 1px solid #1f2a3c !important;
+    color: #ffffff !important;
+}
+
+/* ============================ 
+   BADGES DE STATUS
+=============================== */
 .status-badge {
-    padding: 0.25rem 0.75rem;
+    padding: 0.3rem 0.75rem;
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    display: inline-block;
 }
 
-.status-disponivel { background:#064e3b; color:#a7f3d0; }
+.status-disponivel { background:#065f46; color:#d1fae5; }
 .status-maturando { background:#78350f; color:#fde68a; }
 .status-maturado { background:#1e3a8a; color:#bfdbfe; }
-.status-descanso_1 { background:#5b21b6; color:#e9d5ff; }
-.status-descanso_2 { background:#5b21b6; color:#e9d5ff; }
-.status-pronto_para_maturar { background:#115e59; color:#99f6e4; }
+.status-descanso_1 { background:#6d28d9; color:#e9d5ff; }
+.status-descanso_2 { background:#6d28d9; color:#e9d5ff; }
+.status-pronto_para_maturar { background:#0f766e; color:#99f6e4; }
 .status-disparando { background:#312e81; color:#c7d2fe; }
 .status-banido { background:#7f1d1d; color:#fecaca; }
 .status-restringido { background:#9a3412; color:#fed7aa; }
-.status-ativo { background:#047857; color:#a7f3d0; }
+.status-ativo { background:#047857; color:#d1fae5; }
 .status-bloqueado { background:#7f1d1d; color:#fee2e2; }
 
 .status-default {
-    background:#1e293b;
-    color:#e2e8f0;
-}
-
-/* ============================================
-   AJUSTE EXCLUSIVO DA PÁGINA DE CHIPS
-=============================================== */
-.chips-page,
-.chips-page * {
-    color: #ffffff !important;
+    background: #1e293b;
+    color: #e2e8f0;
 }

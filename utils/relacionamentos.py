@@ -1,10 +1,32 @@
-from utils.bigquery_client import (
-    vincular_chip_aparelho,
-    desvincular_chip
-)
+from google.cloud import bigquery
+import datetime
 
-def vincular(sk_chip, sk_aparelho, data, origem="painel", obs=""):
-    return vincular_chip_aparelho(sk_chip, sk_aparelho, data, origem, obs)
+PROJECT = "painel-universidade"
+DATASET = "marts"
+TABLE = f"{PROJECT}.{DATASET}.f_chip_aparelho"
 
-def desvincular(sk_chip, data, origem="painel", obs=""):
-    return desvincular_chip(sk_chip, data, origem, obs)
+client = bigquery.Client()
+
+def listar_relacionamentos():
+    sql = f"""
+    SELECT *
+    FROM `{TABLE}`
+    ORDER BY data_vinculo DESC
+    """
+    return list(client.query(sql).result())
+
+def vincular_chip(sk_chip, sk_aparelho):
+    rows = [{
+        "sk_chip": int(sk_chip),
+        "sk_aparelho": int(sk_aparelho),
+        "data_vinculo": datetime.datetime.utcnow().isoformat()
+    }]
+    client.insert_rows_json(TABLE, rows)
+
+def desvincular_chip(id_rel):
+    sql = f"""
+    UPDATE `{TABLE}`
+    SET data_desvinculo = CURRENT_TIMESTAMP()
+    WHERE id = {id_rel}
+    """
+    client.query(sql).result()

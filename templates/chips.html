@@ -1,205 +1,282 @@
-{% extends "base.html" %}
-{% block title %}Gestão de Chips{% endblock %}
-
-{% block content %}
-
-<div class="chips-page">
-
-    <!-- HEADER -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Chips</title>
+    <link rel="stylesheet" href="chip.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
     <header class="chip-header">
-        <div class="chip-header-content">
-            <i class="fas fa-sim-card header-icon"></i>
-            <div>
-                <h1 class="chip-title">Gestão de Chips</h1>
-                <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
+        <div class="container">
+            <div class="chip-header-content">
+                <div class="icon-wrapper">
+                    <i class="fas fa-sim-card"></i>
+                </div>
+                <div class="header-text">
+                    <h1 class="chip-title">Gestão de Chips</h1>
+                    <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="chip-container">
-
-        <!-- FORM -->
+    <!-- Main Content -->
+    <main class="container chip-container">
+        <!-- Form Card -->
         <section class="chip-card">
             <div class="chip-card-header">
-                <i class="fas fa-plus card-icon"></i>
-                <h2 id="titulo-form">Novo Chip</h2>
+                <div class="card-icon">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <h2 class="card-title">Novo Chip</h2>
             </div>
+            <div class="card-content">
+                <form id="chipForm" class="chip-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="id_chip">ID do Chip *</label>
+                            <input type="text" id="id_chip" name="id_chip" placeholder="Ex: CHIP-001" required>
+                        </div>
 
-            <form action="/chips/add" method="POST" class="chip-form">
+                        <div class="form-group">
+                            <label for="numero">Número *</label>
+                            <input type="text" id="numero" name="numero" placeholder="5511999999999" required>
+                        </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID do Chip *</label>
-                        <input placeholder="Ex: CHIP-001" type="text" name="id_chip" id="id_chip" required>
+                        <div class="form-group">
+                            <label for="operadora">Operadora</label>
+                            <select id="operadora" name="operadora">
+                                <option value="VIVO">VIVO</option>
+                                <option value="TIM">TIM</option>
+                                <option value="CLARO">CLARO</option>
+                                <option value="OI">OI</option>
+                                <option value="OUTRA">OUTRA</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="status">Status</label>
+                            <select id="status" name="status">
+                                <option value="DISPONIVEL">DISPONÍVEL</option>
+                                <option value="MATURANDO">MATURANDO</option>
+                                <option value="MATURADO">MATURADO</option>
+                                <option value="DESCANSO_1">DESCANSO 1</option>
+                                <option value="DESCANSO_2">DESCANSO 2</option>
+                                <option value="PRONTO_PARA_MATURAR">PRONTO PARA MATURAR</option>
+                                <option value="DISPARANDO">DISPARANDO</option>
+                                <option value="BANIDO">BANIDO</option>
+                                <option value="RESTRINGIDO">RESTRINGIDO</option>
+                                <option value="ATIVO">ATIVO</option>
+                                <option value="BLOQUEADO">BLOQUEADO</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Número *</label>
-                        <input placeholder="5511999999999" type="text" name="numero" id="numero" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="plano">Plano</label>
+                            <input type="text" id="plano" name="plano" placeholder="Ex: Controle 50GB">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dt_inicio">Data de Início</label>
+                            <input type="date" id="dt_inicio" name="dt_inicio">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ultima_recarga_valor">Valor Última Recarga (R$)</label>
+                            <input type="number" id="ultima_recarga_valor" name="ultima_recarga_valor" step="0.01" placeholder="0.00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ultima_recarga_data">Data Última Recarga</label>
+                            <input type="date" id="ultima_recarga_data" name="ultima_recarga_data">
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Operadora</label>
-                        <select name="operadora" id="operadora">
-                            <option value="VIVO">VIVO</option>
-                            <option value="TIM">TIM</option>
-                            <option value="CLARO">CLARO</option>
-                            <option value="OI">OI</option>
-                            <option value="OUTRA">OUTRA</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="total_gasto">Total Gasto (R$)</label>
+                            <input type="number" id="total_gasto" name="total_gasto" step="0.01" placeholder="0.00">
+                        </div>
+
+                        <div class="form-group full">
+                            <label for="sk_aparelho_atual">Aparelho Vinculado</label>
+                            <select id="sk_aparelho_atual" name="sk_aparelho_atual">
+                                <option value="">— Nenhum —</option>
+                                <option value="samsung_s21">Samsung Galaxy S21</option>
+                                <option value="samsung_s22">Samsung Galaxy S22</option>
+                                <option value="iphone_13">iPhone 13</option>
+                                <option value="iphone_14">iPhone 14</option>
+                                <option value="xiaomi_note_11">Xiaomi Redmi Note 11</option>
+                                <option value="motorola_g100">Motorola Moto G100</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="status" id="status">
-                            {% for st in [
-                                'DISPONIVEL','MATURANDO','MATURADO','DESCANSO_1','DESCANSO_2',
-                                'PRONTO_PARA_MATURAR','DISPARANDO','BANIDO','RESTRINGIDO','ATIVO','BLOQUEADO'
-                            ] %}
-                            <option value="{{ st }}">{{ st.replace('_',' ') }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Plano</label>
-                        <input placeholder="Ex: Controle 30GB" type="text" name="plano" id="plano">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Início</label>
-                        <input type="date" name="dt_inicio" id="dt_inicio">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Valor Últ. Recarga</label>
-                        <input placeholder="0.00" type="number" step="0.01" name="ultima_recarga_valor" id="ultima_recarga_valor">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Últ. Recarga</label>
-                        <input type="date" name="ultima_recarga_data" id="ultima_recarga_data">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Total Gasto</label>
-                        <input placeholder="0.00" type="number" step="0.01" name="total_gasto" id="total_gasto">
-                    </div>
-
-                    <div class="form-group full">
-                        <label>Aparelho Vinculado</label>
-                        <select name="sk_aparelho_atual" id="sk_aparelho_atual">
-                            <option value="">— Nenhum —</option>
-                            {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}">
-                                    {{ ap.modelo }} ({{ ap.marca }})
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit" id="botao-salvar" class="chip-btn">
-                    <i class="fas fa-plus"></i> Cadastrar Chip
-                </button>
-
-            </form>
-        </section>
-
-        <!-- LISTA -->
-        <section class="chip-card">
-            <div class="chip-card-header">
-                <i class="fas fa-list card-icon"></i>
-                <h2>Chips Cadastrados</h2>
-            </div>
-
-            <div class="chip-table-wrapper">
-                <table class="chip-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Número</th>
-                            <th>Operadora</th>
-                            <th>Status</th>
-                            <th>Plano</th>
-                            <th>Últ. Recarga</th>
-                            <th>Valor</th>
-                            <th>Total Gasto</th>
-                            <th>Aparelho</th>
-                            <th>Início</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for c in chips %}
-                        <tr>
-                            <td>{{ c.id_chip }}</td>
-                            <td>{{ c.numero }}</td>
-                            <td>{{ c.operadora }}</td>
-                            <td><span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span></td>
-                            <td>{{ c.plano }}</td>
-                            <td>{{ c.ultima_recarga_data }}</td>
-                            <td>{{ c.ultima_recarga_valor }}</td>
-                            <td>{{ c.total_gasto }}</td>
-                            <td>{{ c.aparelho_nome or "-" }}</td>
-                            <td>{{ c.dt_inicio }}</td>
-
-                            <td>
-                                <button class="btn-edit"
-                                        onclick="editarChip(
-                                            '{{ c.id_chip }}',
-                                            '{{ c.numero }}',
-                                            '{{ c.operadora }}',
-                                            '{{ c.status }}',
-                                            '{{ c.plano }}',
-                                            '{{ c.dt_inicio }}',
-                                            '{{ c.ultima_recarga_valor }}',
-                                            '{{ c.ultima_recarga_data }}',
-                                            '{{ c.total_gasto }}',
-                                            '{{ c.sk_aparelho_atual }}'
-                                    )">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-
-                </table>
+                    <button type="submit" class="chip-btn">
+                        <i class="fas fa-plus"></i>
+                        Cadastrar Chip
+                    </button>
+                </form>
             </div>
         </section>
 
+        <!-- Table Card -->
+        <section class="chip-card">
+            <div class="chip-card-header">
+                <div class="card-icon">
+                    <i class="fas fa-list"></i>
+                </div>
+                <h2 class="card-title">Chips Cadastrados</h2>
+            </div>
+            <div class="card-content">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
+                </div>
+                <div class="chip-table-wrapper">
+                    <table class="chip-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Número</th>
+                                <th>Operadora</th>
+                                <th>Status</th>
+                                <th>Plano</th>
+                                <th>Últ. Recarga</th>
+                                <th>Valor (R$)</th>
+                                <th>Total Gasto (R$)</th>
+                                <th>Aparelho</th>
+                                <th>Data Início</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Dados serão inseridos aqui via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
-</div>
 
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>Sistema de Gestão de Chips - <span id="currentYear"></span></p>
+        </div>
+    </footer>
 
-<script>
-function editarChip(id, numero, operadora, status, plano, inicio, val, datarec, gasto, aparelho) {
+    <script>
+        // Array para armazenar os chips
+        let chips = [];
 
-    document.getElementById("id_chip").value = id;
-    document.getElementById("numero").value = numero;
-    document.getElementById("operadora").value = operadora;
-    document.getElementById("status").value = status;
-    document.getElementById("plano").value = plano;
-    document.getElementById("dt_inicio").value = inicio;
-    document.getElementById("ultima_recarga_valor").value = val;
-    document.getElementById("ultima_recarga_data").value = datarec;
-    document.getElementById("total_gasto").value = gasto;
-    document.getElementById("sk_aparelho_atual").value = aparelho;
+        // Função para formatar moeda
+        function formatCurrency(value) {
+            if (!value) return '-';
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
 
-    document.getElementById("titulo-form").innerHTML =
-        `<i class="fas fa-pen"></i> Editar Chip`;
+        // Função para formatar data
+        function formatDate(date) {
+            if (!date) return '-';
+            return new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
+        }
 
-    document.getElementById("botao-salvar").innerHTML =
-        `<i class="fas fa-save"></i> Salvar Alterações`;
+        // Função para obter cor do status
+        function getStatusColor(status) {
+            const colors = {
+                'DISPONIVEL': 'status-disponivel',
+                'MATURANDO': 'status-maturando',
+                'MATURADO': 'status-maturado',
+                'DESCANSO_1': 'status-descanso_1',
+                'DESCANSO_2': 'status-descanso_2',
+                'PRONTO_PARA_MATURAR': 'status-pronto_para_maturar',
+                'DISPARANDO': 'status-disparando',
+                'BANIDO': 'status-banido',
+                'RESTRINGIDO': 'status-restringido',
+                'ATIVO': 'status-ativo',
+                'BLOQUEADO': 'status-bloqueado'
+            };
+            return colors[status] || 'status-default';
+        }
 
-    window.scrollTo({ top: 100, behavior: "smooth" });
-}
-</script>
+        // Função para renderizar a tabela
+        function renderTable(data = chips) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
 
-{% endblock %}
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="empty-message">Nenhum chip cadastrado ainda.</td></tr>';
+                return;
+            }
+
+            data.forEach(chip => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${chip.id_chip}</td>
+                    <td>${chip.numero}</td>
+                    <td>${chip.operadora}</td>
+                    <td><span class="status-badge ${getStatusColor(chip.status)}">${chip.status}</span></td>
+                    <td>${chip.plano || '-'}</td>
+                    <td>${formatDate(chip.ultima_recarga_data)}</td>
+                    <td>${formatCurrency(chip.ultima_recarga_valor)}</td>
+                    <td>${formatCurrency(chip.total_gasto)}</td>
+                    <td>${chip.sk_aparelho_atual || '-'}</td>
+                    <td>${formatDate(chip.dt_inicio)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Função para adicionar chip
+        document.getElementById('chipForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const chip = {
+                id_chip: formData.get('id_chip'),
+                numero: formData.get('numero'),
+                operadora: formData.get('operadora'),
+                plano: formData.get('plano'),
+                status: formData.get('status'),
+                dt_inicio: formData.get('dt_inicio'),
+                ultima_recarga_valor: formData.get('ultima_recarga_valor'),
+                ultima_recarga_data: formData.get('ultima_recarga_data'),
+                total_gasto: formData.get('total_gasto'),
+                sk_aparelho_atual: formData.get('sk_aparelho_atual')
+            };
+
+            chips.push(chip);
+            renderTable();
+            e.target.reset();
+            
+            // Mostrar mensagem de sucesso (opcional)
+            alert('Chip cadastrado com sucesso!');
+        });
+
+        // Função de busca
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = chips.filter(chip => {
+                return Object.values(chip).some(value => 
+                    String(value).toLowerCase().includes(searchTerm)
+                );
+            });
+            renderTable(filtered);
+        });
+
+        // Definir ano atual no footer
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Renderizar tabela inicial
+        renderTable();
+    </script>
+</body>
+</html>

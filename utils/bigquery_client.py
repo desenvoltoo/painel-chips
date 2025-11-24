@@ -1,30 +1,29 @@
 from google.cloud import bigquery
+import pandas as pd
 from datetime import datetime
-import pytz
 
 PROJECT = "painel-universidade"
 DATASET = "marts"
 
-def agora():
-    return datetime.now(pytz.timezone("America/Sao_Paulo"))
 
 class BigQueryClient:
     def __init__(self):
         self.client = bigquery.Client(project=PROJECT)
 
     # ============================================================
-    # EXECUTOR SEGURO DE SQL
+    # EXECUÇÃO DE SQL
     # ============================================================
-    def _run(self, sql):
+    def _run(self, sql: str):
         try:
             return self.client.query(sql).to_dataframe()
         except Exception as e:
-            print("\n❌ ERRO SQL:\n", sql)
+            print("\n🚨 ERRO NO SQL 🚨")
+            print(sql)
             print(e)
             raise e
 
     # ============================================================
-    # SELECTS PRINCIPAIS
+    # VIEW PRINCIPAL
     # ============================================================
     def get_view(self):
         sql = f"""
@@ -34,135 +33,144 @@ class BigQueryClient:
         """
         return self._run(sql)
 
-    def get_chips(self):
-        sql = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.dim_chip`
-        ORDER BY numero
-        """
-        return self._run(sql)
+    # ============================================================
+    # ======================= APARELHOS ===========================
+    # ============================================================
 
     def get_aparelhos(self):
         sql = f"""
-        SELECT *
+        SELECT 
+            sk_aparelho,
+            id_aparelho,
+            modelo,
+            marca,
+            imei,
+            status,
+            ativo
         FROM `{PROJECT}.{DATASET}.dim_aparelho`
         ORDER BY modelo
         """
         return self._run(sql)
 
+    def upsert_aparelho(self, form):
+        id_aparelho = form.get("id_aparelho")
+        modelo = form.get("modelo")
+        marca = form.get("marca")
+        imei = form.get("imei")
+        status = form.get("status") or "ATIVO"
+
+        sql = f"""
+        MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
+        USING (SELECT '{id_aparelho}' AS id_aparelho) S
+        ON T.id_aparelho = S.id_aparelho
+
+        WHEN MATCHED THEN
+          UPDATE SET
+            modelo = '{modelo}',
+            marca = '{marca}',
+            imei = '{imei}',
+            status = '{status}',
+            update_at = CURRENT_TIMESTAMP()
+
+        WHEN NOT MATCHED THEN
+          INSERT (id_aparelho, modelo, marca, imei, status, ativo, create_at, update_at)
+          VALUES ('{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}', TRUE,
+                  CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
+        """
+
+        self._run(sql)
+
     # ============================================================
-    # UPSERT — CHIP
+    # ========================= CHIPS =============================
     # ============================================================
+
+    def get_chips(self):
+        sql = f"""
+        SELECT 
+            sk_chip,
+            id_chip,
+            numero,
+            operadora,
+            plano,
+            status,
+            dt_inicio,
+            ultima_recarga_valor,
+            ultima_recarga_data,
+            total_gasto,
+            sk_aparelho_atual,
+            ativo
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        ORDER BY numero
+        """
+        return self._run(sql)
+
     def upsert_chip(self, form):
         id_chip = form.get("id_chip")
         numero = form.get("numero")
         operadora = form.get("operadora")
         plano = form.get("plano")
         status = form.get("status")
-        dt_inicio = form.get("dt_inicio")
-        ultima_valor = form.get("ultima_recarga_valor") or "0"
-        ultima_data = form.get("ultima_recarga_data")
+
+        dt_inicio = form.get("dt_inicio") or None
+        ultima_data = form.get("ultima_recarga_data") or None
+        val_recarga = form.get("ultima_recarga_valor") or "0"
         total_gasto = form.get("total_gasto") or "0"
 
-        aparelho = form.get("sk_aparelho_atual")
-        aparelho = aparelho if aparelho not in ("", None) else "NULL"
+        sk_aparelho_atual = form.get("sk_aparelho_atual")
+        sk_aparelho_atual = sk_aparelho_atual if sk_aparelho_atual not in ["", None] else None
 
         sql = f"""
         MERGE `{PROJECT}.{DATASET}.dim_chip` T
-        USING (
-            SELECT
-                '{id_chip}' AS id_chip,
-                '{numero}' AS numero,
-                '{operadora}' AS operadora,
-                '{plano}' AS plano,
-                '{status}' AS status,
-                {f"DATE('{dt_inicio}')" if dt_inicio else "NULL"} AS dt_inicio,
-                {ultima_valor} AS ultima_recarga_valor,
-                {f"DATE('{ultima_data}')" if ultima_data else "NULL"} AS ultima_recarga_data,
-                {total_gasto} AS total_gasto,
-                {aparelho} AS sk_aparelho_atual,
-                CURRENT_TIMESTAMP() AS update_at
-        ) S
+        USING (SELECT '{id_chip}' AS id_chip) S
         ON T.id_chip = S.id_chip
 
         WHEN MATCHED THEN
-            UPDATE SET
-                numero = S.numero,
-                operadora = S.operadora,
-                plano = S.plano,
-                status = S.status,
-                dt_inicio = S.dt_inicio,
-                ultima_recarga_valor = S.ultima_recarga_valor,
-                ultima_recarga_data = S.ultima_recarga_data,
-                total_gasto = S.total_gasto,
-                sk_aparelho_atual = S.sk_aparelho_atual,
-                update_at = CURRENT_TIMESTAMP()
+          UPDATE SET
+            numero = '{numero}',
+            operadora = '{operadora}',
+            plano = '{plano}',
+            status = '{status}',
+            dt_inicio = {f"DATE('{dt_inicio}')" if dt_inicio else "NULL"},
+            ultima_recarga_valor = {val_recarga},
+            ultima_recarga_data = {f"DATE('{ultima_data}')" if ultima_data else "NULL"},
+            total_gasto = {total_gasto},
+            sk_aparelho_atual = {sk_aparelho_atual if sk_aparelho_atual else "NULL"},
+            update_at = CURRENT_TIMESTAMP()
 
         WHEN NOT MATCHED THEN
-            INSERT (
-                id_chip, numero, operadora, plano, status, dt_inicio,
-                ultima_recarga_valor, ultima_recarga_data,
-                total_gasto, sk_aparelho_atual,
-                ativo, create_at, update_at
-            )
-            VALUES (
-                S.id_chip, S.numero, S.operadora, S.plano, S.status, S.dt_inicio,
-                S.ultima_recarga_valor, S.ultima_recarga_data,
-                S.total_gasto, S.sk_aparelho_atual,
-                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-            )
+          INSERT (
+            id_chip, numero, operadora, plano, status,
+            dt_inicio, ultima_recarga_valor, ultima_recarga_data,
+            total_gasto, sk_aparelho_atual,
+            ativo, create_at, update_at
+          )
+          VALUES (
+            '{id_chip}', '{numero}', '{operadora}', '{plano}', '{status}',
+            {f"DATE('{dt_inicio}')" if dt_inicio else "NULL"},
+            {val_recarga},
+            {f"DATE('{ultima_data}')" if ultima_data else "NULL"},
+            {total_gasto},
+            {sk_aparelho_atual if sk_aparelho_atual else "NULL"},
+            TRUE,
+            CURRENT_TIMESTAMP(),
+            CURRENT_TIMESTAMP()
+          );
         """
+
         self._run(sql)
 
     # ============================================================
-    # UPSERT — APARELHO
+    # ================== FATO DE MOVIMENTAÇÃO =====================
     # ============================================================
-    def upsert_aparelho(self, form):
-        sk = form.get("sk_aparelho")
-        modelo = form.get("modelo")
-        marca = form.get("marca")
-        imei = form.get("imei")
-        status = form.get("status") or "ATIVO"
-        id_aparelho = form.get("id_aparelho")
 
+    def get_eventos(self):
         sql = f"""
-        MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
-        USING (
-            SELECT
-                {sk} AS sk_aparelho,
-                {'NULL' if not id_aparelho else f"'{id_aparelho}'"} AS id_aparelho,
-                '{modelo}' AS modelo,
-                '{marca}' AS marca,
-                {'NULL' if not imei else f"'{imei}'"} AS imei,
-                '{status}' AS status,
-                CURRENT_TIMESTAMP() AS update_at
-        ) S
-        ON T.sk_aparelho = S.sk_aparelho
-
-        WHEN MATCHED THEN
-            UPDATE SET
-                modelo = S.modelo,
-                marca = S.marca,
-                imei = S.imei,
-                status = S.status,
-                update_at = CURRENT_TIMESTAMP()
-
-        WHEN NOT MATCHED THEN
-            INSERT (
-                sk_aparelho, id_aparelho, modelo, marca, imei, status,
-                ativo, create_at, update_at
-            )
-            VALUES (
-                S.sk_aparelho, S.id_aparelho, S.modelo, S.marca, S.imei, S.status,
-                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-            )
+        SELECT *
+        FROM `{PROJECT}.{DATASET}.f_chip_aparelho`
+        ORDER BY data_uso DESC
         """
+        return self._run(sql)
 
-        self._run(sql)
-
-    # ============================================================
-    # INSERÇÃO DE EVENTOS (mantida)
-    # ============================================================
     def insert_evento(self, form):
         sk_chip = form.get("sk_chip")
         sk_aparelho = form.get("sk_aparelho")
@@ -183,6 +191,7 @@ class BigQueryClient:
             {'NULL' if obs is None else f"'{obs}'"},
             CURRENT_TIMESTAMP(),
             CURRENT_TIMESTAMP()
-        )
+        );
         """
+
         self._run(sql)

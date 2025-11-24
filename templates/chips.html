@@ -2,11 +2,12 @@
 {% block title %}Chips{% endblock %}
 
 {% block content %}
-<h2 class="fw-bold mb-3">Gerenciamento de Chips</h2>
-
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalNovoChip">
-    Novo Chip
-</button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">Gerenciamento de Chips</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoChip">
+        + Novo Chip
+    </button>
+</div>
 
 <div class="card shadow-sm">
     <div class="card-body">
@@ -17,47 +18,122 @@
                     <th>Número</th>
                     <th>Operadora</th>
                     <th>Status</th>
-                    <th>Aparelho</th>
                     <th>Última Recarga</th>
+                    <th>Valor</th>
                     <th>Ações</th>
                 </tr>
             </thead>
-            <tbody id="chips-body"></tbody>
+            <tbody>
+                {% for c in chips %}
+                <tr>
+                    <td>{{ c.sk_chip }}</td>
+                    <td>{{ c.numero_chip }}</td>
+                    <td>{{ c.operadora }}</td>
+                    <td>{{ c.status_chip }}</td>
+                    <td>{{ c.data_ultima_recarga or "-" }}</td>
+                    <td>
+                        {% if c.valor_ultima_recarga %}
+                            R$ {{ "%.2f"|format(c.valor_ultima_recarga) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" 
+                            onclick="editarChip({{ c | tojson }})">
+                            Editar
+                        </button>
+
+                        <button class="btn btn-sm btn-success" 
+                            onclick="abrirRecarga({{ c | tojson }})">
+                            Recarga
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 </div>
 
-<!-- Modal Novo Chip -->
-<div class="modal fade" id="modalNovoChip">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <form class="modal-content" id="form-chip">
+<!-- MODAL NOVO CHIP -->
+<div class="modal fade" id="modalNovoChip" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form class="modal-content" id="formNovoChip">
             <div class="modal-header">
-                <h5 class="modal-title">Novo Chip</h5>
+                <h5 class="modal-title">Cadastrar Novo Chip</h5>
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Número</label>
-                    <input required name="numero" class="form-control">
+                    <label class="form-label">ID (sk_chip)</label>
+                    <input name="sk_chip" type="number" class="form-control" required>
                 </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Número</label>
+                    <input name="numero_chip" class="form-control" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ICC ID</label>
+                    <input name="iccid" class="form-control">
+                </div>
+
                 <div class="col-md-4">
                     <label class="form-label">Operadora</label>
                     <select name="operadora" class="form-select">
-                        <option>Vivo</option>
                         <option>Claro</option>
+                        <option>Vivo</option>
                         <option>Tim</option>
                         <option>Oi</option>
+                        <option>Nextel</option>
                     </select>
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
+                    <select name="status_chip" class="form-select">
                         <option>Ativo</option>
-                        <option>Banido</option>
-                        <option>Restrito</option>
+                        <option>Inativo</option>
+                        <option>Bloqueado</option>
                     </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Data de Ativação</label>
+                    <input type="date" name="data_ativacao" class="form-control">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR RECHARGE -->
+<div class="modal fade" id="modalRecarga" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formRecarga">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar Recarga</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <input type="hidden" name="sk_chip" id="recarga_id">
+
+            <div class="modal-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Data</label>
+                    <input type="date" name="data_ultima_recarga" class="form-control">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Valor</label>
+                    <input type="number" name="valor_ultima_recarga" class="form-control" min="0" step="0.01">
                 </div>
             </div>
 
@@ -69,44 +145,23 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", carregarChips);
+let recargaModal = new bootstrap.Modal(document.getElementById('modalRecarga'));
 
-function carregarChips() {
-    fetch("/api/chips/listar")
-        .then(r => r.json())
-        .then(chips => {
-            let tbody = document.getElementById("chips-body");
-            tbody.innerHTML = "";
-
-            chips.forEach(c => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${c.id_chip}</td>
-                        <td>${c.numero}</td>
-                        <td>${c.operadora}</td>
-                        <td>${c.status}</td>
-                        <td>${c.aparelho_descricao ?? "-"}</td>
-                        <td>${c.data_ultima_recarga ?? "-"}</td>
-                        <td>
-                            <button class="btn btn-sm btn-secondary">Editar</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            new DataTable("#tabelaChips");
-        });
+function abrirRecarga(chip) {
+    document.getElementById("recarga_id").value = chip.sk_chip;
+    recargaModal.show();
 }
 
-document.getElementById("form-chip").addEventListener("submit", e => {
+document.getElementById("formRecarga").addEventListener("submit", async e => {
     e.preventDefault();
-    let data = Object.fromEntries(new FormData(e.target).entries());
-
-    fetch("/api/chips/salvar", {
+    let payload = Object.fromEntries(new FormData(e.target).entries());
+    await fetch("/api/chip/recarga", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-    }).then(() => location.reload());
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+    location.reload();
 });
 </script>
+
 {% endblock %}

@@ -1,132 +1,44 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Painel de Chips</title>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- GOOGLE FONTS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
-    <!-- DATATABLES -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <meta charset="utf-8">
+    <title>Painel Chips & Aparelhos</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 
     <style>
-        body {
-            margin: 0;
-            font-family: "Inter", sans-serif;
-            background: #f2f2f7;
-        }
-
-        header {
-            background: #1e1e2f;
-            padding: 15px 25px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 22px;
-        }
-
-        nav {
-            display: flex;
-            gap: 20px;
-        }
-
-        nav a {
-            color: #dcdcff;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        nav a:hover {
-            color: white;
-        }
-
-        .container {
-            padding: 25px;
-        }
-
-        /* FORM BOX */
-        .form-box {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            max-width: 600px;
-        }
-
-        .form-box label {
-            display: block;
-            margin-top: 15px;
-            font-weight: 600;
-        }
-
-        .form-box input,
-        .form-box select {
-            padding: 10px;
-            width: 100%;
-            margin-top: 5px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            margin-top: 20px;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            background: #4a56e2;
-            color: white;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        button:hover {
-            background: #3945d1;
-        }
-
-        /* TABELAS */
-        table.dataTable {
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .table-container {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f9; }
+        header { background: #1e1e1e; padding: 15px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: white; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+        main { padding: 25px; }
+        h2 { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 8px; background: white; }
+        th { background: #e1e1e1; }
+        .form-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 700px; margin-bottom: 30px; }
+        .form-box label { font-weight: bold; }
+        .form-box button { grid-column: 1 / 3; padding: 10px; background: #333; color:white; border: none; cursor:pointer; }
+        .card-grid { display: flex; gap:20px; margin-bottom: 30px; }
+        .card { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); width:180px; }
+        .card h3 { margin:0; font-size:16px; color:#666; }
+        .card p { font-size:22px; font-weight:bold; margin-top:8px; }
     </style>
-
-    <!-- JQUERY + DATATABLES -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-
 </head>
 <body>
 
 <header>
-    <h1>📡 Painel de Chips</h1>
-
+    <h1>Painel de Chips</h1>
     <nav>
         <a href="/dashboard">Dashboard</a>
         <a href="/chips">Chips</a>
         <a href="/aparelhos">Aparelhos</a>
-        <a href="/movimentacao">Movimentação</a>
+        <a href="/movimentacao">Movimentações</a>
     </nav>
 </header>
 
-<div class="container">
+<main>
     {% block conteudo %}{% endblock %}
-</div>
+</main>
 
 </body>
 </html>

@@ -36,10 +36,13 @@ def aparelhos():
 # =======================
 @app.route("/chips")
 def chips():
-    dados = bq.get_chips()
+    chips = bq.get_chips()
+    aparelhos = bq.get_aparelhos()
+    
     return render_template(
         "chips.html",
-        dados=dados.to_dict(orient="records")
+        chips=chips.to_dict(orient="records"),
+        aparelhos=aparelhos.to_dict(orient="records")
     )
 
 # =======================

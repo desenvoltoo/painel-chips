@@ -1,3 +1,4 @@
+# utils/bigquery_client.py
 from google.cloud import bigquery
 import pandas as pd
 
@@ -8,16 +9,16 @@ class BigQueryClient:
     def __init__(self):
         self.client = bigquery.Client(project=PROJECT)
 
-    # ==========================
-    # HELPERS
-    # ==========================
+    # ----------------------------
+    # HELPERS SEGUROS
+    # ----------------------------
     def _q(self, v):
         if not v or v == "":
             return "NULL"
         return f"'{v}'"
 
     def _num(self, v):
-        if v is None or v == "":
+        if not v or v == "":
             return "0"
         return v
 
@@ -30,14 +31,12 @@ class BigQueryClient:
         try:
             return self.client.query(sql).to_dataframe()
         except Exception as e:
-            print("\n\n############ ERRO SQL ############")
-            print(sql)
-            print("#################################\n\n")
+            print("ERRO SQL:", sql)
             raise e
 
-    # ==========================
+    # ----------------------------
     # VIEW PRINCIPAL
-    # ==========================
+    # ----------------------------
     def get_view(self):
         sql = f"""
         SELECT *
@@ -46,12 +45,12 @@ class BigQueryClient:
         """
         return self._run(sql)
 
-    # ==========================
+    # ----------------------------
     # APARELHOS
-    # ==========================
+    # ----------------------------
     def get_aparelhos(self):
         sql = f"""
-        SELECT
+        SELECT 
             sk_aparelho,
             id_aparelho,
             modelo,
@@ -79,12 +78,12 @@ class BigQueryClient:
         """
         self.client.query(sql)
 
-    # ==========================
+    # ----------------------------
     # CHIPS
-    # ==========================
+    # ----------------------------
     def get_chips(self):
         sql = f"""
-        SELECT
+        SELECT 
             sk_chip,
             id_chip,
             numero,
@@ -126,9 +125,9 @@ class BigQueryClient:
         """
         self.client.query(sql)
 
-    # ==========================
-    # EVENTOS
-    # ==========================
+    # ----------------------------
+    # MOVIMENTAÇÕES (FATO)
+    # ----------------------------
     def get_eventos(self):
         sql = f"""
         SELECT *
@@ -142,8 +141,8 @@ class BigQueryClient:
         INSERT INTO `{PROJECT}.{DATASET}.f_chip_aparelho`
         (sk_chip, sk_aparelho, data_uso, tipo_movimento, origem, observacao)
         VALUES(
-            {self._num_or_null(form.get("sk_chip"))},
-            {self._num_or_null(form.get("sk_aparelho"))},
+            {self._num(form.get("sk_chip"))},
+            {self._num(form.get("sk_aparelho"))},
             DATE({self._q(form.get("data_uso"))}),
             {self._q(form.get("tipo_movimento"))},
             {self._q(form.get("origem"))},

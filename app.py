@@ -4,19 +4,22 @@ from utils.bigquery_client import BigQueryClient
 app = Flask(__name__)
 bq = BigQueryClient()
 
+# ============================
 # DASHBOARD
+# ============================
+@app.route("/")
 @app.route("/dashboard")
 def dashboard():
     df = bq.get_view()
 
     total_chips = len(df)
-    chips_ativos = len(df[df["ativo"] == True])
-    disparando = len(df[df["status"] == "DISPARANDO"])
-    banidos = len(df[df["status"] == "BANIDO"])
+    chips_ativos = len(df[df["ativo"] == True]) if "ativo" in df else 0
+    disparando = len(df[df["status"] == "DISPARANDO"]) if "status" in df else 0
+    banidos = len(df[df["status"] == "BANIDO"]) if "status" in df else 0
 
-    lista_status = sorted(df["status"].dropna().unique())
-    lista_operadora = sorted(df["operadora"].dropna().unique())
-    lista_aparelho = sorted(df["nome_aparelho"].dropna().unique())
+    lista_status = sorted(df["status"].dropna().unique()) if "status" in df else []
+    lista_operadora = sorted(df["operadora"].dropna().unique()) if "operadora" in df else []
+    lista_aparelho = sorted(df["nome_aparelho"].dropna().unique()) if "nome_aparelho" in df else []
 
     return render_template(
         "dashboard.html",
@@ -30,8 +33,9 @@ def dashboard():
         lista_aparelho=lista_aparelho
     )
 
-
-# APARELHOS LISTA + FORM
+# ============================
+# APARELHOS
+# ============================
 @app.route("/aparelhos")
 def aparelhos():
     aparelhos = bq.get_aparelhos()
@@ -40,13 +44,14 @@ def aparelhos():
         aparelhos=aparelhos.to_dict(orient="records")
     )
 
-# ADICIONAR APARELHO
 @app.route("/aparelhos/add", methods=["POST"])
 def add_aparelho():
     bq.insert_aparelho(request.form)
     return redirect("/aparelhos")
 
-# CHIPS LISTA + FORM
+# ============================
+# CHIPS
+# ============================
 @app.route("/chips")
 def chips():
     chips_df = bq.get_chips()
@@ -58,13 +63,14 @@ def chips():
         aparelhos=aparelhos_df.to_dict(orient="records")
     )
 
-# ADICIONAR CHIP
 @app.route("/chips/add", methods=["POST"])
 def add_chip():
     bq.insert_chip(request.form)
     return redirect("/chips")
 
+# ============================
 # MOVIMENTAÇÃO
+# ============================
 @app.route("/movimentacao")
 def movimentacao():
     eventos = bq.get_eventos()
@@ -73,12 +79,13 @@ def movimentacao():
         eventos=eventos.to_dict(orient="records")
     )
 
-# ADICIONAR EVENTO
 @app.route("/movimentacao/add", methods=["POST"])
 def add_evento():
     bq.insert_evento(request.form)
     return redirect("/movimentacao")
 
-
+# ============================
+# EXECUÇÃO
+# ============================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

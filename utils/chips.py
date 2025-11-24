@@ -1,246 +1,44 @@
-{% extends "base.html" %}
-{% block title %}Gestão de Chips{% endblock %}
+# utils/chips.py
+from flask import Blueprint, render_template, request, redirect
+from utils.bigquery_client import BigQueryClient
 
-{% block content %}
+bq = BigQueryClient()
+chips_bp = Blueprint("chips", __name__)
 
-<!-- CSS principal moderno -->
-<link rel="stylesheet" href="{{ url_for('static', filename='chip.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- FIX ABSOLUTO contra letras brancas -->
-<style>
-/* Força cores escuras sobre qualquer herança */
-body, html, main, header, .card, .card-header, .card-content,
-input, select, label, table, th, td, p, h1, h2, h3, span {
-    color: #1e293b !important;
-    background-color: transparent !important;
-}
+# =======================================================
+# LISTAGEM DE CHIPS
+# =======================================================
+@chips_bp.route("/chips")
+def chips_list():
+    chips_df = bq.get_chips()
+    aparelhos_df = bq.get_aparelhos()
 
-/* Corrige cards ficando brancos com tema escuro */
-.card {
-    background: #ffffff !important;
-    color: #1e293b !important;
-    border: 1px solid rgba(59,130,246,0.12) !important;
-}
+    return render_template(
+        "chips.html",
+        chips=chips_df.to_dict(orient="records"),
+        aparelhos=aparelhos_df.to_dict(orient="records")
+    )
 
-/* Botão editar */
-.btn-edit {
-    background: #e0f2fe;
-    color: #0284c7;
-    padding: 0.45rem 0.6rem;
-    border-radius: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-}
-.btn-edit:hover {
-    background: #bae6fd;
-    color: #0369a1;
-}
-</style>
 
-<!-- HEADER -->
-<header class="header">
-    <div class="container">
-        <div class="header-content">
-            <div class="icon-wrapper">
-                <i class="fas fa-sim-card"></i>
-            </div>
-            <div class="header-text">
-                <h1 class="title">Gestão de Chips</h1>
-                <p class="subtitle">Cadastro e monitoramento em tempo real</p>
-            </div>
-        </div>
-    </div>
-</header>
+# =======================================================
+# UPSERT (INSERIR + EDITAR)
+# =======================================================
+@chips_bp.route("/chips/add", methods=["POST"])
+def chips_add():
+    bq.upsert_chip(request.form)
+    return redirect("/chips")
 
-<main class="container main-content">
 
-    <!-- FORMULÁRIO -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-icon"><i class="fas fa-plus"></i></div>
-            <h2 class="card-title" id="titulo-form">Novo Chip</h2>
-        </div>
+# =======================================================
+# GET (APENAS UM CHIP — se você quiser depois)
+# =======================================================
+@chips_bp.route("/chips/<id_chip>")
+def get_chip(id_chip):
+    df = bq.get_chips()
+    df = df[df["id_chip"] == id_chip]
 
-        <div class="card-content">
-            <form action="/chips/add" method="POST" class="form-grid">
+    if len(df) == 0:
+        return {"erro": "Chip não encontrado"}, 404
 
-                <div class="form-group">
-                    <label>ID do Chip *</label>
-                    <input type="text" name="id_chip" id="id_chip" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Número *</label>
-                    <input type="text" name="numero" id="numero" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Operadora</label>
-                    <select name="operadora" id="operadora">
-                        <option value="VIVO">VIVO</option>
-                        <option value="TIM">TIM</option>
-                        <option value="CLARO">CLARO</option>
-                        <option value="OI">OI</option>
-                        <option value="OUTRA">OUTRA</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status" id="status">
-                        <option value="DISPONIVEL">DISPONÍVEL</option>
-                        <option value="MATURANDO">MATURANDO</option>
-                        <option value="MATURADO">MATURADO</option>
-                        <option value="DESCANSO_1">DESCANSO 1</option>
-                        <option value="DESCANSO_2">DESCANSO 2</option>
-                        <option value="PRONTO_PARA_MATURAR">PRONTO PARA MATURAR</option>
-                        <option value="DISPARANDO">DISPARANDO</option>
-                        <option value="BANIDO">BANIDO</option>
-                        <option value="RESTRINGIDO">RESTRINGIDO</option>
-                        <option value="ATIVO">ATIVO</option>
-                        <option value="BLOQUEADO">BLOQUEADO</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Plano</label>
-                    <input type="text" name="plano" id="plano">
-                </div>
-
-                <div class="form-group">
-                    <label>Data Início</label>
-                    <input type="date" name="dt_inicio" id="dt_inicio">
-                </div>
-
-                <div class="form-group">
-                    <label>Valor Última Recarga</label>
-                    <input type="number" step="0.01" name="ultima_recarga_valor" id="ultima_recarga_valor">
-                </div>
-
-                <div class="form-group">
-                    <label>Data Última Recarga</label>
-                    <input type="date" name="ultima_recarga_data" id="ultima_recarga_data">
-                </div>
-
-                <div class="form-group">
-                    <label>Total Gasto</label>
-                    <input type="number" step="0.01" name="total_gasto" id="total_gasto">
-                </div>
-
-                <div class="form-group full-width">
-                    <label>Aparelho Vinculado</label>
-                    <select name="sk_aparelho_atual" id="sk_aparelho_atual">
-                        <option value="">-- Nenhum --</option>
-                        {% for ap in aparelhos %}
-                            <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary full-width" id="botao-salvar">
-                    <i class="fas fa-plus"></i> Cadastrar Chip
-                </button>
-
-            </form>
-        </div>
-    </div>
-
-    <!-- TABELA -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-icon"><i class="fas fa-list"></i></div>
-            <h2 class="card-title">Chips Cadastrados</h2>
-        </div>
-
-        <div class="card-content">
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Número</th>
-                            <th>Operadora</th>
-                            <th>Status</th>
-                            <th>Plano</th>
-                            <th>Última Recarga</th>
-                            <th>Valor</th>
-                            <th>Total Gasto</th>
-                            <th>Aparelho</th>
-                            <th>Início</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for c in chips %}
-                        <tr>
-                            <td>{{ c.id_chip }}</td>
-                            <td>{{ c.numero }}</td>
-                            <td>{{ c.operadora }}</td>
-
-                            <td>
-                                <span class="status-badge status-{{ c.status|lower }}">
-                                    {{ c.status }}
-                                </span>
-                            </td>
-
-                            <td>{{ c.plano }}</td>
-                            <td>{{ c.ultima_recarga_data }}</td>
-                            <td>{{ c.ultima_recarga_valor }}</td>
-                            <td>{{ c.total_gasto }}</td>
-                            <td>{{ c.aparelho_nome if c.aparelho_nome else '-' }}</td>
-                            <td>{{ c.dt_inicio }}</td>
-
-                            <td style="text-align:center;">
-                                <button class="btn-edit"
-                                    onclick="editarChip(
-                                        '{{ c.id_chip }}',
-                                        '{{ c.numero }}',
-                                        '{{ c.operadora }}',
-                                        '{{ c.status }}',
-                                        '{{ c.plano }}',
-                                        '{{ c.dt_inicio }}',
-                                        '{{ c.ultima_recarga_valor }}',
-                                        '{{ c.ultima_recarga_data }}',
-                                        '{{ c.total_gasto }}',
-                                        '{{ c.sk_aparelho_atual }}'
-                                    )">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-
-                </table>
-            </div>
-
-        </div>
-    </div>
-
-</main>
-
-<script>
-function editarChip(id, numero, operadora, status, plano, inicio, valor, datarec, gasto, aparelho) {
-    document.getElementById("id_chip").value = id;
-    document.getElementById("numero").value = numero;
-    document.getElementById("operadora").value = operadora;
-    document.getElementById("status").value = status;
-    document.getElementById("plano").value = plano;
-    document.getElementById("dt_inicio").value = inicio;
-    document.getElementById("ultima_recarga_valor").value = valor;
-    document.getElementById("ultima_recarga_data").value = datarec;
-    document.getElementById("total_gasto").value = gasto;
-    document.getElementById("sk_aparelho_atual").value = aparelho;
-
-    document.getElementById("titulo-form").innerHTML = `<i class="fas fa-pen"></i> Editar Chip`;
-    document.getElementById("botao-salvar").innerHTML = `<i class="fas fa-save"></i> Salvar Alterações`;
-
-    window.scrollTo({ top: 80, behavior: "smooth" });
-}
-</script>
-
-{% endblock %}
+    return df.to_dict(orient="records")[0]

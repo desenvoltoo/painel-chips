@@ -16,22 +16,20 @@ bq = BigQueryClient()
 def dashboard():
     df = bq.get_view()
 
-    # ========= KPIs =========
+    # === KPIs ===
     total_chips = len(df)
     chips_ativos = len(df[df["ativo"] == True])
     disparando = len(df[df["status"] == "DISPARANDO"])
     banidos = len(df[df["status"] == "BANIDO"])
 
-    # ========= ALERTA RECARGA =========
+    # === ALERTA RECARGA ===
     hoje = datetime.now().date()
-
     df["dias_sem_recarga"] = df["ultima_recarga_data"].apply(
         lambda x: (hoje - x).days if pd.notnull(x) else 999
     )
-
     alerta_recarga = df[df["dias_sem_recarga"] >= 80]
 
-    # ========= FILTROS =========
+    # === FILTROS ===
     lista_status = sorted(df["status"].dropna().unique())
     lista_operadora = sorted(df["operadora"].dropna().unique())
     lista_aparelho = sorted(df["nome_aparelho"].dropna().unique())
@@ -60,7 +58,7 @@ def aparelhos():
 
     return render_template(
         "aparelhos.html",
-        aparelhos=aparelhos_df.to_dict(orient="records")
+        aparelhos=aparelhos_df.to_dict(orient="records"),
     )
 
 
@@ -84,7 +82,7 @@ def chips():
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
-        aparelhos=aparelhos_df.to_dict(orient="records")
+        aparelhos=aparelhos_df.to_dict(orient="records"),
     )
 
 
@@ -98,17 +96,21 @@ def add_chip():
 
 
 # =======================================================
-# MOVIMENTAÇÃO
+# MOVIMENTAÇÃO — LISTA
 # =======================================================
 @app.route("/movimentacao")
 def movimentacao():
     eventos_df = bq.get_eventos()
+
     return render_template(
         "movimentacao.html",
-        eventos=eventos_df.to_dict(orient="records")
+        eventos=eventos_df.to_dict(orient="records"),
     )
 
 
+# =======================================================
+# MOVIMENTAÇÃO — INSERIR
+# =======================================================
 @app.route("/movimentacao/add", methods=["POST"])
 def add_evento():
     bq.insert_evento(request.form)

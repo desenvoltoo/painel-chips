@@ -1,191 +1,227 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Dashboard – Visão Geral</h2>
+<style>
+/* ====== CARDS DO DASHBOARD ====== */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
 
-<div class="card-grid">
-    <div class="card"><h3>Total de Chips</h3><p id="kpi_total">{{ total_chips }}</p></div>
-    <div class="card"><h3>Ativos</h3><p id="kpi_ativos">{{ ativos }}</p></div>
-    <div class="card"><h3>Disparando</h3><p id="kpi_disparando">{{ disparando }}</p></div>
-    <div class="card"><h3>Banidos</h3><p id="kpi_banidos">{{ banidos }}</p></div>
+.card-kpi {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    transition: .2s ease-in-out;
+}
+
+.card-kpi:hover {
+    transform: scale(1.03);
+}
+
+.kpi-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.kpi-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #0077cc;
+}
+
+/* ====== FILTROS ====== */
+.filtros-box {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.filtros-box select {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #bbb;
+    font-size: 15px;
+}
+
+/* ====== TABELA ====== */
+.table-wrapper {
+    background: #fff;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+table thead {
+    background: #0077cc;
+    color: white;
+}
+
+table thead th {
+    padding: 10px;
+}
+
+table tbody td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.status-tag {
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+/* ===== CORES DOS STATUS ===== */
+.status-DISPARANDO { background:#008000; }
+.status-BANIDO { background:#cc0000; }
+.status-MATURANDO { background:#ff9500; }
+.status-MATURADO { background:#0066ff; }
+.status-DESCANSO_1,
+.status-DESCANSO_2 { background:#7a7a7a; }
+.status-PRONTO_PARA_MATURAR { background:#3333aa; }
+.status-DISPONIVEL { background:#0099cc; }
+.status-RESTRINGIDO { background:#cc6600; }
+.status-ATIVO { background:#555; }
+.status-BLOQUEADO { background:#444; }
+
+</style>
+
+
+<h2>Painel Geral</h2>
+
+<!-- ====================== CARDS ====================== -->
+<div class="dashboard-cards">
+
+    <div class="card-kpi">
+        <div class="kpi-title">Total de Chips</div>
+        <div class="kpi-value">{{ total_chips }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <div class="kpi-title">Chips Ativos</div>
+        <div class="kpi-value">{{ chips_ativos }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <div class="kpi-title">Disparando</div>
+        <div class="kpi-value">{{ disparando }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <div class="kpi-title">Banidos</div>
+        <div class="kpi-value">{{ banidos }}</div>
+    </div>
+
 </div>
 
-<hr>
 
+<!-- ====================== FILTROS ====================== -->
 <h3>Filtros</h3>
 
-<div class="form-box" style="max-width:900px;">
-    <label>Status</label>
-    <select id="filtro_status">
-        <option value="">Todos</option>
+<div class="filtros-box">
+    <select id="filtro-status">
+        <option value="">Filtrar por Status</option>
         {% for s in lista_status %}
-            <option value="{{ s }}">{{ s }}</option>
+        <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
     </select>
 
-    <label>Operadora</label>
-    <select id="filtro_operadora">
-        <option value="">Todas</option>
-        {% for op in lista_operadora %}
-            <option value="{{ op }}">{{ op }}</option>
+    <select id="filtro-operadora">
+        <option value="">Filtrar Operadora</option>
+        {% for s in lista_operadora %}
+        <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
     </select>
 
-    <label>Aparelho</label>
-    <select id="filtro_aparelho">
-        <option value="">Todos</option>
-        {% for ap in lista_aparelho %}
-            <option value="{{ ap }}">{{ ap }}</option>
+    <select id="filtro-aparelho">
+        <option value="">Filtrar Aparelho</option>
+        {% for s in lista_aparelho %}
+        <option value="{{ s }}">{{ s }}</option>
         {% endfor %}
     </select>
-
-    <button id="btn_filtrar" style="grid-column:1/4;">Aplicar Filtros</button>
 </div>
 
-<hr>
 
-<h3>Gráficos</h3>
+<!-- ====================== TABELA ====================== -->
+<div class="table-wrapper">
+    <table id="tabela-chips">
+        <thead>
+            <tr>
+                <th>Chip</th>
+                <th>Operadora</th>
+                <th>Status</th>
+                <th>Aparelho</th>
+                <th>Plano</th>
+                <th>Última Recarga</th>
+            </tr>
+        </thead>
 
-<div style="display:flex; gap:40px; flex-wrap:wrap;">
-    <canvas id="graf_status" width="350" height="250"></canvas>
-    <canvas id="graf_operadora" width="350" height="250"></canvas>
-    <canvas id="graf_aparelho" width="350" height="250"></canvas>
+        <tbody>
+        {% for c in tabela %}
+            <tr>
+                <td>{{ c.numero }}</td>
+                <td>{{ c.operadora }}</td>
+
+                <td>
+                    <span class="status-tag status-{{ c.status }}">
+                        {{ c.status }}
+                    </span>
+                </td>
+
+                <td>{{ c.nome_aparelho }}</td>
+                <td>{{ c.plano }}</td>
+                <td>{{ c.ultima_recarga_data }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 
-<hr>
-
-<h3>Lista de Chips</h3>
-
-<table id="tabela_dashboard">
-    <thead>
-        <tr>
-            <th>SK</th>
-            <th>Número</th>
-            <th>Status</th>
-            <th>Operadora</th>
-            <th>Modelo</th>
-            <th>IMEI</th>
-            <th>Última Recarga</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in tabela %}
-        <tr>
-            <td>{{ row.sk_chip }}</td>
-            <td>{{ row.numero }}</td>
-            <td>{{ row.status }}</td>
-            <td>{{ row.operadora }}</td>
-            <td>{{ row.modelo_atual }}</td>
-            <td>{{ row.imei_atual }}</td>
-            <td>{{ row.ultima_recarga_data }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const dadosOriginais = {{ tabela | tojson }};
+document.addEventListener("DOMContentLoaded", () => {
+    const rows = Array.from(document.querySelectorAll("#tabela-chips tbody tr"));
 
-// =========================
-// FILTROS
-// =========================
-document.querySelector("#btn_filtrar").onclick = () => {
-    const st = document.querySelector("#filtro_status").value;
-    const op = document.querySelector("#filtro_operadora").value;
-    const ap = document.querySelector("#filtro_aparelho").value;
+    function filtrar() {
+        const status = document.querySelector("#filtro-status").value.toLowerCase();
+        const operadora = document.querySelector("#filtro-operadora").value.toLowerCase();
+        const aparelho = document.querySelector("#filtro-aparelho").value.toLowerCase();
 
-    let filtrado = dadosOriginais;
+        rows.forEach(row => {
+            const tStatus = row.children[2].innerText.toLowerCase();
+            const tOperadora = row.children[1].innerText.toLowerCase();
+            const tAparelho = row.children[3].innerText.toLowerCase();
 
-    if (st) filtrado = filtrado.filter(i => i.status === st);
-    if (op) filtrado = filtrado.filter(i => i.operadora === op);
-    if (ap) filtrado = filtrado.filter(i => i.nome_aparelho === ap);
+            const match =
+                (status === "" || tStatus.includes(status)) &&
+                (operadora === "" || tOperadora.includes(operadora)) &&
+                (aparelho === "" || tAparelho.includes(aparelho));
 
-    renderTabela(filtrado);
-    gerarGraficos(filtrado);
+            row.style.display = match ? "" : "none";
+        });
+    }
 
-    document.querySelector("#kpi_total").innerText = filtrado.length;
-    document.querySelector("#kpi_ativos").innerText = filtrado.filter(i => i.ativo).length;
-    document.querySelector("#kpi_disparando").innerText = filtrado.filter(i => i.status === "DISPARANDO").length;
-    document.querySelector("#kpi_banidos").innerText = filtrado.filter(i => i.status === "BANIDO").length;
-};
-
-// =========================
-// TABELA
-// =========================
-function renderTabela(lista) {
-    let tbody = "";
-    lista.forEach(r => {
-        tbody += `
-            <tr>
-                <td>${r.sk_chip}</td>
-                <td>${r.numero}</td>
-                <td>${r.status}</td>
-                <td>${r.operadora}</td>
-                <td>${r.modelo_atual}</td>
-                <td>${r.imei_atual}</td>
-                <td>${r.ultima_recarga_data || ""}</td>
-            </tr>
-        `;
-    });
-    document.querySelector("#tabela_dashboard tbody").innerHTML = tbody;
-}
-
-// =========================
-// GRÁFICOS
-// =========================
-let graf1, graf2, graf3;
-
-function gerarGraficos(lista) {
-    const porStatus = {};
-    const porOperadora = {};
-    const porAparelho = {};
-
-    lista.forEach(i => {
-        porStatus[i.status] = (porStatus[i.status] || 0) + 1;
-        porOperadora[i.operadora] = (porOperadora[i.operadora] || 0) + 1;
-        porAparelho[i.modelo_atual] = (porAparelho[i.modelo_atual] || 0) + 1;
-    });
-
-    if (graf1) graf1.destroy();
-    if (graf2) graf2.destroy();
-    if (graf3) graf3.destroy();
-
-    graf1 = new Chart(document.getElementById("graf_status"), {
-        type: "pie",
-        data: {
-            labels: Object.keys(porStatus),
-            datasets: [{
-                data: Object.values(porStatus)
-            }]
-        }
-    });
-
-    graf2 = new Chart(document.getElementById("graf_operadora"), {
-        type: "bar",
-        data: {
-            labels: Object.keys(porOperadora),
-            datasets: [{
-                data: Object.values(porOperadora)
-            }]
-        }
-    });
-
-    graf3 = new Chart(document.getElementById("graf_aparelho"), {
-        type: "bar",
-        data: {
-            labels: Object.keys(porAparelho),
-            datasets: [{
-                data: Object.values(porAparelho)
-            }]
-        }
-    });
-}
-
-// Inicializa tudo ao carregar
-gerarGraficos(dadosOriginais);
-
+    document.querySelector("#filtro-status").onchange = filtrar;
+    document.querySelector("#filtro-operadora").onchange = filtrar;
+    document.querySelector("#filtro-aparelho").onchange = filtrar;
+});
 </script>
 
 {% endblock %}

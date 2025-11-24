@@ -11,14 +11,18 @@ def listar_chips():
     return list(client.query(sql).result())
 
 def inserir_chip(data):
-    rows = [{
-        "iccid": data.get("iccid"),
-        "numero_chip": data.get("numero_chip"),
+    row = {
+        "id_chip": data.get("id_chip"),
+        "numero": data.get("numero"),
         "operadora": data.get("operadora"),
-        "status_chip": data.get("status_chip"),
-        "data_ativacao": data.get("data_ativacao"),
-        "data_ultima_recarga": data.get("data_ultima_recarga"),
-        "valor_ultima_recarga": float(data.get("valor_ultima_recarga") or 0)
-    }]
+        "plano": data.get("plano"),
+        "status": data.get("status"),
+        "dt_inicio": data.get("dt_inicio"),
+        "ultima_recarga_valor": float(data.get("ultima_recarga_valor") or 0),
+        "ultima_recarga_data": data.get("ultima_recarga_data"),
+        "total_gasto": float(data.get("total_gasto") or 0),
+        "sk_aparelho_atual": int(data.get("sk_aparelho_atual") or 0),
+        "ativo": True
+    }
 
-    client.insert_rows_json(TABLE, rows)
+    client.insert_rows_json(TABLE, [row])

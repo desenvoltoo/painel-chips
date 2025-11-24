@@ -1,28 +1,35 @@
-from google.cloud import bigquery
+{% extends "base.html" %}
+{% block conteudo %}
 
-PROJECT = "painel-universidade"
-DATASET = "marts"
-TABLE = f"{PROJECT}.{DATASET}.dim_chip"
+<h2>Cadastrar Chip</h2>
 
-client = bigquery.Client()
+<form id="form-chip" class="form-box">
 
-def listar_chips():
-    sql = f"SELECT * FROM `{TABLE}` ORDER BY sk_chip DESC"
-    return list(client.query(sql).result())
+    <label>ID Interno</label>
+    <input name="id_chip">
 
-def inserir_chip(data):
-    row = {
-        "id_chip": data.get("id_chip"),
-        "numero": data.get("numero"),
-        "operadora": data.get("operadora"),
-        "plano": data.get("plano"),
-        "status": data.get("status"),
-        "dt_inicio": data.get("dt_inicio"),
-        "ultima_recarga_valor": float(data.get("ultima_recarga_valor") or 0),
-        "ultima_recarga_data": data.get("ultima_recarga_data"),
-        "total_gasto": float(data.get("total_gasto") or 0),
-        "sk_aparelho_atual": int(data.get("sk_aparelho_atual") or 0),
-        "ativo": True
-    }
+    <label>Número do Chip</label>
+    <input name="numero" required>
 
-    client.insert_rows_json(TABLE, [row])
+    <label>Operadora</label>
+    <input name="operadora">
+
+    <label>Plano</label>
+    <input name="plano">
+
+    <label>Status</label>
+    <select name="status">
+
+        <!-- Status operacionais -->
+        <option value="DISPONIVEL">DISPONÍVEL</option>
+        <option value="MATURANDO">MATURANDO</option>
+        <option value="MATURADO">MATURADO</option>
+        <option value="DESCANSO_1">DESCANSO 1</option>
+        <option value="DESCANSO_2">DESCANSO 2</option>
+        <option value="PRONTO_PARA_MATURAR">PRONTO PARA MATURAR</option>
+        <option value="DISPARANDO">DISPARANDO</option>
+        <option value="BANIDO">BANIDO</option>
+        <option value="RESTRINGIDO">RESTRINGIDO</option>
+
+        <!-- Antigos -->
+        <option value="ATIVO">ATIVO</option>

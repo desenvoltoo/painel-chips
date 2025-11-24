@@ -411,3 +411,56 @@ body {
         padding: 0.6rem;
     }
 }
+/* ============================================================
+   SIDEBAR FIXO DO PAINEL
+============================================================ */
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    background: #0d1320;        /* mesmo tom dark premium */
+    color: #e2e8f0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 25px 20px;
+    border-right: 1px solid #1e3a8a;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 9999;
+}
+
+.sidebar .side-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.sidebar a {
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar a:hover {
+    background: #1e3a8a;
+    color: white;
+}
+
+/* ============================================================
+   AJUSTE DO CONTEÚDO PARA NÃO FICAR POR BAIXO DO MENU
+============================================================ */
+.content {
+    margin-left: 260px;   /* desloca o conteúdo para o lado */
+    padding: 35px;
+}
+

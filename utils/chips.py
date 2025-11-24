@@ -31,10 +31,6 @@
         <option value="BANIDO">BANIDO</option>
         <option value="RESTRINGIDO">RESTRINGIDO</option>
 
-        <!-- Antigos -->
-        <option value="ATIVO">ATIVO</option>
-        <option value="BLOQUEADO">BLOQUEADO</option>
-
     </select>
 
     <label>Data de Início</label>

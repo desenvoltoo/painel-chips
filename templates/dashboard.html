@@ -1,119 +1,122 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h2 class="mb-3 fw-bold">Painel Inteligente — Chips & Aparelhos</h2>
+<h2 class="fw-bold mb-4">Dashboard Operacional</h2>
 
-<div class="row g-3">
-  <div class="col-md-3"><div class="card-metric"><div id="metric-ativos" class="metric-number">0</div><small>Chips Ativos</small></div></div>
-  <div class="col-md-3"><div class="card-metric"><div id="metric-banidos" class="metric-number">0</div><small>Banidos</small></div></div>
-  <div class="col-md-3"><div class="card-metric"><div id="metric-restritos" class="metric-number">0</div><small>Restritos</small></div></div>
-  <div class="col-md-3"><div class="card-metric"><div id="metric-aparelhos" class="metric-number">0</div><small>Aparelhos Ativos</small></div></div>
-</div>
+<div class="row g-4 mb-4">
 
-<div class="row mt-4 g-3">
-    <div class="col-md-6">
-        <div class="chart-box">
-            <h5>Distribuição por Operadora</h5>
-            <canvas id="chart-operadora"></canvas>
+    <!-- TOTAL CHIPS -->
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center">
+                <i class="bi bi-sim fs-1 text-primary"></i>
+                <h5 class="mt-2 fw-bold">Total de Chips</h5>
+                <h3 class="fw-bold">{{ kpis.total_chips }}</h3>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="chart-box">
-            <h5>Tendência de Recargas</h5>
-            <canvas id="chart-recargas"></canvas>
+    <!-- CHIPS ATIVOS -->
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle fs-1 text-success"></i>
+                <h5 class="mt-2 fw-bold">Chips Ativos</h5>
+                <h3 class="fw-bold">{{ kpis.chips_ativos }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- APARELHOS -->
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center">
+                <i class="bi bi-phone fs-1 text-warning"></i>
+                <h5 class="mt-2 fw-bold">Aparelhos</h5>
+                <h3 class="fw-bold">{{ kpis.total_aparelhos }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- APARELHOS VINCULADOS -->
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center">
+                <i class="bi bi-link-45deg fs-1 text-info"></i>
+                <h5 class="mt-2 fw-bold">Vinculados</h5>
+                <h3 class="fw-bold">{{ kpis.aparelhos_vinculados }}</h3>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="table-box mt-4">
-    <h5 class="fw-bold">Últimos Chips Cadastrados</h5>
-    <table id="table-chips" class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Número</th>
-                <th>Operadora</th>
-                <th>Status</th>
-                <th>Aparelho</th>
-                <th>Última Recarga</th>
-            </tr>
-        </thead>
-        <tbody id="table-chips-body"></tbody>
-    </table>
-</div>
+<hr class="my-4">
+
+<h4 class="fw-bold mb-3">Últimas Recargas</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Chip</th>
+            <th>Operadora</th>
+            <th>Data Última Recarga</th>
+            <th>Valor</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for r in ultimas_recargas %}
+        <tr>
+            <td>{{ r.numero_chip }}</td>
+            <td>{{ r.operadora }}</td>
+            <td>{{ r.data_ultima_recarga }}</td>
+            <td>R$ {{ "%.2f"|format(r.valor_ultima_recarga) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<hr class="my-4">
+
+<h4 class="fw-bold">Tabela Consolidada (vw_chips_painel)</h4>
+
+<table id="tabelaDashboard" class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Chip</th>
+            <th>Operadora</th>
+            <th>Status Chip</th>
+            <th>Aparelho</th>
+            <th>Modelo</th>
+            <th>Data Vínculo</th>
+            <th>Última Recarga</th>
+            <th>Valor</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in tabela %}
+        <tr>
+            <td>{{ row.numero_chip }}</td>
+            <td>{{ row.operadora }}</td>
+            <td>{{ row.status_chip }}</td>
+            <td>{{ row.nome_aparelho or "-" }}</td>
+            <td>{{ row.modelo or "-" }}</td>
+            <td>{{ row.data_vinculo or "-" }}</td>
+            <td>{{ row.data_ultima_recarga or "-" }}</td>
+            <td>{{ row.valor_ultima_recarga or "-" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    carregarMetricas();
-    carregarTabelaChips();
-    carregarGraficoOperadora();
-    carregarGraficoRecargas();
+$(document).ready(() => {
+    $('#tabelaDashboard').DataTable({
+        pageLength: 10,
+        order: [[0, 'asc']]
+    });
 });
-
-function carregarMetricas() {
-    fetch("/api/dashboard/metricas")
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById("metric-ativos").innerText = d.ativos;
-            document.getElementById("metric-banidos").innerText = d.banidos;
-            document.getElementById("metric-restritos").innerText = d.restritos;
-            document.getElementById("metric-aparelhos").innerText = d.aparelhos;
-        });
-}
-
-function carregarTabelaChips() {
-    fetch("/api/chips/listar")
-        .then(r => r.json())
-        .then(dados => {
-            let tbody = document.getElementById("table-chips-body");
-            tbody.innerHTML = "";
-            dados.forEach(c => {
-                tbody.innerHTML += `
-                  <tr>
-                      <td>${c.id_chip}</td>
-                      <td>${c.numero}</td>
-                      <td>${c.operadora}</td>
-                      <td>${c.status}</td>
-                      <td>${c.aparelho_descricao ?? "-"}</td>
-                      <td>${c.data_ultima_recarga ?? "-"}</td>
-                  </tr>`;
-            });
-            new DataTable("#table-chips");
-        });
-}
-
-function carregarGraficoOperadora() {
-    fetch("/api/dashboard/operadoras")
-        .then(r => r.json())
-        .then(d => {
-            new Chart(document.getElementById("chart-operadora"), {
-                type: "pie",
-                data: {
-                    labels: d.labels,
-                    datasets: [{ data: d.valores }]
-                }
-            });
-        });
-}
-
-function carregarGraficoRecargas() {
-    fetch("/api/dashboard/recargas_trend")
-        .then(r => r.json())
-        .then(d => {
-            new Chart(document.getElementById("chart-recargas"), {
-                type: "line",
-                data: {
-                    labels: d.labels,
-                    datasets: [{
-                        label: "Recargas",
-                        data: d.valores,
-                        tension: 0.3
-                    }]
-                }
-            });
-        });
-}
 </script>
+
 {% endblock %}

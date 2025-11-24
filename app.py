@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from utils.bigquery_client import BigQueryClient
 
 app = Flask(__name__)
@@ -25,10 +25,11 @@ def home():
 # =======================
 @app.route("/aparelhos")
 def aparelhos():
-    aparelhos = bq.get_aparelhos()
+    dados = bq.get_aparelhos()
+
     return render_template(
         "aparelhos.html",
-        dados=aparelhos.to_dict(orient="records")
+        aparelhos=dados.to_dict(orient="records")
     )
 
 # =======================
@@ -36,21 +37,22 @@ def aparelhos():
 # =======================
 @app.route("/chips")
 def chips():
-    chips = bq.get_chips()
-    aparelhos = bq.get_aparelhos()
+    chips_df = bq.get_chips()
+    aparelhos_df = bq.get_aparelhos()
 
     return render_template(
         "chips.html",
-        chips=chips.to_dict(orient="records"),
-        aparelhos=aparelhos.to_dict(orient="records")
+        chips=chips_df.to_dict(orient="records"),
+        aparelhos=aparelhos_df.to_dict(orient="records")
     )
 
 # =======================
-# MOVIMENTAÇÃO (EVENTOS)
+# LISTA DE MOVIMENTAÇÃO
 # =======================
 @app.route("/movimentacao")
 def movimentacao():
-    dados = bq.get_view()  # view deve retornar chip + aparelho + vínculos
+    dados = bq.get_view()
+
     return render_template(
         "movimentacao.html",
         dados=dados.to_dict(orient="records")

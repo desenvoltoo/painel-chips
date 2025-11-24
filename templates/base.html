@@ -12,7 +12,7 @@
     <link rel="stylesheet"
           href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
-    <!-- Estilos Custom -->
+    <!-- CSS Geral -->
     <link rel="stylesheet" href="/static/css/style.css">
 
     <!-- JS -->
@@ -20,9 +20,15 @@
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
+        body {
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background: #0f0f0f;
+        }
+
         /* ===== SIDEBAR ===== */
         .sidebar {
-            width: 230px;
+            width: 240px;
             height: 100vh;
             background: #111827;
             padding: 25px 15px;
@@ -30,10 +36,11 @@
             top: 0;
             left: 0;
             color: white;
+            box-shadow: 0 0 12px #0006;
         }
 
         .side-title {
-            font-size: 22px;
+            font-size: 23px;
             font-weight: 700;
             margin-bottom: 30px;
             text-align: center;
@@ -46,7 +53,7 @@
             color: #d1d5db;
             text-decoration: none;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 16px;
             transition: 0.2s;
         }
 
@@ -55,10 +62,11 @@
             color: white;
         }
 
-        /* ===== ÁREA PRINCIPAL ===== */
+        /* ===== CONTEÚDO ===== */
         .content {
-            margin-left: 250px;
-            padding: 30px;
+            margin-left: 260px;
+            padding: 35px;
+            color: white;
         }
 
         .page-header {
@@ -69,7 +77,13 @@
             font-size: 28px;
             font-weight: 700;
             margin: 0;
-            color: #222;
+            color: white;
+        }
+
+        /* Remove interferências globais */
+        h1, h2, h3, p, span, td, th, label {
+            opacity: 1 !important;
+            color: inherit !important;
         }
     </style>
 </head>

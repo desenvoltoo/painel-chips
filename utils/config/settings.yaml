@@ -1,6 +1,15 @@
-bigquery:
-  dataset: "marts"
-  location: "us-central1"
-view:
-  chips: "painel-universidade.marts.vw_chips_painel"
-  aparelhos: "painel-universidade.marts.vw_aparelhos"
+project: painel-universidade
+dataset: marts
+
+paths:
+  views:
+    vw_chips_painel: "painel-universidade.marts.vw_chips_painel"
+
+tables:
+  dim_chip: "painel-universidade.marts.dim_chip"
+  dim_aparelho: "painel-universidade.marts.dim_aparelho"
+  f_chip_aparelho: "painel-universidade.marts.f_chip_aparelho"
+
+app:
+  title: "Painel de Chips & Aparelhos"
+  version: "1.0.0"

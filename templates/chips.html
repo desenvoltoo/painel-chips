@@ -7,17 +7,33 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-/* 🔥 Correções globais para impedir texto branco herdado */
+/* Correções para texto escuro */
 body, html, .content, .page, .main-container {
     color: #1e293b !important;
 }
-
 .card, table, th, td, input, select, label, h1, h2, h3, p, span {
     color: #1e293b !important;
 }
+
+/* Botão editar */
+.btn-edit {
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    text-decoration: none;
+}
+.btn-edit:hover {
+    background: #bae6fd;
+    color: #0369a1;
+}
 </style>
 
-<!-- HEADER MODERNO -->
 <header class="header">
     <div class="container">
         <div class="header-content">
@@ -134,21 +150,18 @@ body, html, .content, .page, .main-container {
     <!-- LISTAGEM -->
     <div class="card">
         <div class="card-header">
-            <div class="card-icon">
-                <i class="fas fa-list"></i>
-            </div>
+            <div class="card-icon"><i class="fas fa-list"></i></div>
             <h2 class="card-title">Chips Cadastrados</h2>
         </div>
 
         <div class="card-content">
 
-            <!-- Busca -->
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
             </div>
 
-            <!-- Tabela -->
+            <!-- TABELA -->
             <div class="table-wrapper">
                 <table id="chipsTable">
                     <thead>
@@ -163,6 +176,7 @@ body, html, .content, .page, .main-container {
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
                             <th>Início</th>
+                            <th style="text-align:center;">Ações</th>
                         </tr>
                     </thead>
 
@@ -172,17 +186,20 @@ body, html, .content, .page, .main-container {
                             <td>{{ c.id_chip }}</td>
                             <td>{{ c.numero }}</td>
                             <td>{{ c.operadora }}</td>
-                            <td>
-                                <span class="status-badge status-{{ c.status|lower }}">
-                                    {{ c.status }}
-                                </span>
-                            </td>
+                            <td><span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span></td>
                             <td>{{ c.plano }}</td>
                             <td>{{ c.ultima_recarga_data }}</td>
                             <td>{{ c.ultima_recarga_valor }}</td>
                             <td>{{ c.total_gasto }}</td>
                             <td>{{ c.aparelho_nome if c.aparelho_nome else '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
+
+                            <!-- BOTÃO EDITAR -->
+                            <td style="text-align:center;">
+                                <a href="/chips/edit/{{ c.id_chip }}" class="btn-edit">
+                                    <i class="fas fa-pen-to-square"></i>
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -196,11 +213,10 @@ body, html, .content, .page, .main-container {
 </main>
 
 <script>
-/* Filtro de busca moderno */
+/* Filtro de busca */
 document.getElementById('searchInput').addEventListener('input', function(e) {
     const term = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('#tableBody tr');
-
     rows.forEach(row => {
         const text = row.innerText.toLowerCase();
         row.style.display = text.includes(term) ? '' : 'none';

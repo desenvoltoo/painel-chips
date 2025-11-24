@@ -1,26 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <meta charset="utf-8">
-    <title>Painel Chips & Aparelhos</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <script src="/static/js/app.js" defer></script>
+    <meta charset="UTF-8">
+    <title>Painel de Chips</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- GOOGLE FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- DATATABLES -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Inter", sans-serif;
+            background: #f2f2f7;
+        }
+
+        header {
+            background: #1e1e2f;
+            padding: 15px 25px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+        }
+
+        nav a {
+            color: #dcdcff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        nav a:hover {
+            color: white;
+        }
+
+        .container {
+            padding: 25px;
+        }
+
+        /* FORM BOX */
+        .form-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            max-width: 600px;
+        }
+
+        .form-box label {
+            display: block;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .form-box input,
+        .form-box select {
+            padding: 10px;
+            width: 100%;
+            margin-top: 5px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #4a56e2;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #3945d1;
+        }
+
+        /* TABELAS */
+        table.dataTable {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+    </style>
+
+    <!-- JQUERY + DATATABLES -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
 </head>
 <body>
 
 <header>
-    <h1>Painel Chips & Aparelhos</h1>
+    <h1>📡 Painel de Chips</h1>
+
     <nav>
-        <a href="/">Dashboard</a>
+        <a href="/dashboard">Dashboard</a>
         <a href="/chips">Chips</a>
         <a href="/aparelhos">Aparelhos</a>
-        <a href="/eventos">Movimentações</a>
+        <a href="/movimentacao">Movimentação</a>
     </nav>
 </header>
 
-<main>
+<div class="container">
     {% block conteudo %}{% endblock %}
-</main>
+</div>
 
 </body>
 </html>

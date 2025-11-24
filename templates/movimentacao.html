@@ -1,44 +1,56 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Movimentação de Chips</h2>
+<h2>Movimentações</h2>
 
-<p class="subinfo">
-    Aqui você acompanha o histórico de vínculos entre chips e aparelhos,
-    incluindo entradas, saídas e trocas de dispositivos.
-</p>
+<form method="POST" action="/movimentacao/add" class="form-box">
+
+    <label>Chip (SK)</label>
+    <input name="sk_chip" required>
+
+    <label>Aparelho (SK)</label>
+    <input name="sk_aparelho" required>
+
+    <label>Data Uso</label>
+    <input type="date" name="data_uso">
+
+    <label>Tipo Movimento</label>
+    <input name="tipo_movimento">
+
+    <label>Origem</label>
+    <input name="origem">
+
+    <label>Observação</label>
+    <textarea name="observacao"></textarea>
+
+    <button>Salvar</button>
+</form>
+
+
+<h2>Eventos Registrados</h2>
 
 <table class="tabela">
 <thead>
-    <tr>
-        <th>ID Chip</th>
-        <th>Número</th>
-        <th>Operadora</th>
-        <th>Status Chip</th>
-
-        <th>Aparelho</th>
-        <th>Modelo</th>
-        <th>IMEI</th>
-
-        <th>Data de Vínculo</th>
-        <th>Data de Desvínculo</th>
-    </tr>
-</thead>
-
-<tbody>
-{% for m in dados %}
 <tr>
-    <td>{{ m.sk_chip }}</td>
-    <td>{{ m.numero }}</td>
-    <td>{{ m.operadora }}</td>
-    <td>{{ m.status }}</td>
-
-    <td>{{ m.nome_aparelho }}</td>
-    <td>{{ m.modelo }}</td>
-    <td>{{ m.imei }}</td>
-
-    <td>{{ m.data_vinculo }}</td>
-    <td>{{ m.data_desvinculo }}</td>
+    <th>Fato</th>
+    <th>Chip</th>
+    <th>Aparelho</th>
+    <th>Data</th>
+    <th>Tipo</th>
+    <th>Origem</th>
+    <th>Obs</th>
+</tr>
+</thead>
+<tbody>
+{% for e in eventos %}
+<tr>
+    <td>{{ e.sk_fato }}</td>
+    <td>{{ e.sk_chip }}</td>
+    <td>{{ e.sk_aparelho }}</td>
+    <td>{{ e.data_uso }}</td>
+    <td>{{ e.tipo_movimento }}</td>
+    <td>{{ e.origem }}</td>
+    <td>{{ e.observacao }}</td>
 </tr>
 {% endfor %}
 </tbody>

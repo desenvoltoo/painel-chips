@@ -19,8 +19,6 @@
 
     <label>Status</label>
     <select name="status">
-
-        <!-- Status oficiais -->
         <option value="DISPONIVEL">DISPONÍVEL</option>
         <option value="MATURANDO">MATURANDO</option>
         <option value="MATURADO">MATURADO</option>
@@ -30,11 +28,8 @@
         <option value="DISPARANDO">DISPARANDO</option>
         <option value="BANIDO">BANIDO</option>
         <option value="RESTRINGIDO">RESTRINGIDO</option>
-
-        <!-- Legados -->
         <option value="ATIVO">ATIVO</option>
         <option value="BLOQUEADO">BLOQUEADO</option>
-
     </select>
 
     <label>Data de Início</label>
@@ -49,12 +44,12 @@
     <label>Total Gasto</label>
     <input type="number" step="0.01" name="total_gasto">
 
-    <!-- Select de aparelhos com nome real -->
+    <!-- AGORA MOSTRA O MODELO REAL DO APARELHO -->
     <label>Aparelho Atual</label>
     <select name="sk_aparelho_atual">
         <option value="">Nenhum</option>
         {% for a in aparelhos %}
-            <option value="{{ a.sk_aparelho }}">{{ a.nome_aparelho }}</option>
+            <option value="{{ a.sk_aparelho }}">{{ a.modelo }}</option>
         {% endfor %}
     </select>
 
@@ -74,7 +69,7 @@
         <th>Status</th>
         <th>Última Recarga</th>
         <th>Total Gasto</th>
-        <th>Aparelho Atual</th>
+        <th>Aparelho Atual (Modelo)</th>
     </tr>
 </thead>
 <tbody>
@@ -87,12 +82,11 @@
     <td>{{ c.status }}</td>
     <td>{{ c.ultima_recarga_data }}</td>
     <td>{{ c.total_gasto }}</td>
-    <td>{{ c.aparelho_atual }}</td>
+    <td>{{ c.modelo }}</td>
 </tr>
 {% endfor %}
 </tbody>
 </table>
-
 
 <script>
 document.querySelector("#form-chip").onsubmit = async e => {

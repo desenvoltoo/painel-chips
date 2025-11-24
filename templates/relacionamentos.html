@@ -1,72 +1,76 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Vínculo Chip ↔ Aparelho</h2>
+<h2>Registrar Evento</h2>
 
-<form id="form-vinculo" class="form-box">
+<form id="form-evento" class="form-box">
 
     <label>Chip</label>
     <select name="sk_chip">
         {% for c in chips %}
-            <option value="{{ c.sk_chip }}">{{ c.numero_chip }} ({{ c.operadora }})</option>
+            <option value="{{ c.sk_chip }}">{{ c.numero }}</option>
         {% endfor %}
     </select>
 
     <label>Aparelho</label>
     <select name="sk_aparelho">
         {% for a in aparelhos %}
-            <option value="{{ a.sk_aparelho }}">{{ a.nome_aparelho }} - {{ a.modelo }}</option>
+            <option value="{{ a.sk_aparelho }}">{{ a.modelo }}</option>
         {% endfor %}
     </select>
 
-    <button type="submit">Vincular</button>
+    <label>Tipo de Movimento</label>
+    <select name="tipo_movimento">
+        <option>ENTREGA</option>
+        <option>DEVOLUÇÃO</option>
+        <option>RECARGA</option>
+    </select>
+
+    <label>Data</label>
+    <input type="date" name="data_uso">
+
+    <label>Origem</label>
+    <input name="origem">
+
+    <label>Observação</label>
+    <input name="observacao">
+
+    <button>Salvar Evento</button>
 </form>
 
-<h2>Vínculos Atuais</h2>
+<h2>Eventos Registrados</h2>
 
 <table class="tabela">
-    <thead>
-        <tr>
-            <th>Chip</th>
-            <th>Aparelho</th>
-            <th>Data Vínculo</th>
-            <th>Ação</th>
-        </tr>
-    </thead>
-
-    <tbody>
-    {% for r in rel %}
-    <tr>
-        <td>{{ r.sk_chip }}</td>
-        <td>{{ r.sk_aparelho }}</td>
-        <td>{{ r.data_vinculo }}</td>
-        <td>
-            {% if not r.data_desvinculo %}
-            <button onclick="desvincular({{ r.id }})">Desvincular</button>
-            {% else %}
-            <span>Finalizado</span>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-    </tbody>
+<thead>
+<tr>
+    <th>Chip</th>
+    <th>Aparelho</th>
+    <th>Tipo</th>
+    <th>Data</th>
+    <th>Origem</th>
+    <th>Observação</th>
+</tr>
+</thead>
+<tbody>
+{% for r in rel %}
+<tr>
+    <td>{{ r.sk_chip }}</td>
+    <td>{{ r.sk_aparelho }}</td>
+    <td>{{ r.tipo_movimento }}</td>
+    <td>{{ r.data_uso }}</td>
+    <td>{{ r.origem }}</td>
+    <td>{{ r.observacao }}</td>
+</tr>
+{% endfor %}
+</tbody>
 </table>
 
 <script>
-document.querySelector("#form-vinculo").onsubmit = async e => {
+document.querySelector("#form-evento").onsubmit = async e => {
     e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    await fetch("/vincular", {method:"POST", body:new URLSearchParams(data)});
+    await fetch("/eventos/add", {method:"POST", body:new URLSearchParams(new FormData(e.target))});
     location.reload();
-}
-
-async function desvincular(id) {
-    await fetch("/desvincular", {
-        method:"POST",
-        body: new URLSearchParams({id})
-    });
-    location.reload();
-}
+};
 </script>
 
 {% endblock %}

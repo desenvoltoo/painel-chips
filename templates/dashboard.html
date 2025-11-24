@@ -1,37 +1,161 @@
 {% extends "base.html" %}
 {% block conteudo %}
 
-<h2>Resumo Geral</h2>
+<style>
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
 
-<div class="kpi-container">
-    <div class="kpi-card"><h3>Total de Chips</h3><p>{{ kpis.total_chips }}</p></div>
-    <div class="kpi-card"><h3>Total de Aparelhos</h3><p>{{ kpis.total_aparelhos }}</p></div>
-    <div class="kpi-card"><h3>Eventos Registrados</h3><p>{{ kpis.total_eventos }}</p></div>
+.card-kpi {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.card-kpi h3 {
+    margin: 0;
+    color: #444;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.card-kpi .valor {
+    font-size: 28px;
+    font-weight: bold;
+    margin-top: 8px;
+    color: #222;
+}
+
+.filtros-box {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.filtros-box select {
+    padding: 10px;
+    border-radius: 8px;
+    width: 220px;
+}
+
+.table-container {
+    background: white;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+</style>
+
+<h2>📊 Dashboard — Chips & Aparelhos</h2>
+
+<div class="dashboard-grid">
+    <div class="card-kpi">
+        <h3>Total de Chips</h3>
+        <div class="valor">{{ total_chips }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <h3>Chips Ativos</h3>
+        <div class="valor">{{ chips_ativos }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <h3>Chips Disparando</h3>
+        <div class="valor">{{ disparando }}</div>
+    </div>
+
+    <div class="card-kpi">
+        <h3>Banidos</h3>
+        <div class="valor">{{ banidos }}</div>
+    </div>
 </div>
 
-<h2>Consolidação</h2>
+<!-- FILTROS -->
+<div class="filtros-box">
+    <select id="filtro-status">
+        <option value="">Filtrar por status</option>
+        {% for s in lista_status %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select>
 
-<table class="tabela">
-<thead>
-<tr>
-    <th>Chip</th>
-    <th>Operadora</th>
-    <th>Status</th>
-    <th>Aparelho</th>
-    <th>Evento</th>
-</tr>
-</thead>
-<tbody>
-{% for r in tabela %}
-<tr>
-    <td>{{ r.numero }}</td>
-    <td>{{ r.operadora }}</td>
-    <td>{{ r.status }}</td>
-    <td>{{ r.aparelho_modelo }}</td>
-    <td>{{ r.valor_evento }}</td>
-</tr>
-{% endfor %}
-</tbody>
+    <select id="filtro-operadora">
+        <option value="">Filtrar por operadora</option>
+        {% for s in lista_operadora %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select>
+
+    <select id="filtro-aparelho">
+        <option value="">Filtrar por aparelho</option>
+        {% for s in lista_aparelho %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- TABELA -->
+<div class="table-container">
+<table id="tabela-dashboard" class="display" style="width:100%">
+    <thead>
+        <tr>
+            <th>Chip</th>
+            <th>Número</th>
+            <th>Status</th>
+            <th>Operadora</th>
+            <th>Plano</th>
+            <th>Aparelho Atual</th>
+            <th>Última Recarga</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in tabela %}
+        <tr>
+            <td>{{ row.sk_chip }}</td>
+            <td>{{ row.numero }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.operadora }}</td>
+            <td>{{ row.plano }}</td>
+            <td>
+                {% if row.nome_aparelho %}
+                    {{ row.nome_aparelho }}
+                {% else %}
+                    Nenhum
+                {% endif %}
+            </td>
+            <td>{{ row.ultima_recarga_data }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+</div>
+
+<script>
+$(document).ready(function() {
+    var tabela = $('#tabela-dashboard').DataTable({
+        pageLength: 10,
+        order: [[0, "desc"]]
+    });
+
+    $("#filtro-status").on("change", function() {
+        tabela.column(2).search(this.value).draw();
+    });
+
+    $("#filtro-operadora").on("change", function() {
+        tabela.column(3).search(this.value).draw();
+    });
+
+    $("#filtro-aparelho").on("change", function() {
+        tabela.column(5).search(this.value).draw();
+    });
+});
+</script>
 
 {% endblock %}

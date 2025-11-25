@@ -146,68 +146,75 @@ class BigQueryClient:
         """
         return self._run(sql)
 
-    def upsert_chip(self, form):
+   def upsert_chip(self, form):
+    import uuid
 
-        # ============= ID CHIP =============
-        id_chip = form.get("id_chip")
-        if not id_chip or id_chip.strip() == "":
-            id_chip = str(uuid.uuid4())
+    # ============= ID CHIP =============
+    id_chip = form.get("id_chip")
+    if not id_chip or id_chip.strip() == "":
+        id_chip = str(uuid.uuid4())
 
-        id_chip = q(id_chip)
+    # ======== CAMPOS TEXTO (sanitize) ========
+    numero = form.get("numero", "").strip()
+    operadora = form.get("operadora", "").strip()
+    plano = form.get("plano", "").strip()
+    status = form.get("status", "").strip()
 
-        numero = q(form.get("numero"))
-        operadora = q(form.get("operadora"))
-        plano = q(form.get("plano"))
-        status = q(form.get("status"))
+    # ======== DATAS ========
+    def sql_date(x):
+        return f"DATE('{x}')" if x else "NULL"
 
-        # ======== Datas ========
-        dt_inicio = form.get("dt_inicio")
-        dt_inicio_sql = f"DATE('{dt_inicio}')" if dt_inicio else "NULL"
+    dt_inicio_sql = sql_date(form.get("dt_inicio"))
+    ultima_data_sql = sql_date(form.get("ultima_recarga_data"))
 
-        ultima_data = form.get("ultima_recarga_data")
-        ultima_data_sql = f"DATE('{ultima_data}')" if ultima_data else "NULL"
+    # ======== VALORES NUMÉRICOS (corrigido!) ========
+    def sql_num(x):
+        try:
+            x = x.replace(",", ".")
+            return float(x)
+        except:
+            return 0
 
-        # ======== Valores ========
-        val_recarga = form.get("ultima_recarga_valor") or "0"
-        total_gasto = form.get("total_gasto") or "0"
+    val_recarga = sql_num(form.get("ultima_recarga_valor") or "0")
+    total_gasto = sql_num(form.get("total_gasto") or "0")
 
-        # ======== Aparelho ========
-        sk_aparelho_atual = form.get("sk_aparelho_atual")
-        sk_aparelho_atual = sk_aparelho_atual if sk_aparelho_atual else None
-        aparelho_sql = sk_aparelho_atual if sk_aparelho_atual else "NULL"
+    # ======== APARELHO (corrigido!) ========
+    sk_aparelho_atual = form.get("sk_aparelho_atual")
+    aparelho_sql = sk_aparelho_atual if sk_aparelho_atual not in ("", None) else "NULL"
 
-        sql = f"""
-        MERGE `{PROJECT}.{DATASET}.dim_chip` T
-        USING (SELECT '{id_chip}' AS id_chip) S
-        ON T.id_chip = S.id_chip
+    # ======== MERGE FINAL ========
+    sql = f"""
+    MERGE `{PROJECT}.{DATASET}.dim_chip` T
+    USING (SELECT '{id_chip}' AS id_chip) S
+    ON T.id_chip = S.id_chip
 
-        WHEN MATCHED THEN UPDATE SET
-            numero = '{numero}',
-            operadora = '{operadora}',
-            plano = '{plano}',
-            status = '{status}',
-            dt_inicio = {dt_inicio_sql},
-            ultima_recarga_valor = {val_recarga},
-            ultima_recarga_data = {ultima_data_sql},
-            total_gasto = {total_gasto},
-            sk_aparelho_atual = {aparelho_sql},
-            update_at = CURRENT_TIMESTAMP()
+    WHEN MATCHED THEN UPDATE SET
+        numero = '{numero}',
+        operadora = '{operadora}',
+        plano = '{plano}',
+        status = '{status}',
+        dt_inicio = {dt_inicio_sql},
+        ultima_recarga_valor = {val_recarga},
+        ultima_recarga_data = {ultima_data_sql},
+        total_gasto = {total_gasto},
+        sk_aparelho_atual = {aparelho_sql},
+        update_at = CURRENT_TIMESTAMP()
 
-        WHEN NOT MATCHED THEN INSERT (
-            id_chip, numero, operadora, plano, status,
-            dt_inicio, ultima_recarga_valor, ultima_recarga_data,
-            total_gasto, sk_aparelho_atual,
-            ativo, create_at, update_at
-        )
-        VALUES (
-            '{id_chip}', '{numero}', '{operadora}', '{plano}', '{status}',
-            {dt_inicio_sql}, {val_recarga}, {ultima_data_sql},
-            {total_gasto}, {aparelho_sql},
-            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-        );
-        """
+    WHEN NOT MATCHED THEN INSERT (
+        id_chip, numero, operadora, plano, status,
+        dt_inicio, ultima_recarga_valor, ultima_recarga_data,
+        total_gasto, sk_aparelho_atual,
+        ativo, create_at, update_at
+    )
+    VALUES (
+        '{id_chip}', '{numero}', '{operadora}', '{plano}', '{status}',
+        {dt_inicio_sql}, {val_recarga}, {ultima_data_sql},
+        {total_gasto}, {aparelho_sql},
+        TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+    );
+    """
 
-        self._run(sql)
+    self._run(sql)
 
     # ============================================================
     # ======================= MOVIMENTAÇÃO ========================

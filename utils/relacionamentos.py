@@ -1,27 +1,74 @@
-from google.cloud import bigquery
-from datetime import datetime
+# utils/relacionamentos.py
+from flask import Blueprint, render_template, request, redirect
+from utils.bigquery_client import BigQueryClient
 
-PROJECT = "painel-universidade"
-DATASET = "marts"
-TABLE = f"{PROJECT}.{DATASET}.f_chip_aparelho"
+# Blueprint
+relacionamentos_bp = Blueprint("relacionamentos", __name__)
 
-client = bigquery.Client()
+# BigQuery Client
+bq = BigQueryClient()
 
-def listar_eventos():
-    sql = f"""
-    SELECT *
-    FROM `{TABLE}`
-    ORDER BY data_uso DESC
+
+# =======================================================
+# LISTAGEM DE RELACIONAMENTOS (FATO)
+# =======================================================
+@relacionamentos_bp.route("/relacionamentos")
+def listar_relacionamentos():
     """
-    return list(client.query(sql).result())
+    Lista todos os vínculos entre chips e aparelhos
+    (tabela f_chip_aparelho).
+    """
+    try:
+        df = bq.get_eventos()
 
-def registrar_evento(data):
-    row = {
-        "sk_chip": int(data.get("sk_chip")),
-        "sk_aparelho": int(data.get("sk_aparelho")),
-        "tipo_movimento": data.get("tipo_movimento"),
-        "data_uso": data.get("data_uso"),
-        "origem": data.get("origem"),
-        "observacao": data.get("observacao"),
-    }
-    client.insert_rows_json(TABLE, [row])
+        # Converte para JSON
+        relacionamentos = df.to_dict(orient="records")
+
+        return render_template(
+            "relacionamentos.html",
+            relacionamentos=relacionamentos
+        )
+
+    except Exception as e:
+        print("Erro ao carregar relacionamentos:", e)
+        return "Erro ao carregar relacionamentos", 500
+
+
+# =======================================================
+# NOVO RELACIONAMENTO
+# =======================================================
+@relacionamentos_bp.route("/relacionamentos/add", methods=["POST"])
+def adicionar_relacionamento():
+    """
+    Insere um novo relacionamento Chip → Aparelho
+    (movimentação).
+    """
+    try:
+        bq.insert_evento(request.form)
+        return redirect("/relacionamentos")
+
+    except Exception as e:
+        print("Erro ao inserir relacionamento:", e)
+        return "Erro ao inserir relacionamento", 500
+
+
+# =======================================================
+# DETALHE DO RELACIONAMENTO (opcional)
+# =======================================================
+@relacionamentos_bp.route("/relacionamentos/<id_row>")
+def detalhe_relacionamento(id_row):
+    """
+    Busca 1 relacionamento específico.
+    """
+    try:
+        df = bq.get_eventos()
+        df = df[df["id"] == id_row]
+
+        if len(df) == 0:
+            return {"erro": "Relacionamento não encontrado"}, 404
+
+        return df.to_dict(orient="records")[0]
+
+    except Exception as e:
+        print("Erro ao carregar registro:", e)
+        return "Erro ao buscar relacionamento", 500

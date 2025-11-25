@@ -69,9 +69,6 @@ class BigQueryClient:
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
-        # =====================================================
-        # 1. BUSCAR PRÓXIMO SK DISPONÍVEL (caso seja INSERT)
-        # =====================================================
         sql_next_sk = f"""
             SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`;
@@ -79,9 +76,6 @@ class BigQueryClient:
         df = self._run(sql_next_sk)
         next_sk = int(df.iloc[0]["next_sk"])
 
-        # =====================================================
-        # 2. MERGE — agora inclui sk_aparelho no INSERT
-        # =====================================================
         sql = f"""
         MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
         USING (SELECT '{id_aparelho}' AS id_aparelho) S
@@ -119,7 +113,6 @@ class BigQueryClient:
             CURRENT_TIMESTAMP()
           );
         """
-
         self._run(sql)
 
     # ============================================================
@@ -146,75 +139,96 @@ class BigQueryClient:
         """
         return self._run(sql)
 
-   def upsert_chip(self, form):
-    import uuid
+    def upsert_chip(self, form):
 
-    # ============= ID CHIP =============
-    id_chip = form.get("id_chip")
-    if not id_chip or id_chip.strip() == "":
-        id_chip = str(uuid.uuid4())
+        # --- ID CHIP ---
+        id_chip = form.get("id_chip")
+        if not id_chip or id_chip.strip() == "":
+            id_chip = str(uuid.uuid4())
 
-    # ======== CAMPOS TEXTO (sanitize) ========
-    numero = form.get("numero", "").strip()
-    operadora = form.get("operadora", "").strip()
-    plano = form.get("plano", "").strip()
-    status = form.get("status", "").strip()
+        id_chip_sql = q(id_chip)
 
-    # ======== DATAS ========
-    def sql_date(x):
-        return f"DATE('{x}')" if x else "NULL"
+        # --- STRING FIELDS ---
+        numero = q(form.get("numero", "").strip())
+        operadora = q(form.get("operadora", "").strip())
+        plano = q(form.get("plano", "").strip())
+        status = q(form.get("status", "").strip())
 
-    dt_inicio_sql = sql_date(form.get("dt_inicio"))
-    ultima_data_sql = sql_date(form.get("ultima_recarga_data"))
+        # --- DATAS ---
+        def sql_date(x):
+            return f"DATE('{x}')" if x else "NULL"
 
-    # ======== VALORES NUMÉRICOS (corrigido!) ========
-    def sql_num(x):
-        try:
-            x = x.replace(",", ".")
-            return float(x)
-        except:
-            return 0
+        dt_inicio_sql = sql_date(form.get("dt_inicio"))
+        ultima_data_sql = sql_date(form.get("ultima_recarga_data"))
 
-    val_recarga = sql_num(form.get("ultima_recarga_valor") or "0")
-    total_gasto = sql_num(form.get("total_gasto") or "0")
+        # --- NÚMEROS (corrigido!) ---
+        def sql_num(x):
+            try:
+                if x is None:
+                    return 0
+                x = str(x).replace(",", ".").strip()
+                return float(x)
+            except:
+                return 0
 
-    # ======== APARELHO (corrigido!) ========
-    sk_aparelho_atual = form.get("sk_aparelho_atual")
-    aparelho_sql = sk_aparelho_atual if sk_aparelho_atual not in ("", None) else "NULL"
+        val_recarga = sql_num(form.get("ultima_recarga_valor"))
+        total_gasto = sql_num(form.get("total_gasto"))
 
-    # ======== MERGE FINAL ========
-    sql = f"""
-    MERGE `{PROJECT}.{DATASET}.dim_chip` T
-    USING (SELECT '{id_chip}' AS id_chip) S
-    ON T.id_chip = S.id_chip
+        # --- APARELHO ---
+        aparelho = form.get("sk_aparelho_atual")
+        aparelho_sql = aparelho if aparelho not in (None, "") else "NULL"
 
-    WHEN MATCHED THEN UPDATE SET
-        numero = '{numero}',
-        operadora = '{operadora}',
-        plano = '{plano}',
-        status = '{status}',
-        dt_inicio = {dt_inicio_sql},
-        ultima_recarga_valor = {val_recarga},
-        ultima_recarga_data = {ultima_data_sql},
-        total_gasto = {total_gasto},
-        sk_aparelho_atual = {aparelho_sql},
-        update_at = CURRENT_TIMESTAMP()
+        # --- MERGE ---
+        sql = f"""
+        MERGE `{PROJECT}.{DATASET}.dim_chip` T
+        USING (SELECT '{id_chip_sql}' AS id_chip) S
+        ON T.id_chip = S.id_chip
 
-    WHEN NOT MATCHED THEN INSERT (
-        id_chip, numero, operadora, plano, status,
-        dt_inicio, ultima_recarga_valor, ultima_recarga_data,
-        total_gasto, sk_aparelho_atual,
-        ativo, create_at, update_at
-    )
-    VALUES (
-        '{id_chip}', '{numero}', '{operadora}', '{plano}', '{status}',
-        {dt_inicio_sql}, {val_recarga}, {ultima_data_sql},
-        {total_gasto}, {aparelho_sql},
-        TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-    );
-    """
+        WHEN MATCHED THEN UPDATE SET
+            numero = '{numero}',
+            operadora = '{operadora}',
+            plano = '{plano}',
+            status = '{status}',
+            dt_inicio = {dt_inicio_sql},
+            ultima_recarga_valor = {val_recarga},
+            ultima_recarga_data = {ultima_data_sql},
+            total_gasto = {total_gasto},
+            sk_aparelho_atual = {aparelho_sql},
+            update_at = CURRENT_TIMESTAMP()
 
-    self._run(sql)
+        WHEN NOT MATCHED THEN INSERT (
+            id_chip,
+            numero,
+            operadora,
+            plano,
+            status,
+            dt_inicio,
+            ultima_recarga_valor,
+            ultima_recarga_data,
+            total_gasto,
+            sk_aparelho_atual,
+            ativo,
+            create_at,
+            update_at
+        )
+        VALUES (
+            '{id_chip_sql}',
+            '{numero}',
+            '{operadora}',
+            '{plano}',
+            '{status}',
+            {dt_inicio_sql},
+            {val_recarga},
+            {ultima_data_sql},
+            {total_gasto},
+            {aparelho_sql},
+            TRUE,
+            CURRENT_TIMESTAMP(),
+            CURRENT_TIMESTAMP()
+        );
+        """
+
+        self._run(sql)
 
     # ============================================================
     # ======================= MOVIMENTAÇÃO ========================

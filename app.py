@@ -9,7 +9,6 @@ import pandas as pd
 # Blueprints
 from utils.chips import chips_bp
 from utils.aparelhos import bp_aparelhos
-from utils.recargas import recargas_bp
 from utils.relacionamentos import relacionamentos_bp
 
 # BigQuery

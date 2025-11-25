@@ -7,9 +7,10 @@ from datetime import datetime, date
 import pandas as pd
 
 # Blueprints
-from routes.chips import chips_bp
-from routes.aparelhos import bp_aparelhos
-from routes.movimentacao import bp_mov
+from utils.chips import chips_bp
+from utils.aparelhos import bp_aparelhos
+from utils.recargas import recargas_bp
+from utils.relacionamentos import relacionamentos_bp
 
 # BigQuery
 from utils.bigquery_client import BigQueryClient

@@ -33,7 +33,12 @@ def dashboard():
     # === FILTROS ===
     lista_status = sorted(df["status"].dropna().unique())
     lista_operadora = sorted(df["operadora"].dropna().unique())
-    lista_aparelho = sorted(df["modelo_aparelho"].dropna().unique())
+    df["aparelho_label"] = df.apply(
+    lambda x: f"{x['marca_aparelho']} {x['modelo_aparelho']}".strip(),
+    axis=1
+)
+
+lista_aparelho = sorted(df["aparelho_label"].dropna().unique())
 
     return render_template(
         "dashboard.html",

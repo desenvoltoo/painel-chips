@@ -79,14 +79,29 @@ def chips():
     chips_df = bq.get_chips()
     aparelhos_df = bq.get_aparelhos()
 
-    # 🔥 CORREÇÃO CRÍTICA
-    # Converte datetime para string e remove NaT para evitar erro no tojson
+    # ===========
+    # 1) Corrige datas NaT → None (evita erro de timetuple no tojson)
+    # ===========
+    for col in chips_df.select_dtypes(include=["datetime64[ns]"]).columns:
+        chips_df[col] = chips_df[col].astype("object").where(
+            chips_df[col].notnull(), None
+        )
+
+    # ===========
+    # 2) Corrige colunas Int64 para aceitar fillna
+    # ===========
     for col in chips_df.columns:
-        if "data" in col.lower() or "dt_" in col.lower():
-            chips_df[col] = chips_df[col].astype(str).replace("NaT", "")
+        if str(chips_df[col].dtype) == "Int64":  # Pandas Int64 (nullable)
+            chips_df[col] = chips_df[col].astype("float").astype("object")
 
-    chips_df = chips_df.fillna("")  # remove None/NaN
+    # ===========
+    # 3) Agora pode preencher Nulos sem quebrar
+    # ===========
+    chips_df = chips_df.fillna("")
 
+    # ===========
+    # RENDERIZA
+    # ===========
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),

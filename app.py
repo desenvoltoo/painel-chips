@@ -104,7 +104,7 @@ app.register_blueprint(chips_bp)
 app.register_blueprint(bp_aparelhos)
 app.register_blueprint(bp_mov)
 app.register_blueprint(recargas_bp)
-
+app.register_blueprint(relacionamentos_bp)
 
 # ============================================================
 # RUN LOCAL

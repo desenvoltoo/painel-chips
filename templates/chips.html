@@ -185,7 +185,7 @@
 </main>
 
 <script>
-let chipsData = {{ chips|tojson }};
+let chipsData = {{ chips | tojson | safe }};
 
 // Busca dinâmica
 document.getElementById("searchInput").addEventListener("input", e => {
@@ -193,7 +193,7 @@ document.getElementById("searchInput").addEventListener("input", e => {
 
     const filtrados = chipsData.filter(chip =>
         Object.values(chip).some(val =>
-            String(val).toLowerCase().includes(termo)
+            String(val || "").toLowerCase().includes(termo)
         )
     );
 
@@ -205,27 +205,31 @@ function renderRows(lista) {
     tbody.innerHTML = "";
 
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="10" class="empty-message">Nenhum chip encontrado.</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" class="empty-message">Nenhum chip encontrado.</td>
+            </tr>`;
         return;
     }
 
     lista.forEach(c => {
         tbody.innerHTML += `
             <tr>
-                <td>${c.id_chip}</td>
-                <td>${c.numero}</td>
-                <td>${c.operadora}</td>
-                <td><span class="status-badge status-${c.status.toLowerCase()}">${c.status}</span></td>
-                <td>${c.plano || '-'}</td>
-                <td>${c.ultima_recarga_data || '-'}</td>
-                <td>${c.ultima_recarga_valor || '-'}</td>
-                <td>${c.total_gasto || '-'}</td>
-                <td>${c.modelo_aparelho || '-'}</td>
-                <td>${c.dt_inicio || '-'}</td>
+                <td>${c.id_chip || "-"}</td>
+                <td>${c.numero || "-"}</td>
+                <td>${c.operadora || "-"}</td>
+                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status || "-"}</span></td>
+                <td>${c.plano || "-"}</td>
+                <td>${c.ultima_recarga_data || "-"}</td>
+                <td>${c.ultima_recarga_valor || "-"}</td>
+                <td>${c.total_gasto || "-"}</td>
+                <td>${c.modelo_aparelho || "-"}</td>
+                <td>${c.dt_inicio || "-"}</td>
             </tr>
         `;
     });
 }
 </script>
+
 
 {% endblock %}

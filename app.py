@@ -1,16 +1,14 @@
 # ============================================================
-# app.py — Painel de Chips (versão corrigida final)
+# app.py — Painel de Chips (versão limpa e funcional)
 # ============================================================
 
 from flask import Flask, render_template
 from datetime import datetime, date
 import pandas as pd
 
-# Blueprints
+# Blueprints — apenas os que realmente existem
 from utils.chips import chips_bp
 from utils.aparelhos import bp_aparelhos
-from utils.relacionamentos import relacionamentos_bp
-from utils.recargas import recargas_bp
 
 # BigQuery
 from utils.bigquery_client import BigQueryClient
@@ -20,11 +18,11 @@ bq = BigQueryClient()
 
 
 # ============================================================
-# FUNÇÃO GLOBAL – SANITIZA TUDO PARA JSON (Cloud Run SAFE)
+# FUNÇÃO GLOBAL – SANITIZAÇÃO PARA JSON (Cloud Run SAFE)
 # ============================================================
 def sanitize_df(df):
     """
-    Corrige NaT, Timestamp, datetime e None para strings adequadas ao JSON.
+    Converte NaT, datetime64, Timestamp e None em strings seguras.
     Evita erro: NaTType does not support timetuple (Cloud Run)
     """
     for col in df.columns:
@@ -40,7 +38,7 @@ def sanitize_df(df):
 
 
 # ============================================================
-# ROTAS PRINCIPAIS (DASHBOARD)
+# ROTA PRINCIPAL — DASHBOARD
 # ============================================================
 @app.route("/")
 @app.route("/dashboard")
@@ -50,13 +48,13 @@ def dashboard():
     # Sanitize para JSON seguro
     df = sanitize_df(df)
 
-    # ===== KPIs =====
+    # ========== KPIs ==========
     total_chips = len(df)
     chips_ativos = len(df[df["ativo"] == True])
     disparando = len(df[df["status"] == "DISPARANDO"])
     banidos = len(df[df["status"] == "BANIDO"])
 
-    # ===== Alerta de Recarga =====
+    # ========== ALERTA DE RECARGA ==========
     hoje = date.today()
 
     def calc_dias(x):
@@ -71,10 +69,11 @@ def dashboard():
     df["dias_sem_recarga"] = df["ultima_recarga_data"].apply(calc_dias)
     alerta_recarga = df[df["dias_sem_recarga"] >= 80]
 
-    # ===== Filtros =====
+    # ========== FILTROS ==========
     lista_status = sorted(df["status"].unique())
     lista_operadora = sorted(df["operadora"].unique())
 
+    # marca + modelo no mesmo campo
     df["aparelho_label"] = (
         df["marca_aparelho"].fillna("") + " " +
         df["modelo_aparelho"].fillna("")
@@ -98,13 +97,11 @@ def dashboard():
 
 
 # ============================================================
-# BLUEPRINTS (Chips / Aparelhos / Movimentação)
+# BLUEPRINTS — APENAS OS QUE EXISTEM
 # ============================================================
 app.register_blueprint(chips_bp)
 app.register_blueprint(bp_aparelhos)
-app.register_blueprint(bp_mov)
-app.register_blueprint(recargas_bp)
-app.register_blueprint(relacionamentos_bp)
+
 
 # ============================================================
 # RUN LOCAL

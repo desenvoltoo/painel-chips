@@ -46,3 +46,24 @@ def get_chip(id_chip):
         return {"erro": "Chip não encontrado"}, 404
 
     return df.to_dict(orient="records")[0]
+
+# =======================================================
+# EDIT VIEW (carrega formulário com dados preenchidos)
+# =======================================================
+@chips_bp.route("/chips/edit/<id_chip>")
+def chips_edit(id_chip):
+    df = bq.get_chips()
+    df = df[df["id_chip"] == id_chip]
+
+    if len(df) == 0:
+        return "Chip não encontrado", 404
+    
+    chip = df.to_dict(orient="records")[0]
+    aparelhos_df = bq.get_aparelhos()
+
+    return render_template(
+        "chips_edit.html",
+        chip=chip,
+        aparelhos=aparelhos_df.to_dict(orient="records")
+    )
+

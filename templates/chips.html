@@ -171,7 +171,7 @@
                             <td>{{ c.ultima_recarga_data }}</td>
                             <td>{{ c.ultima_recarga_valor }}</td>
                             <td>{{ c.total_gasto }}</td>
-                            <td>{{ c.aparelho_nome or '-' }}</td>
+                            <td>{{ c.modelo_aparelho or '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
                         </tr>
                         {% endfor %}
@@ -220,7 +220,7 @@ function renderRows(lista) {
                 <td>${c.ultima_recarga_data || '-'}</td>
                 <td>${c.ultima_recarga_valor || '-'}</td>
                 <td>${c.total_gasto || '-'}</td>
-                <td>${c.aparelho_nome || '-'}</td>
+                <td>${c.modelo_aparelho || '-'}</td>
                 <td>${c.dt_inicio || '-'}</td>
             </tr>
         `;

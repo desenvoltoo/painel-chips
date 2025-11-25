@@ -157,6 +157,7 @@
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
                             <th>Data Início</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
 
@@ -173,6 +174,12 @@
                             <td>{{ c.total_gasto }}</td>
                             <td>{{ c.modelo_aparelho or '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
+
+                            <td>
+                                <a class="btn btn-primary btn-sm" href="/chips/edit/{{ c.id_chip }}">
+                                    Editar
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

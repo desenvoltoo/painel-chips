@@ -9,37 +9,57 @@ bq = BigQueryClient()
 
 
 # =======================================================
+# TRATAMENTO SEGURO PARA JSON (NÃO QUEBRA NO CLOUD RUN)
+# =======================================================
+def safe_fillna_strings(df):
+    """Preenche somente colunas STRING, evitando NaT em JSON."""
+    for col in df.columns:
+        if pd.api.types.is_string_dtype(df[col]):
+            df[col] = df[col].fillna("")
+        elif pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].astype(str).replace("NaT", "")
+        else:
+            df[col] = df[col]
+    return df
+
+
+# =======================================================
 # DASHBOARD
 # =======================================================
+@app.route("/")
 @app.route("/dashboard")
 def dashboard():
     df = bq.get_view()
-    df = safe_fillna_strings(df)   # prevenção de erro
+    df = safe_fillna_strings(df)
 
-    # === KPIs ===
+    # =========== KPIs ===========
     total_chips = len(df)
     chips_ativos = len(df[df["ativo"] == True])
     disparando = len(df[df["status"] == "DISPARANDO"])
     banidos = len(df[df["status"] == "BANIDO"])
 
-    # === ALERTA RECARGA ===
+    # =========== ALERTA ===========
     hoje = datetime.now().date()
     df["dias_sem_recarga"] = df["ultima_recarga_data"].apply(
-        lambda x: (hoje - x).days if pd.notnull(x) else 999
+        lambda x: (hoje - datetime.strptime(x, "%Y-%m-%d").date()).days
+        if x not in (None, "", "NaT")
+        else 999
     )
-
     alerta_recarga = df[df["dias_sem_recarga"] >= 80]
 
-    # === FILTROS ===
+    # =========== FILTROS ===========
     lista_status = sorted(df["status"].dropna().unique())
     lista_operadora = sorted(df["operadora"].dropna().unique())
+
+    # Marca + modelo (com fallback)
     df["aparelho_label"] = df.apply(
-    lambda x: f"{x['marca_aparelho']} {x['modelo_aparelho']}".strip(),
-    axis=1
-)
+        lambda x: f"{x.get('marca_aparelho', '')} {x.get('modelo_aparelho', '')}".strip(),
+        axis=1
+    )
 
-lista_aparelho = sorted(df["aparelho_label"].dropna().unique())
+    lista_aparelho = sorted(df["aparelho_label"].unique())
 
+    # Render
     return render_template(
         "dashboard.html",
         tabela=df.to_dict(orient="records"),
@@ -61,11 +81,13 @@ lista_aparelho = sorted(df["aparelho_label"].dropna().unique())
 @app.route("/aparelhos")
 def aparelhos():
     aparelhos_df = bq.get_aparelhos()
+    aparelhos_df = safe_fillna_strings(aparelhos_df)
 
     return render_template(
         "aparelhos.html",
         aparelhos=aparelhos_df.to_dict(orient="records"),
     )
+
 
 # =======================================================
 # APARELHOS — UPSERT
@@ -82,9 +104,9 @@ def add_aparelho():
 @app.route("/chips")
 def chips():
     chips_df = bq.get_chips()
-    aparelhos_df = bq.get_aparelhos()
-
     chips_df = safe_fillna_strings(chips_df)
+
+    aparelhos_df = bq.get_aparelhos()
     aparelhos_df = safe_fillna_strings(aparelhos_df)
 
     return render_template(
@@ -92,6 +114,7 @@ def chips():
         chips=chips_df.to_dict(orient="records"),
         aparelhos=aparelhos_df.to_dict(orient="records"),
     )
+
 
 # =======================================================
 # CHIPS — UPSERT
@@ -108,6 +131,7 @@ def add_chip():
 @app.route("/movimentacao")
 def movimentacao():
     eventos_df = bq.get_eventos()
+    eventos_df = safe_fillna_strings(eventos_df)
 
     return render_template(
         "movimentacao.html",
@@ -122,19 +146,6 @@ def movimentacao():
 def add_evento():
     bq.insert_evento(request.form)
     return redirect("/movimentacao")
-
-# =======================================================
-# TRATAMENTO SEGURO PARA DATAFRAME (SOMENTE STRINGS)
-# =======================================================
-def safe_fillna_strings(df):
-    """Preenche somente colunas STRING, sem quebrar DATE/INT64."""
-    for col in df.columns:
-        if pd.api.types.is_string_dtype(df[col]):
-            df[col] = df[col].fillna("")
-        else:
-            # Para tipo date, datetime, int nullable, mantém NaN/NaT
-            df[col] = df[col]
-    return df
 
 
 # =======================================================

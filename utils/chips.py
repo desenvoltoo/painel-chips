@@ -14,12 +14,16 @@ def chips_list():
     chips_df = bq.get_chips()
     aparelhos_df = bq.get_aparelhos()
 
+    # === SANITIZA PARA EVITAR ERRO NA TABELA ===
+    from app import sanitize_df
+    chips_df = sanitize_df(chips_df)
+    aparelhos_df = sanitize_df(aparelhos_df)
+
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
         aparelhos=aparelhos_df.to_dict(orient="records")
     )
-
 
 # =======================================================
 # UPSERT (INSERIR + EDITAR)

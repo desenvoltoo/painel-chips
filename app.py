@@ -21,21 +21,24 @@ bq = BigQueryClient()
 # FUNÇÃO GLOBAL – SANITIZAÇÃO PARA JSON (Cloud Run SAFE)
 # ============================================================
 def sanitize_df(df):
-    """
-    Converte NaT, datetime64, Timestamp e None em strings seguras.
-    Evita erro: NaTType does not support timetuple (Cloud Run)
-    """
     for col in df.columns:
+
         if pd.api.types.is_datetime64_any_dtype(df[col]):
             df[col] = df[col].dt.strftime("%Y-%m-%d").fillna("")
+
+        elif pd.api.types.is_float_dtype(df[col]):
+            df[col] = df[col].fillna(0).apply(lambda x: f"{x:.2f}")
+
         elif pd.api.types.is_numeric_dtype(df[col]):
             df[col] = df[col].replace({pd.NA: None})
+
         elif pd.api.types.is_string_dtype(df[col]):
             df[col] = df[col].fillna("")
+
         else:
             df[col] = df[col].astype(str).replace("NaT", "")
-    return df
 
+    return df
 
 # ============================================================
 # ROTA PRINCIPAL — DASHBOARD

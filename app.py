@@ -11,10 +11,10 @@ bq = BigQueryClient()
 # =======================================================
 # DASHBOARD
 # =======================================================
-@app.route("/")
 @app.route("/dashboard")
 def dashboard():
     df = bq.get_view()
+    df = safe_fillna_strings(df)   # prevenção de erro
 
     # === KPIs ===
     total_chips = len(df)
@@ -27,6 +27,7 @@ def dashboard():
     df["dias_sem_recarga"] = df["ultima_recarga_data"].apply(
         lambda x: (hoje - x).days if pd.notnull(x) else 999
     )
+
     alerta_recarga = df[df["dias_sem_recarga"] >= 80]
 
     # === FILTROS ===
@@ -61,7 +62,6 @@ def aparelhos():
         aparelhos=aparelhos_df.to_dict(orient="records"),
     )
 
-
 # =======================================================
 # APARELHOS — UPSERT
 # =======================================================
@@ -79,35 +79,14 @@ def chips():
     chips_df = bq.get_chips()
     aparelhos_df = bq.get_aparelhos()
 
-    # ===========
-    # 1) Corrige datas NaT → None (evita erro de timetuple no tojson)
-    # ===========
-    for col in chips_df.select_dtypes(include=["datetime64[ns]"]).columns:
-        chips_df[col] = chips_df[col].astype("object").where(
-            chips_df[col].notnull(), None
-        )
+    chips_df = safe_fillna_strings(chips_df)
+    aparelhos_df = safe_fillna_strings(aparelhos_df)
 
-    # ===========
-    # 2) Corrige colunas Int64 para aceitar fillna
-    # ===========
-    for col in chips_df.columns:
-        if str(chips_df[col].dtype) == "Int64":  # Pandas Int64 (nullable)
-            chips_df[col] = chips_df[col].astype("float").astype("object")
-
-    # ===========
-    # 3) Agora pode preencher Nulos sem quebrar
-    # ===========
-    chips_df = chips_df.fillna("")
-
-    # ===========
-    # RENDERIZA
-    # ===========
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
         aparelhos=aparelhos_df.to_dict(orient="records"),
     )
-
 
 # =======================================================
 # CHIPS — UPSERT
@@ -138,6 +117,19 @@ def movimentacao():
 def add_evento():
     bq.insert_evento(request.form)
     return redirect("/movimentacao")
+
+# =======================================================
+# TRATAMENTO SEGURO PARA DATAFRAME (SOMENTE STRINGS)
+# =======================================================
+def safe_fillna_strings(df):
+    """Preenche somente colunas STRING, sem quebrar DATE/INT64."""
+    for col in df.columns:
+        if pd.api.types.is_string_dtype(df[col]):
+            df[col] = df[col].fillna("")
+        else:
+            # Para tipo date, datetime, int nullable, mantém NaN/NaT
+            df[col] = df[col]
+    return df
 
 
 # =======================================================

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Editar Chip</h2>
+
+<form action="/chips/add" method="POST">
+
+    <!-- ID oculto -->
+    <input type="hidden" name="id_chip" value="{{ chip.id_chip }}">
+
+    <label>Número:</label>
+    <input type="text" name="numero" value="{{ chip.numero }}" required>
+
+    <label>Operadora:</label>
+    <select name="operadora">
+        <option {{ "selected" if chip.operadora=="TIM" }}>TIM</option>
+        <option {{ "selected" if chip.operadora=="VIVO" }}>VIVO</option>
+        <option {{ "selected" if chip.operadora=="CLARO" }}>CLARO</option>
+        <option {{ "selected" if chip.operadora=="OI" }}>OI</option>
+    </select>
+
+    <label>Status:</label>
+    <select name="status">
+        <option {{ "selected" if chip.status=="ATIVO" }}>ATIVO</option>
+        <option {{ "selected" if chip.status=="BANIDO" }}>BANIDO</option>
+        <option {{ "selected" if chip.status=="PRONTO_PARA_MATURAR" }}>PRONTO_PARA_MATURAR</option>
+    </select>
+
+    <label>Plano:</label>
+    <select name="plano">
+        <option {{ "selected" if chip.plano=="PRÉ" }}>PRÉ</option>
+        <option {{ "selected" if chip.plano=="PÓS" }}>PÓS</option>
+    </select>
+
+    <label>Data Início:</label>
+    <input type="date" name="dt_inicio" value="{{ chip.dt_inicio }}">
+
+    <label>Última Recarga:</label>
+    <input type="date" name="ultima_recarga_data" value="{{ chip.ultima_recarga_data }}">
+
+    <label>Valor Recarga:</label>
+    <input type="text" name="ultima_recarga_valor" value="{{ chip.ultima_recarga_valor }}">
+
+    <label>Total Gasto:</label>
+    <input type="text" name="total_gasto" value="{{ chip.total_gasto }}">
+
+    <label>Aparelho Atual:</label>
+    <select name="sk_aparelho_atual">
+        <option value="">Nenhum</option>
+        {% for a in aparelhos %}
+            <option value="{{ a.sk_aparelho }}"
+                {% if a.sk_aparelho == chip.sk_aparelho_atual %}selected{% endif %}
+            >
+                {{ a.marca }} - {{ a.modelo }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Salvar Alterações</button>
+
+</form>
+
+{% endblock %}

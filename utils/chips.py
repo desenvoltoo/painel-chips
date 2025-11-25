@@ -67,3 +67,4 @@ def chips_edit(id_chip):
         aparelhos=aparelhos_df.to_dict(orient="records")
     )
 
+

@@ -10,6 +10,7 @@ import pandas as pd
 from utils.chips import chips_bp
 from utils.aparelhos import bp_aparelhos
 from utils.relacionamentos import relacionamentos_bp
+from utils.recargas import recargas_bp
 
 # BigQuery
 from utils.bigquery_client import BigQueryClient
@@ -102,6 +103,7 @@ def dashboard():
 app.register_blueprint(chips_bp)
 app.register_blueprint(bp_aparelhos)
 app.register_blueprint(bp_mov)
+app.register_blueprint(recargas_bp)
 
 
 # ============================================================

@@ -46,22 +46,19 @@ class BigQueryClient:
     # ======================= APARELHOS ===========================
     # ============================================================
 
-    def get_aparelhos(self):
-        sql = f"""
+    def get_view(self):
+    sql = """
         SELECT 
-            sk_aparelho,
-            id_aparelho,
-            modelo,
-            marca,
-            imei,
+            id_chip,
+            numero,
+            operadora,
+            plano,
             status,
-            ativo,
-            created_at,
-            updated_at
-        FROM `{PROJECT}.{DATASET}.dim_aparelho`
-        ORDER BY modelo
-        """
-        return self._run(sql)
+            ultima_recarga_data,
+            modelo_aparelho
+        FROM `painel-universidade.marts.vw_chips_dashboard`
+    """
+    return self._run(sql)
 
     def upsert_aparelho(self, form):
 

@@ -5,6 +5,7 @@ import pandas as pd
 from flask import Flask, render_template, request, jsonify
 
 from utils.bigquery_client import BigQueryClient
+from utils.sanitizer import sanitize_df
 
 # Blueprints
 from routes.aparelhos import bp_aparelhos
@@ -22,30 +23,6 @@ PORT = int(os.getenv("PORT", 8080))
 
 app = Flask(__name__)
 bq = BigQueryClient()
-
-
-# ===========================
-# SANITIZAÇÃO (JSON SAFE)
-# ===========================
-def sanitize_df(df: pd.DataFrame):
-    """
-    Garante compatibilidade com Jinja2, JSON e tabelas.
-    """
-    for col in df.columns:
-
-        # Datas → string
-        if pd.api.types.is_datetime64_any_dtype(df[col]):
-            df[col] = df[col].astype(str).replace("NaT", "")
-
-        # Números
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].fillna(0)
-
-        # Strings
-        else:
-            df[col] = df[col].fillna("")
-
-    return df
 
 
 # ===========================

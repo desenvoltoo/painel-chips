@@ -13,7 +13,6 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Função auxiliar para escapar aspas
 def q(x: str):
     if x in (None, "", "None"):
         return ""
@@ -23,64 +22,56 @@ def q(x: str):
 class BigQueryClient:
 
     def __init__(self):
-        self.client = bigquery.Client(
-            project=PROJECT,
-            location=LOCATION
-        )
+        self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
     # ============================================================
-    # EXECUTA SQL E RETORNA DATAFRAME
+    # EXECUTA SQL → DataFrame
     # ============================================================
     def _run(self, sql: str, job_config=None):
         try:
             job = self.client.query(sql, job_config=job_config)
-            return job.result().to_dataframe()
+            df = job.result().to_dataframe()
+            df = df.replace({pd.NaT: None}).fillna("")   # ← ESSENCIAL
+            return df
         except Exception as e:
-            print("🔥 ERRO SQL:")
-            print(sql)
-            print(e)
+            print("\n🔥 ERRO SQL:\n", sql)
             raise e
 
     # ============================================================
-    # VIEW PRINCIPAL
+    # NOVO → view dinâmica
     # ============================================================
-    def get_view(self):
+    def get_view(self, view_name: str):
         sql = f"""
-            SELECT
-                sk_chip,
-                id_chip,
-                numero,
-                operadora,
-                plano,
-                status,
-                dt_inicio,
-                ultima_recarga_data,
-                ultima_recarga_valor,
-                total_gasto,
-                id_aparelho,
-                modelo_aparelho,
-                marca_aparelho,
-                imei_aparelho,
-                status_aparelho
-            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-            ORDER BY numero
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.{view_name}`
         """
         return self._run(sql)
+
+    # ============================================================
+    # NOVO → query genérica
+    # ============================================================
+    def query(self, sql: str):
+        return self._run(sql)
+
+    # ============================================================
+    # NOVO → executar sem retorno
+    # ============================================================
+    def execute(self, sql: str):
+        try:
+            job = self.client.query(sql)
+            job.result()
+            return True
+        except Exception as e:
+            print("\n🔥 ERRO EXECUTE:\n", sql)
+            raise e
 
     # ============================================================
     # APARELHOS
     # ============================================================
     def get_aparelhos(self):
         sql = f"""
-            SELECT 
-                sk_aparelho,
-                id_aparelho,
-                modelo,
-                marca,
-                imei,
-                status,
-                ativo
-            FROM `{PROJECT}.{DATASET}.dim_aparelho`
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.vw_aparelhos`
             ORDER BY modelo
         """
         return self._run(sql)
@@ -93,34 +84,33 @@ class BigQueryClient:
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
-        # pega próximo SK
-        sql_next = f"""
-            SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
-            FROM `{PROJECT}.{DATASET}.dim_aparelho`
-        """
-        next_sk = int(self._run(sql_next).iloc[0]["next_sk"])
+        next_sk = int(self._run(
+            f"""SELECT COALESCE(MAX(sk_aparelho),0)+1 AS next_sk
+                FROM `{PROJECT}.{DATASET}.dim_aparelho`"""
+        ).iloc[0]["next_sk"])
 
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
             USING (SELECT '{id_aparelho}' AS id_aparelho) S
             ON T.id_aparelho = S.id_aparelho
 
-            WHEN MATCHED THEN UPDATE SET
-                modelo = '{modelo}',
-                marca = '{marca}',
-                imei = '{imei}',
-                status = '{status}',
-                updated_at = CURRENT_TIMESTAMP()
+            WHEN MATCHED THEN
+              UPDATE SET
+                modelo='{modelo}',
+                marca='{marca}',
+                imei='{imei}',
+                status='{status}',
+                updated_at=CURRENT_TIMESTAMP()
 
-            WHEN NOT MATCHED THEN INSERT (
-                sk_aparelho, id_aparelho, modelo,
-                marca, imei, status, ativo, created_at, updated_at
-            )
-            VALUES (
-                {next_sk}, '{id_aparelho}', '{modelo}',
-                '{marca}', '{imei}', '{status}', TRUE,
-                CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-            )
+            WHEN NOT MATCHED THEN
+              INSERT (
+                sk_aparelho, id_aparelho, modelo, marca, imei,
+                status, ativo, created_at, updated_at
+              )
+              VALUES (
+                {next_sk}, '{id_aparelho}', '{modelo}', '{marca}', '{imei}',
+                '{status}', TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+              )
         """
         self._run(sql)
 
@@ -128,12 +118,7 @@ class BigQueryClient:
     # CHIPS
     # ============================================================
     def get_chips(self):
-        sql = f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-            ORDER BY numero
-        """
-        return self._run(sql)
+        return self.get_view("vw_chips_painel")
 
     def upsert_chip(self, form):
 
@@ -145,14 +130,12 @@ class BigQueryClient:
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
-        # datas
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
-        # valores numéricos
         def sql_num(x):
             try:
                 if not x:
@@ -164,8 +147,7 @@ class BigQueryClient:
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
-        sk_aparelho = form.get("sk_aparelho_atual") or None
-        aparelho_sql = sk_aparelho if sk_aparelho else "NULL"
+        aparelho_sql = form.get("sk_aparelho_atual") or "NULL"
 
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
@@ -200,9 +182,9 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # MOVIMENTAÇÃO DO CHIP
+    # MOVIMENTAÇÃO
     # ============================================================
-    def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
+    def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, obs):
 
         query = f"""
             CALL `{PROJECT}.{DATASET}.sp_registrar_movimento_chip`(
@@ -216,7 +198,7 @@ class BigQueryClient:
                 bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
                 bigquery.ScalarQueryParameter("tipo", "STRING", tipo),
                 bigquery.ScalarQueryParameter("origem", "STRING", origem),
-                bigquery.ScalarQueryParameter("obs", "STRING", observacao),
+                bigquery.ScalarQueryParameter("obs", "STRING", obs),
             ]
         )
 
@@ -224,7 +206,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS DO CHIP
+    # EVENTOS
     # ============================================================
     def get_eventos(self):
         sql = f"""

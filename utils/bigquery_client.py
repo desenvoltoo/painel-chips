@@ -35,21 +35,20 @@ class BigQueryClient:
     # VIEW PRINCIPAL — DASHBOARD
     # ============================================================
     def get_view(self):
-    sql = f"""
-        SELECT
-            id_chip,
-            numero,
-            operadora,
-            plano,
-            status,
-            ultima_recarga_data,
-            marca_aparelho,
-            modelo_aparelho
-        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-        ORDER BY numero
-    """
-    return self._run(sql)
-
+        sql = f"""
+            SELECT
+                id_chip,
+                numero,
+                operadora,
+                plano,
+                status,
+                ultima_recarga_data,
+                marca_aparelho,
+                modelo_aparelho
+            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+            ORDER BY numero
+        """
+        return self._run(sql)
 
     # ============================================================
     # ======================= APARELHOS ===========================
@@ -57,16 +56,16 @@ class BigQueryClient:
 
     def get_aparelhos(self):
         sql = f"""
-        SELECT 
-            sk_aparelho,
-            id_aparelho,
-            modelo,
-            marca,
-            imei,
-            status,
-            ativo
-        FROM `{PROJECT}.{DATASET}.dim_aparelho`
-        ORDER BY modelo
+            SELECT 
+                sk_aparelho,
+                id_aparelho,
+                modelo,
+                marca,
+                imei,
+                status,
+                ativo
+            FROM `{PROJECT}.{DATASET}.dim_aparelho`
+            ORDER BY modelo
         """
         return self._run(sql)
 
@@ -78,7 +77,6 @@ class BigQueryClient:
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
-        # pega próximo SK
         sql_next = f"""
             SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`;
@@ -87,41 +85,41 @@ class BigQueryClient:
         next_sk = int(df.iloc[0]["next_sk"])
 
         sql = f"""
-        MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
-        USING (SELECT '{id_aparelho}' AS id_aparelho) S
-        ON T.id_aparelho = S.id_aparelho
+            MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
+            USING (SELECT '{id_aparelho}' AS id_aparelho) S
+            ON T.id_aparelho = S.id_aparelho
 
-        WHEN MATCHED THEN
-          UPDATE SET
-            modelo = '{modelo}',
-            marca = '{marca}',
-            imei = '{imei}',
-            status = '{status}',
-            updated_at = CURRENT_TIMESTAMP()
+            WHEN MATCHED THEN
+              UPDATE SET
+                modelo = '{modelo}',
+                marca = '{marca}',
+                imei = '{imei}',
+                status = '{status}',
+                updated_at = CURRENT_TIMESTAMP()
 
-        WHEN NOT MATCHED THEN
-          INSERT (
-            sk_aparelho,
-            id_aparelho,
-            modelo,
-            marca,
-            imei,
-            status,
-            ativo,
-            created_at,
-            updated_at
-          )
-          VALUES (
-            {next_sk},
-            '{id_aparelho}',
-            '{modelo}',
-            '{marca}',
-            '{imei}',
-            '{status}',
-            TRUE,
-            CURRENT_TIMESTAMP(),
-            CURRENT_TIMESTAMP()
-          );
+            WHEN NOT MATCHED THEN
+              INSERT (
+                sk_aparelho,
+                id_aparelho,
+                modelo,
+                marca,
+                imei,
+                status,
+                ativo,
+                created_at,
+                updated_at
+              )
+              VALUES (
+                {next_sk},
+                '{id_aparelho}',
+                '{modelo}',
+                '{marca}',
+                '{imei}',
+                '{status}',
+                TRUE,
+                CURRENT_TIMESTAMP(),
+                CURRENT_TIMESTAMP()
+              );
         """
         self._run(sql)
 
@@ -131,15 +129,14 @@ class BigQueryClient:
 
     def get_chips(self):
         sql = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-        ORDER BY numero
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+            ORDER BY numero
         """
         return self._run(sql)
 
     def upsert_chip(self, form):
 
-        # ID CHIP
         id_chip = form.get("id_chip")
         if not id_chip or id_chip.strip() == "":
             id_chip = str(uuid.uuid4())
@@ -150,14 +147,12 @@ class BigQueryClient:
         plano = q(form.get("plano"))
         status = q(form.get("status"))
 
-        # datas
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio_sql = sql_date(form.get("dt_inicio"))
         ultima_recarga_sql = sql_date(form.get("ultima_recarga_data"))
 
-        # números
         def sql_num(x):
             try:
                 if x is None or x == "":
@@ -174,52 +169,52 @@ class BigQueryClient:
         aparelho_sql = sk_aparelho_atual if sk_aparelho_atual else "NULL"
 
         sql = f"""
-        MERGE `{PROJECT}.{DATASET}.dim_chip` T
-        USING (SELECT '{id_chip_sql}' AS id_chip) S
-        ON T.id_chip = S.id_chip
+            MERGE `{PROJECT}.{DATASET}.dim_chip` T
+            USING (SELECT '{id_chip_sql}' AS id_chip) S
+            ON T.id_chip = S.id_chip
 
-        WHEN MATCHED THEN UPDATE SET
-            numero = '{numero}',
-            operadora = '{operadora}',
-            plano = '{plano}',
-            status = '{status}',
-            dt_inicio = {dt_inicio_sql},
-            ultima_recarga_valor = {val_recarga},
-            ultima_recarga_data = {ultima_recarga_sql},
-            total_gasto = {total_gasto},
-            sk_aparelho_atual = {aparelho_sql},
-            updated_at = CURRENT_TIMESTAMP()
+            WHEN MATCHED THEN UPDATE SET
+                numero = '{numero}',
+                operadora = '{operadora}',
+                plano = '{plano}',
+                status = '{status}',
+                dt_inicio = {dt_inicio_sql},
+                ultima_recarga_valor = {val_recarga},
+                ultima_recarga_data = {ultima_recarga_sql},
+                total_gasto = {total_gasto},
+                sk_aparelho_atual = {aparelho_sql},
+                updated_at = CURRENT_TIMESTAMP()
 
-        WHEN NOT MATCHED THEN INSERT (
-            id_chip,
-            numero,
-            operadora,
-            plano,
-            status,
-            dt_inicio,
-            ultima_recarga_valor,
-            ultima_recarga_data,
-            total_gasto,
-            sk_aparelho_atual,
-            ativo,
-            created_at,
-            updated_at
-        )
-        VALUES (
-            '{id_chip_sql}',
-            '{numero}',
-            '{operadora}',
-            '{plano}',
-            '{status}',
-            {dt_inicio_sql},
-            {val_recarga},
-            {ultima_recarga_sql},
-            {total_gasto},
-            {aparelho_sql},
-            TRUE,
-            CURRENT_TIMESTAMP(),
-            CURRENT_TIMESTAMP()
-        );
+            WHEN NOT MATCHED THEN INSERT (
+                id_chip,
+                numero,
+                operadora,
+                plano,
+                status,
+                dt_inicio,
+                ultima_recarga_valor,
+                ultima_recarga_data,
+                total_gasto,
+                sk_aparelho_atual,
+                ativo,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                '{id_chip_sql}',
+                '{numero}',
+                '{operadora}',
+                '{plano}',
+                '{status}',
+                {dt_inicio_sql},
+                {val_recarga},
+                {ultima_recarga_sql},
+                {total_gasto},
+                {aparelho_sql},
+                TRUE,
+                CURRENT_TIMESTAMP(),
+                CURRENT_TIMESTAMP()
+            );
         """
 
         self._run(sql)
@@ -229,17 +224,14 @@ class BigQueryClient:
     # ============================================================
 
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
-        """
-        Chama a stored procedure oficial de movimentação.
-        """
         QUERY = f"""
-        CALL `{PROJECT}.{DATASET}.sp_registrar_movimento_chip`(
-            @sk_chip,
-            @sk_aparelho,
-            @tipo,
-            @origem,
-            @observacao
-        );
+            CALL `{PROJECT}.{DATASET}.sp_registrar_movimento_chip`(
+                @sk_chip,
+                @sk_aparelho,
+                @tipo,
+                @origem,
+                @observacao
+            );
         """
 
         job_config = bigquery.QueryJobConfig(
@@ -257,8 +249,8 @@ class BigQueryClient:
 
     def get_eventos(self):
         sql = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.f_chip_aparelho`
-        ORDER BY data_movimento DESC
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.f_chip_aparelho`
+            ORDER BY data_movimento DESC
         """
         return self._run(sql)

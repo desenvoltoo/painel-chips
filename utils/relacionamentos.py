@@ -1,32 +1,24 @@
 # utils/relacionamentos.py
-from flask import Blueprint, render_template, request, redirect
+from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
+from app import sanitize_df
 
-# Blueprint
 relacionamentos_bp = Blueprint("relacionamentos", __name__)
-
-# BigQuery Client
 bq = BigQueryClient()
 
 
 # =======================================================
-# LISTAGEM DE RELACIONAMENTOS (FATO)
+# LISTAGEM DE RELACIONAMENTOS
 # =======================================================
 @relacionamentos_bp.route("/relacionamentos")
 def listar_relacionamentos():
-    """
-    Lista todos os vínculos entre chips e aparelhos
-    (tabela f_chip_aparelho).
-    """
     try:
         df = bq.get_eventos()
-
-        # Converte para JSON
-        relacionamentos = df.to_dict(orient="records")
+        df = sanitize_df(df)
 
         return render_template(
             "relacionamentos.html",
-            relacionamentos=relacionamentos
+            relacionamentos=df.to_dict(orient="records")
         )
 
     except Exception as e:
@@ -35,16 +27,21 @@ def listar_relacionamentos():
 
 
 # =======================================================
-# NOVO RELACIONAMENTO
+# INSERIR NOVO RELACIONAMENTO (MOVIMENTAÇÃO)
 # =======================================================
 @relacionamentos_bp.route("/relacionamentos/add", methods=["POST"])
 def adicionar_relacionamento():
-    """
-    Insere um novo relacionamento Chip → Aparelho
-    (movimentação).
-    """
     try:
-        bq.insert_evento(request.form)
+        dados = request.form
+
+        bq.registrar_movimento_chip(
+            sk_chip=dados.get("sk_chip"),
+            sk_aparelho=dados.get("sk_aparelho"),
+            tipo=dados.get("tipo"),
+            origem=dados.get("origem", "Painel"),
+            observacao=dados.get("observacao", "")
+        )
+
         return redirect("/relacionamentos")
 
     except Exception as e:
@@ -53,21 +50,18 @@ def adicionar_relacionamento():
 
 
 # =======================================================
-# DETALHE DO RELACIONAMENTO (opcional)
+# DETALHE DE UM RELACIONAMENTO
 # =======================================================
-@relacionamentos_bp.route("/relacionamentos/<id_row>")
-def detalhe_relacionamento(id_row):
-    """
-    Busca 1 relacionamento específico.
-    """
+@relacionamentos_bp.route("/relacionamentos/<sk_fato>")
+def detalhe_relacionamento(sk_fato):
     try:
         df = bq.get_eventos()
-        df = df[df["id"] == id_row]
+        df = df[df["sk_fato"] == int(sk_fato)]
 
-        if len(df) == 0:
-            return {"erro": "Relacionamento não encontrado"}, 404
+        if df.empty:
+            return jsonify({"erro": "Relacionamento não encontrado"}), 404
 
-        return df.to_dict(orient="records")[0]
+        return jsonify(df.to_dict(orient="records")[0])
 
     except Exception as e:
         print("Erro ao carregar registro:", e)

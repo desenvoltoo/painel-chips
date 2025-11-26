@@ -43,6 +43,7 @@ def dashboard():
     # ----- 3) FILTROS / GRÁFICOS -----
     lista_status = sorted({ (x.get("status") or "").upper() for x in tabela if x.get("status") })
     lista_operadora = sorted({ x.get("operadora") for x in tabela if x.get("operadora") })
+    lista_operadores = sorted({ x["operador"] for x in tabela if x.get("operador") })
 
     # ----- 4) ALERTAS (chips > 80 dias sem recarga) -----
     alerta_sql = f"""
@@ -78,3 +79,4 @@ def dashboard():
         alerta_recarga=alerta,
         qtd_alerta=len(alerta),
     )
+

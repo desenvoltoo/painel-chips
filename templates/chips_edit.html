@@ -2,96 +2,105 @@
 {% block title %}Editar Chip{% endblock %}
 
 {% block content %}
+
 <link rel="stylesheet" href="/static/css/style.css">
 
-<div class="container chip-edit-container">
+<main class="container chip-container">
 
-    <h1 class="chip-title">
-        <i class="fas fa-edit"></i> Editar Chip
-    </h1>
+    <section class="chip-card">
 
-    <div class="chip-card">
-
-        <form action="/chips/update/{{ chip.id_chip }}" method="POST">
-
-            <div class="form-row">
-
-                <div class="form-group">
-                    <label>ID do Chip</label>
-                    <input type="text" name="id_chip" value="{{ chip.id_chip }}" readonly>
-                </div>
-
-                <div class="form-group">
-                    <label>Número</label>
-                    <input type="text" name="numero" value="{{ chip.numero }}" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Operadora</label>
-                    <select name="operadora">
-                        {% for op in ["VIVO","TIM","CLARO","OI","OUTRA"] %}
-                        <option value="{{ op }}" {% if chip.operadora == op %}selected{% endif %}>{{ op }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Operador</label>
-                    <input type="text" name="operador" value="{{ chip.operador }}">
-                </div>
-
+        <div class="chip-card-header">
+            <div class="card-icon">
+                <i class="fas fa-edit"></i>
             </div>
+            <h2 class="card-title">Editar Chip</h2>
+        </div>
 
-            <div class="form-row">
+        <div class="card-content">
 
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status">
-                        {% for s in ["DISPONIVEL","MATURANDO","MATURADO","DESCANSO_1","DESCANSO_2","PRONTO_PARA_MATURAR","DISPARANDO","BANIDO","RESTRINGIDO","ATIVO","BLOQUEADO"] %}
-                        <option value="{{ s }}" {% if chip.status == s %}selected{% endif %}>{{ s }}</option>
-                        {% endfor %}
-                    </select>
+            <form action="/chips/update" method="POST" class="chip-form">
+
+                <input type="hidden" name="id_chip" value="{{ chip.id_chip }}">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Número *</label>
+                        <input type="text" name="numero" value="{{ chip.numero }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Operadora</label>
+                        <select name="operadora">
+                            {% for op in ["VIVO","TIM","CLARO","OI","OUTRA"] %}
+                                <option value="{{ op }}" {% if chip.operadora==op %}selected{% endif %}>
+                                    {{ op }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status">
+                            {% for st in [
+                                "DISPONIVEL","MATURANDO","MATURADO","DESCANSO_1","DESCANSO_2",
+                                "PRONTO_PARA_MATURAR","DISPARANDO","BANIDO","RESTRINGIDO",
+                                "ATIVO","BLOQUEADO"
+                            ] %}
+                                <option value="{{ st }}" {% if chip.status==st %}selected{% endif %}>
+                                    {{ st }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Plano</label>
-                    <input type="text" name="plano" value="{{ chip.plano }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Plano</label>
+                        <input type="text" name="plano" value="{{ chip.plano }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Data Início</label>
+                        <input type="date" name="dt_inicio" value="{{ chip.dt_inicio }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Última Recarga (R$)</label>
+                        <input type="number" step="0.01" name="ultima_recarga_valor" value="{{ chip.ultima_recarga_valor }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Data Última Recarga</label>
+                        <input type="date" name="ultima_recarga_data" value="{{ chip.ultima_recarga_data }}">
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Data de Início</label>
-                    <input type="date" name="dt_inicio" value="{{ chip.dt_inicio }}">
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label>Aparelho Vinculado</label>
+                        <select name="sk_aparelho_atual">
+                            <option value="">— Nenhum —</option>
+
+                            {% for ap in aparelhos %}
+                                <option value="{{ ap.sk_aparelho }}"
+                                    {% if chip.sk_aparelho_atual == ap.sk_aparelho %} selected {% endif %}>
+                                    {{ ap.modelo }} ({{ ap.marca }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-            </div>
+                <button class="chip-btn" type="submit">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
 
-            <div class="form-row">
+            </form>
 
-                <div class="form-group">
-                    <label>Valor Última Recarga (R$)</label>
-                    <input type="number" name="ultima_recarga_valor" step="0.01" value="{{ chip.ultima_recarga_valor }}">
-                </div>
-
-                <div class="form-group">
-                    <label>Última Recarga</label>
-                    <input type="date" name="ultima_recarga_data" value="{{ chip.ultima_recarga_data }}">
-                </div>
-
-                <div class="form-group">
-                    <label>Total Gasto</label>
-                    <input type="number" name="total_gasto" step="0.01" value="{{ chip.total_gasto }}">
-                </div>
-
-            </div>
-
-            <button type="submit" class="chip-btn">
-                <i class="fas fa-save"></i> Salvar Alterações
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
+        </div>
+    </section>
+</main>
 
 {% endblock %}

@@ -6,6 +6,7 @@ from utils.bigquery_client import BigQueryClient
 recargas_bp = Blueprint("recargas", __name__)
 bq = BigQueryClient()
 
+
 # =======================================================
 # REGISTRAR RECARGA
 # =======================================================
@@ -13,22 +14,22 @@ bq = BigQueryClient()
 def registrar_recarga():
     """Registra manualmente uma recarga para um chip."""
 
-    form = request.form
+    sk_chip = request.form.get("sk_chip")
+    valor = request.form.get("valor")
+    data = request.form.get("data_recarga")
 
-    sk_chip = form.get("sk_chip")
-    valor = form.get("valor")
-    data = form.get("data_recarga")
+    if not sk_chip or not valor or not data:
+        return "Dados inválidos", 400
 
-    # Atualiza valores na tabela dim_chip
     sql = f"""
-    UPDATE `{bq.PROJECT}.{bq.DATASET}.dim_chip`
-    SET 
-        ultima_recarga_valor = {valor},
-        ultima_recarga_data = DATE('{data}'),
-        update_at = CURRENT_TIMESTAMP()
-    WHERE sk_chip = {sk_chip}
+        UPDATE `{bq.project}.{bq.dataset}.dim_chip`
+        SET 
+            ultima_recarga_valor = {valor},
+            ultima_recarga_data = DATE('{data}'),
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {sk_chip}
     """
 
-    bq._run(sql)
+    bq.execute(sql)
 
     return redirect("/dashboard")

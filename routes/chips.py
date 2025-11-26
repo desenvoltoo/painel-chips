@@ -8,9 +8,9 @@ chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# ===================================
-# LISTAGEM GERAL
-# ===================================
+# =====================================================================
+# LISTA DE CHIPS
+# =====================================================================
 @chips_bp.route("/chips")
 def chips_list():
     chips_df = bq.get_view("vw_chips_painel")
@@ -26,28 +26,48 @@ def chips_list():
     )
 
 
-# ===================================
-# ADICIONAR CHIP
-# ===================================
-@chips_bp.route("/chips/add", methods=["POST"])
-def chips_add():
+# =====================================================================
+# FORM HTML DE EDIÇÃO
+# =====================================================================
+@chips_bp.route("/chips/edit/<id_chip>")
+def chips_edit(id_chip):
+    chips_df = bq.get_view("vw_chips_painel")
+    chips_df = sanitize_df(chips_df)
+
+    chip = chips_df[chips_df["id_chip"] == id_chip]
+
+    if chip.empty:
+        return "Chip não encontrado", 404
+
+    chip = chip.to_dict(orient="records")[0]
+
+    aparelhos_df = bq.get_view("vw_aparelhos")
+    aparelhos_df = sanitize_df(aparelhos_df).to_dict(orient="records")
+
+    return render_template(
+        "chips_edit.html",
+        chip=chip,
+        aparelhos=aparelhos_df
+    )
+
+
+# =====================================================================
+# SALVAR ALTERAÇÕES DO CHIP
+# =====================================================================
+@chips_bp.route("/chips/update", methods=["POST"])
+def chips_update():
     try:
-        dados = request.form.to_dict()
-
-        # Novo campo
-        dados["operador"] = request.form.get("operador", "")
-
-        bq.upsert_chip(dados)
+        bq.upsert_chip(request.form)
         return redirect("/chips")
 
     except Exception as e:
-        print("Erro ao salvar chip:", e)
-        return "Erro ao salvar chip", 500
+        print("Erro ao atualizar chip:", e)
+        return "Erro ao atualizar chip", 500
 
 
-# ===================================
-# BUSCAR CHIP
-# ===================================
+# =====================================================================
+# API - GET CHIP (JSON)
+# =====================================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
     df = bq.get_view("vw_chips_painel")
@@ -59,9 +79,9 @@ def get_chip(id_chip):
     return jsonify(df.to_dict(orient="records")[0])
 
 
-# ===================================
+# =====================================================================
 # REGISTRAR MOVIMENTO
-# ===================================
+# =====================================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:

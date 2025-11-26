@@ -67,4 +67,32 @@ def chips_edit(id_chip):
         aparelhos=aparelhos_df.to_dict(orient="records")
     )
 
+# =======================================================
+# MOVIMENTAÇÃO DE CHIP (INSTALAR / REMOVER / TROCA)
+# =======================================================
+@chips_bp.route("/chips/movimento", methods=["POST"])
+def chips_movimento():
+    try:
+        dados = request.json
+        
+        sk_chip = dados.get("sk_chip")
+        sk_aparelho = dados.get("sk_aparelho")  # pode ser NULL
+        tipo = dados.get("tipo")
+        origem = dados.get("origem", "Painel")
+        observacao = dados.get("observacao", "")
+
+        ok = bq.registrar_movimento_chip(
+            sk_chip=sk_chip,
+            sk_aparelho=sk_aparelho,
+            tipo=tipo,
+            origem=origem,
+            observacao=observacao
+        )
+
+        return {"success": ok}
+
+    except Exception as e:
+        print("Erro movimento chip:", e)
+        return {"success": False, "erro": str(e)}, 500
+
 

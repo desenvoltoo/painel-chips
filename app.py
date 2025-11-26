@@ -4,10 +4,11 @@ import os
 import pandas as pd
 from flask import Flask, render_template, request, jsonify
 
+# Utils
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-# Blueprints
+# Blueprints (agora corretos)
 from routes.aparelhos import bp_aparelhos
 from routes.chips import chips_bp
 from routes.recargas import recargas_bp
@@ -26,7 +27,7 @@ bq = BigQueryClient()
 
 
 # ===========================
-# DASHBOARD
+# DASHBOARD PRINCIPAL
 # ===========================
 @app.route("/")
 @app.route("/dashboard")
@@ -34,19 +35,32 @@ def dashboard():
 
     df = bq.get_view("vw_chips_painel")
     df = sanitize_df(df)
+
     tabela = df.to_dict(orient="records")
 
     # KPIs
+    def safe_upper(x):
+        return (x or "").upper()
+
     total_chips = len(tabela)
-    chips_ativos = sum(1 for x in tabela if (x["status"] or "").upper() == "ATIVO")
-    disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
-    banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
+    chips_ativos = sum(1 for x in tabela if safe_upper(x.get("status")) == "ATIVO")
+    disparando = sum(1 for x in tabela if safe_upper(x.get("status")) == "DISPARANDO")
+    banidos = sum(1 for x in tabela if safe_upper(x.get("status")) == "BANIDO")
 
-    # filtros / gráficos
-    lista_status = sorted(list({(x["status"] or "").upper() for x in tabela if x["status"]}))
-    lista_operadora = sorted(list({x["operadora"] for x in tabela if x["operadora"]}))
+    # Filtros dinâmicos
+    lista_status = sorted({
+        safe_upper(x.get("status"))
+        for x in tabela
+        if x.get("status")
+    })
 
-    # Alerta de recarga atrasada
+    lista_operadora = sorted({
+        x.get("operadora")
+        for x in tabela
+        if x.get("operadora")
+    })
+
+    # ALERTA DE RECARGA
     alerta_sql = f"""
         SELECT
             numero,
@@ -59,6 +73,7 @@ def dashboard():
         AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
         ORDER BY dias_sem_recarga DESC
     """
+
     alerta = bq._run(alerta_sql).to_dict(orient="records")
 
     return render_template(
@@ -76,14 +91,18 @@ def dashboard():
 
 
 # ===========================
-# MOVIMENTAÇÃO DE CHIP
+# MOVIMENTAÇÃO
 # ===========================
 @app.route("/movimentacao", methods=["GET", "POST"])
 def movimentacao():
 
     if request.method == "GET":
-        chips = bq.get_view("vw_chips_painel").to_dict(orient="records")
-        aparelhos = bq.get_view("vw_aparelhos").to_dict(orient="records")
+
+        chips = bq.get_view("vw_chips_painel")
+        chips = sanitize_df(chips).to_dict(orient="records")
+
+        aparelhos = bq.get_view("vw_aparelhos")
+        aparelhos = sanitize_df(aparelhos).to_dict(orient="records")
 
         return render_template(
             "movimentacao.html",
@@ -91,7 +110,7 @@ def movimentacao():
             aparelhos=aparelhos
         )
 
-    # POST — registrar movimento
+    # POST
     data = request.form.to_dict()
 
     sk_chip = int(data.get("sk_chip"))
@@ -112,7 +131,7 @@ def movimentacao():
 
 
 # ===========================
-# BLUEPRINTS (ROTAS EXTERNAS)
+# BLUEPRINTS
 # ===========================
 app.register_blueprint(bp_aparelhos)
 app.register_blueprint(chips_bp)
@@ -121,7 +140,7 @@ app.register_blueprint(relacionamentos_bp)
 
 
 # ===========================
-# RUN SERVER
+# RUN
 # ===========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)

@@ -1,13 +1,15 @@
-from .dashboard import bp_dashboard
-from .aparelhos import bp_aparelhos
-from .chips import bp_chips
-from .recargas import bp_recargas
-from .relacionamentos import bp_relacionamentos
+# routes/__init__.py
 
-__all__ = [
-    "bp_dashboard",
-    "bp_aparelhos",
-    "bp_chips",
-    "bp_recargas",
-    "bp_relacionamentos"
-]
+from .dashboard import bp_dashboard
+from .chips import chips_bp
+from .aparelhos import bp_aparelhos
+from .recargas import recargas_bp
+from .relacionamentos import relacionamentos_bp
+
+
+def register_blueprints(app):
+    app.register_blueprint(bp_dashboard)
+    app.register_blueprint(chips_bp)
+    app.register_blueprint(bp_aparelhos)
+    app.register_blueprint(recargas_bp)
+    app.register_blueprint(relacionamentos_bp)

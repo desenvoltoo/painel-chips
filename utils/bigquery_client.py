@@ -44,18 +44,26 @@ class BigQueryClient:
     def get_view(self):
         sql = f"""
             SELECT
+                sk_chip,
                 id_chip,
                 numero,
                 operadora,
                 plano,
-                status_chip AS status,
+                status,
+                dt_inicio,
                 ultima_recarga_data,
+                ultima_recarga_valor,
+                total_gasto,
+                id_aparelho,
+                modelo_aparelho,
                 marca_aparelho,
-                modelo_aparelho
+                imei_aparelho,
+                status_aparelho
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             ORDER BY numero
         """
         return self._run(sql)
+
 
     # ============================================================
     # APARELHOS

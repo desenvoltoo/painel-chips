@@ -48,7 +48,7 @@ class BigQueryClient:
                 numero,
                 operadora,
                 plano,
-                status,
+                status_chip AS status,
                 ultima_recarga_data,
                 marca_aparelho,
                 modelo_aparelho

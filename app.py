@@ -13,6 +13,7 @@ from routes.aparelhos import bp_aparelhos
 from routes.chips import chips_bp
 from routes.recargas import recargas_bp
 from routes.relacionamentos import relacionamentos_bp
+from routes import register_blueprints
 
 
 # ===========================
@@ -130,7 +131,7 @@ app.register_blueprint(bp_aparelhos)
 app.register_blueprint(chips_bp)
 app.register_blueprint(recargas_bp)
 app.register_blueprint(relacionamentos_bp)
-
+app.register_blueprints(app)
 
 # ===========================
 # RUN

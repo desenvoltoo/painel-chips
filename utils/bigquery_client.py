@@ -35,9 +35,22 @@ class BigQueryClient:
     # VIEW PRINCIPAL — DASHBOARD
     # ============================================================
     def get_view(self):
-        sql = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+        """
+        Essa view deve conter apenas as colunas usadas no dashboard:
+        id_chip, numero, operadora, plano, status,
+        ultima_recarga_data, modelo_aparelho
+        """
+        sql = """
+        SELECT 
+            id_chip,
+            numero,
+            operadora,
+            plano,
+            status,
+            ultima_recarga_data,
+            modelo_aparelho,
+            marca_aparelho
+        FROM `painel-universidade.marts.vw_chips_dashboard`
         ORDER BY numero
         """
         return self._run(sql)
@@ -46,19 +59,20 @@ class BigQueryClient:
     # ======================= APARELHOS ===========================
     # ============================================================
 
-    def get_view(self):
-    sql = """
+    def get_aparelhos(self):
+        sql = f"""
         SELECT 
-            id_chip,
-            numero,
-            operadora,
-            plano,
+            sk_aparelho,
+            id_aparelho,
+            modelo,
+            marca,
+            imei,
             status,
-            ultima_recarga_data,
-            modelo_aparelho
-        FROM `painel-universidade.marts.vw_chips_dashboard`
-    """
-    return self._run(sql)
+            ativo
+        FROM `{PROJECT}.{DATASET}.dim_aparelho`
+        ORDER BY modelo
+        """
+        return self._run(sql)
 
     def upsert_aparelho(self, form):
 
@@ -129,6 +143,7 @@ class BigQueryClient:
 
     def upsert_chip(self, form):
 
+        # ID CHIP
         id_chip = form.get("id_chip")
         if not id_chip or id_chip.strip() == "":
             id_chip = str(uuid.uuid4())

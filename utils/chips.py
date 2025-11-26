@@ -51,21 +51,25 @@ def get_chip(id_chip):
 # EDIT VIEW (carrega formulário com dados preenchidos)
 # =======================================================
 @chips_bp.route("/chips/edit/<id_chip>")
-def chips_edit(id_chip):
-    df = bq.get_chips()
-    df = df[df["id_chip"] == id_chip]
-
-    if len(df) == 0:
-        return "Chip não encontrado", 404
-    
-    chip = df.to_dict(orient="records")[0]
-    aparelhos_df = bq.get_aparelhos()
-
-    return render_template(
-        "chips_edit.html",
-        chip=chip,
-        aparelhos=aparelhos_df.to_dict(orient="records")
-    )
+def get_chips(self):
+    sql = f"""
+        SELECT
+            sk_chip,
+            id_chip,
+            numero,
+            operadora,
+            plano,
+            status,
+            dt_inicio,
+            ultima_recarga_valor,
+            ultima_recarga_data,
+            total_gasto,
+            sk_aparelho_atual,
+            ativo
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        ORDER BY numero
+    """
+    return self._run(sql)
 
 # =======================================================
 # MOVIMENTAÇÃO DE CHIP (INSTALAR / REMOVER / TROCA)

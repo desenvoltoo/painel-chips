@@ -1,12 +1,11 @@
 from flask import Blueprint, render_template
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-from utils.config import SETTINGS
 
 bp_dashboard = Blueprint("dashboard", __name__)
 
-PROJECT_ID = SETTINGS["GCP_PROJECT_ID"]
-DATASET = SETTINGS["BQ_DATASET"]
+PROJECT_ID = ["GCP_PROJECT_ID"]
+DATASET = ["BQ_DATASET"]
 
 bq = BigQueryClient()
 
@@ -52,3 +51,4 @@ def dashboard():
         alerta_recarga=alerta,
         qtd_alerta=len(alerta)
     )
+

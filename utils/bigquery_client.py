@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from google.cloud import bigquery
-import pandas as pd
 import os
 import uuid
+import pandas as pd
+from google.cloud import bigquery
 
 
 # ===========================
@@ -14,11 +14,11 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Função auxiliar para escapar aspas
-def q(x: str):
-    if x in (None, "", "None"):
+# Escapa aspas simples
+def q(value: str):
+    if value in (None, "", "None"):
         return ""
-    return str(x).replace("'", "''")
+    return str(value).replace("'", "''")
 
 
 class BigQueryClient:
@@ -33,23 +33,24 @@ class BigQueryClient:
         )
 
     # ============================================================
-    # EXECUTA SQL E RETORNA DATAFRAME
+    # EXECUTA SQL E RETORNA DATAFRAME (CORRIGIDO)
     # ============================================================
     def _run(self, sql: str):
+
+        print("\n🔥🔥🔥 ERRO SQL EXECUTANDO QUERY:\n", sql, "\n========================================")
+
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
 
-            # Sanitização segura de campos vazios
-            df = df.replace({"": None, " ": None})
+            # EVITA O BUG "bool has no attribute to_numpy"
             df = df.astype(object).where(pd.notnull(df), None)
 
             return df
 
         except Exception as e:
-            print("\n🔥🔥🔥 ERRO SQL EXECUTANDO QUERY:")
+            print("\n🚨 ERRO NO SQL:")
             print(sql)
-            print("========================================\n")
             raise e
 
     # ============================================================
@@ -88,7 +89,6 @@ class BigQueryClient:
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
-        # NOVO SK
         sql_next = f"""
             SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`
@@ -117,6 +117,7 @@ class BigQueryClient:
                 CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
             )
         """
+
         self._run(sql)
 
     # ============================================================
@@ -131,19 +132,17 @@ class BigQueryClient:
         id_chip_sql = q(id_chip)
 
         numero = q(form.get("numero"))
-        operadora = q(form.get("operadora"))
-        operador = q(form.get("operador"))  # NOVO
+        operadora = q(form.get("operadora"))      # NOVO
+        operador = q(form.get("operador"))        # NOVO → SEU NOVO CAMPO
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
-        # Datas
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
-        # Números
         def sql_num(x):
             try:
                 if not x:
@@ -155,9 +154,11 @@ class BigQueryClient:
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
+        # FK do aparelho
         sk_aparelho = form.get("sk_aparelho_atual") or None
         aparelho_sql = sk_aparelho if sk_aparelho else "NULL"
 
+        # MERGE corrigido
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT '{id_chip_sql}' AS id_chip) S
@@ -179,16 +180,17 @@ class BigQueryClient:
             WHEN NOT MATCHED THEN INSERT (
                 id_chip, numero, operadora, operador, plano, status,
                 dt_inicio, ultima_recarga_valor, ultima_recarga_data,
-                total_gasto, sk_aparelho_atual, ativo,
-                created_at, updated_at
+                total_gasto, sk_aparelho_atual,
+                ativo, created_at, updated_at
             )
             VALUES (
                 '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
                 {dt_inicio}, {val_recarga}, {dt_recarga},
-                {total_gasto}, {aparelho_sql}, TRUE,
-                CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+                {total_gasto}, {aparelho_sql},
+                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
             )
         """
+
         self._run(sql)
 
     # ============================================================

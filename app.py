@@ -48,41 +48,22 @@ def sanitize_df(df):
 def dashboard():
     df = bq.get_view()
 
-    # Sanitize para JSON seguro
-    df = sanitize_df(df)
-
-    # ========== KPIs ==========
     total_chips = len(df)
-    chips_ativos = len(df[df["ativo"] == True])
+    chips_ativos = len(df[df["status"] == "ATIVO"])
     disparando = len(df[df["status"] == "DISPARANDO"])
     banidos = len(df[df["status"] == "BANIDO"])
 
-    # ========== ALERTA DE RECARGA ==========
-    hoje = date.today()
+    # ALERTA de 80 dias
+    alerta = df.copy()
+    alerta["dias_sem_recarga"] = (
+        pd.Timestamp.now() - pd.to_datetime(alerta["ultima_recarga_data"])
+    ).dt.days
 
-    def calc_dias(x):
-        if isinstance(x, str) and x.strip() != "":
-            try:
-                d = datetime.strptime(x, "%Y-%m-%d").date()
-                return (hoje - d).days
-            except:
-                return 999
-        return 999
+    alerta_recarga = alerta[alerta["dias_sem_recarga"] > 80]
+    qtd_alerta = len(alerta_recarga)
 
-    df["dias_sem_recarga"] = df["ultima_recarga_data"].apply(calc_dias)
-    alerta_recarga = df[df["dias_sem_recarga"] >= 80]
-
-    # ========== FILTROS ==========
-    lista_status = sorted(df["status"].unique())
-    lista_operadora = sorted(df["operadora"].unique())
-
-    # marca + modelo no mesmo campo
-    df["aparelho_label"] = (
-        df["marca_aparelho"].fillna("") + " " +
-        df["modelo_aparelho"].fillna("")
-    ).str.strip()
-
-    lista_aparelho = sorted(x for x in df["aparelho_label"].unique() if x != "")
+    lista_status = sorted(df["status"].dropna().unique())
+    lista_operadora = sorted(df["operadora"].dropna().unique())
 
     return render_template(
         "dashboard.html",
@@ -91,13 +72,11 @@ def dashboard():
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
-        lista_status=lista_status,
-        lista_operadora=lista_operadora,
-        lista_aparelho=lista_aparelho,
         alerta_recarga=alerta_recarga.to_dict(orient="records"),
-        qtd_alerta=len(alerta_recarga),
+        qtd_alerta=qtd_alerta,
+        lista_status=lista_status,
+        lista_operadora=lista_operadora
     )
-
 
 # ============================================================
 # BLUEPRINTS — APENAS OS QUE EXISTEM

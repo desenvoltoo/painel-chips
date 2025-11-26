@@ -1,7 +1,7 @@
 # utils/relacionamentos.py
 from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
-from app import sanitize_df
+from utils.sanitizer import sanitize_df
 
 relacionamentos_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()

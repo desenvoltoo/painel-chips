@@ -27,40 +27,29 @@ bq = BigQueryClient()
 
 
 # ===========================
-# DASHBOARD PRINCIPAL
+# DASHBOARD COMPLETO
 # ===========================
 @app.route("/")
 @app.route("/dashboard")
 def dashboard():
 
+    # ------ 1) TABELA PRINCIPAL ------
     df = bq.get_view("vw_chips_painel")
     df = sanitize_df(df)
 
     tabela = df.to_dict(orient="records")
 
-    # KPIs
-    def safe_upper(x):
-        return (x or "").upper()
-
+    # ------ 2) KPIs ------
     total_chips = len(tabela)
-    chips_ativos = sum(1 for x in tabela if safe_upper(x.get("status")) == "ATIVO")
-    disparando = sum(1 for x in tabela if safe_upper(x.get("status")) == "DISPARANDO")
-    banidos = sum(1 for x in tabela if safe_upper(x.get("status")) == "BANIDO")
+    chips_ativos = sum(1 for x in tabela if (x["status"] or "").upper() == "ATIVO")
+    disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
+    banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
 
-    # Filtros dinâmicos
-    lista_status = sorted({
-        safe_upper(x.get("status"))
-        for x in tabela
-        if x.get("status")
-    })
+    # ------ 3) LISTAS PARA GRÁFICOS E FILTROS ------
+    lista_status = sorted(list({ (x["status"] or "").upper() for x in tabela if x["status"] }))
+    lista_operadora = sorted(list({ x["operadora"] for x in tabela if x["operadora"] }))
 
-    lista_operadora = sorted({
-        x.get("operadora")
-        for x in tabela
-        if x.get("operadora")
-    })
-
-    # ALERTA DE RECARGA
+    # ------ 4) ALERTA DE RECARGA (chips > 80 dias sem recarga) ------
     alerta_sql = f"""
         SELECT
             numero,
@@ -73,22 +62,26 @@ def dashboard():
         AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
         ORDER BY dias_sem_recarga DESC
     """
-
     alerta = bq._run(alerta_sql).to_dict(orient="records")
 
     return render_template(
         "dashboard.html",
         tabela=tabela,
+
+        # KPIs
         total_chips=total_chips,
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
+
+        # filtros e gráficos
         lista_status=lista_status,
         lista_operadora=lista_operadora,
+
+        # alertas
         alerta_recarga=alerta,
         qtd_alerta=len(alerta)
     )
-
 
 # ===========================
 # MOVIMENTAÇÃO

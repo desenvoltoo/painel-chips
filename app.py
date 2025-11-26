@@ -62,7 +62,7 @@ def dashboard():
     alerta_recarga = alerta[alerta["dias_sem_recarga"] > 80]
     qtd_alerta = len(alerta_recarga)
 
-    lista_status = sorted(df["status"].dropna().unique())
+    lista_status = sorted(df["status"].fillna("").str.upper().unique())
     lista_operadora = sorted(df["operadora"].dropna().unique())
 
     return render_template(

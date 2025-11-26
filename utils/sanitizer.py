@@ -1,23 +1,15 @@
 # utils/sanitizer.py
-
 import pandas as pd
 
-def sanitize_df(df: pd.DataFrame):
-    """
-    Padroniza datas, números e strings para JSON/Jinja.
-    """
+def sanitize_df(df):
+    if df is None or df.empty:
+        return df
+
+    # Converte tudo para string primeiro
     for col in df.columns:
+        df[col] = df[col].astype("object")
 
-        # Datas → string
-        if pd.api.types.is_datetime64_any_dtype(df[col]):
-            df[col] = df[col].astype(str).replace("NaT", "")
-
-        # Números
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].fillna(0)
-
-        # Texto
-        else:
-            df[col] = df[col].fillna("")
+    # Preenche NAs corretamente sem warning
+    df = df.fillna("").infer_objects(copy=False)
 
     return df

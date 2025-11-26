@@ -1,92 +1,128 @@
-# ============================================================
-# app.py — Painel de Chips (versão limpa e funcional)
-# ============================================================
-
-from flask import Flask, render_template
-from datetime import datetime, date
-import pandas as pd
-
-# Blueprints — apenas os que realmente existem
-from utils.chips import chips_bp
-from utils.aparelhos import bp_aparelhos
-
-# BigQuery
+# -*- coding: utf-8 -*-
+import os
+from flask import Flask, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 
 app = Flask(__name__)
-bq = BigQueryClient()
+
+# ===========================
+# CONFIGURAÇÃO
+# ===========================
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "painel-universidade")
+DATASET = os.getenv("BQ_DATASET", "marts")
+PORT = int(os.getenv("PORT", 8080))
+
+bq = BigQueryClient(PROJECT_ID, DATASET)
 
 
-# ============================================================
-# FUNÇÃO GLOBAL – SANITIZAÇÃO PARA JSON (Cloud Run SAFE)
-# ============================================================
-def sanitize_df(df):
-    for col in df.columns:
+# ===========================
+# ROTAS PRINCIPAIS
+# ===========================
 
-        if pd.api.types.is_datetime64_any_dtype(df[col]):
-            df[col] = df[col].dt.strftime("%Y-%m-%d").fillna("")
-
-        elif pd.api.types.is_float_dtype(df[col]):
-            df[col] = df[col].fillna(0).apply(lambda x: f"{x:.2f}")
-
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].replace({pd.NA: None})
-
-        elif pd.api.types.is_string_dtype(df[col]):
-            df[col] = df[col].fillna("")
-
-        else:
-            df[col] = df[col].astype(str).replace("NaT", "")
-
-    return df
-
-# ============================================================
-# ROTA PRINCIPAL — DASHBOARD
-# ============================================================
 @app.route("/")
+def home():
+    return render_template("dashboard.html")
+
+
 @app.route("/dashboard")
 def dashboard():
-    df = bq.get_view()
+    df = bq.get_view("vw_chips_painel")
 
-    total_chips = len(df)
-    chips_ativos = len(df[df["status"] == "ATIVO"])
-    disparando = len(df[df["status"] == "DISPARANDO"])
-    banidos = len(df[df["status"] == "BANIDO"])
+    # Converte DataFrame → lista de dict
+    tabela = df.to_dict(orient="records")
 
-    # ALERTA de 80 dias
-    alerta = df.copy()
-    alerta["dias_sem_recarga"] = (
-        pd.Timestamp.now() - pd.to_datetime(alerta["ultima_recarga_data"])
-    ).dt.days
+    # ==================== KPIs ====================
+    total_chips = len(tabela)
+    chips_ativos = sum(1 for x in tabela if (x["status"] or "").upper() == "ATIVO")
+    disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
+    banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
 
-    alerta_recarga = alerta[alerta["dias_sem_recarga"] > 80]
-    qtd_alerta = len(alerta_recarga)
+    # ==================== LISTAS ====================
+    lista_status = sorted(list({(x["status"] or "").upper() for x in tabela if x["status"]}))
+    lista_operadora = sorted(list({x["operadora"] for x in tabela if x["operadora"]}))
 
-    lista_status = sorted(df["status"].fillna("").str.upper().unique())
-    lista_operadora = sorted(df["operadora"].dropna().unique())
+    # ==================== ALERTA RECARGA ====================
+    alerta_query = """
+        SELECT numero, status, operadora,
+               ultima_recarga_data,
+               DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) AS dias_sem_recarga
+        FROM `painel-universidade.marts.vw_chips_painel`
+        WHERE ultima_recarga_data IS NOT NULL
+          AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
+        ORDER BY dias_sem_recarga DESC
+    """
+
+    alerta = bq.query(alerta_query).to_dict(orient="records")
+    qtd_alerta = len(alerta)
 
     return render_template(
         "dashboard.html",
-        tabela=df.to_dict(orient="records"),
+        tabela=tabela,
         total_chips=total_chips,
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
-        alerta_recarga=alerta_recarga.to_dict(orient="records"),
-        qtd_alerta=qtd_alerta,
         lista_status=lista_status,
-        lista_operadora=lista_operadora
+        lista_operadora=lista_operadora,
+        alerta_recarga=alerta,
+        qtd_alerta=qtd_alerta
     )
 
-# ============================================================
-# BLUEPRINTS — APENAS OS QUE EXISTEM
-# ============================================================
-app.register_blueprint(chips_bp)
-app.register_blueprint(bp_aparelhos)
+
+# ===========================
+# LISTAGEM DE CHIPS
+# ===========================
+@app.route("/chips")
+def chips():
+    df = bq.get_view("vw_chips_painel")
+    tabela = df.to_dict(orient="records")
+    return render_template("chips.html", tabela=tabela)
 
 
-# ============================================================
-# RUN LOCAL
-# ============================================================
+# ===========================
+# LISTAGEM DE APARELHOS
+# ===========================
+@app.route("/aparelhos")
+def aparelhos():
+    df = bq.get_view("vw_aparelhos")
+    tabela = df.to_dict(orient="records")
+    return render_template("aparelhos.html", tabela=tabela)
+
+
+# ===========================
+# REGISTRO DE MOVIMENTAÇÃO
+# ===========================
+@app.route("/movimentacao", methods=["GET", "POST"])
+def movimentacao():
+    if request.method == "GET":
+        chips = bq.get_view("vw_chips_painel").to_dict(orient="records")
+        aparelhos = bq.get_view("vw_aparelhos").to_dict(orient="records")
+        return render_template("movimentacao.html", chips=chips, aparelhos=aparelhos)
+
+    # POST → registrar movimento
+    data = request.form.to_dict()
+
+    sql = f"""
+        INSERT INTO `{PROJECT_ID}.{DATASET}.f_chip_aparelho`
+        (sk_chip, sk_aparelho, tipo_movimento, origem, observacao, data_uso)
+        VALUES (
+            {data['sk_chip']},
+            {data['sk_aparelho']},
+            '{data['tipo_movimento']}',
+            '{data.get('origem','')}',
+            '{data.get('observacao','')}',
+            CURRENT_TIMESTAMP()
+        )
+    """
+
+    bq.execute(sql)
+
+    return jsonify({"status": "ok", "mensagem": "Movimentação registrada com sucesso!"})
+
+
+# ===========================
+# RODAR SERVIDOR
+# ===========================
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=PORT)

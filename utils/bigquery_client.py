@@ -31,22 +31,27 @@ class BigQueryClient:
     # ============================================================
     # EXECUTA SQL E RETORNA DATAFRAME
     # ============================================================
-    def _run(self, sql: str, job_config=None):
-        try:
-            job = self.client.query(sql, job_config=job_config)
-            df = job.result().to_dataframe()
+def _run(self, sql: str):
+    try:
+        job = self.client.query(sql)
+        df = job.result().to_dataframe(create_bqstorage_client=False)
 
-            # Ajuste seguro para datas e campos vazios
-            df = df.replace({pd.NaT: ""})
-            df = df.fillna("")
+        # Remover strings vazias em colunas de data para evitar erro db_dtypes
+        for col in df.columns:
+            # Se a coluna é DATE, DATETIME ou TIMESTAMP → forçar None
+            if pd.api.types.is_datetime64_any_dtype(df[col]) or "datetime" in str(df[col].dtype).lower():
+                df[col] = df[col].replace({"": None, " ": None})
 
-            return df
+        # Agora converte NaT para string segura
+        df = df.astype(object).where(pd.notnull(df), None)
 
-        except Exception as e:
-            print("🔥 ERRO SQL:")
-            print(sql)
-            print(e)
-            raise e
+        return df
+
+    except Exception as e:
+        print("🔥 ERRO SQL:")
+        print(sql)
+        raise e
+
 
     # ============================================================
     # GET VIEW GENÉRICO

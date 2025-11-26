@@ -119,13 +119,14 @@
                             <td>
                                 <button
                                     class="btn-edit"
-                                    onclick="editarAparelho(
-                                        '{{ a.id_aparelho|replace(\"'\", \"\\'\") }}',
-                                        '{{ a.modelo|replace(\"'\", \"\\'\") }}',
-                                        '{{ a.marca|replace(\"'\", \"\\'\") }}',
-                                        '{{ (a.imei or '')|replace(\"'\", \"\\'\") }}',
-                                        '{{ status_val|replace(\"'\", \"\\'\") }}'
-                                    )">
+                                    onclick='editarAparelho(
+                                        {{ a.id_aparelho|tojson }},
+                                        {{ a.modelo|tojson }},
+                                        {{ a.marca|tojson }},
+                                        {{ (a.imei or "")|tojson }},
+                                        {{ status_val|tojson }}
+                                    )'
+                                >
                                     <i class="fas fa-pen"></i>
                                 </button>
                             </td>

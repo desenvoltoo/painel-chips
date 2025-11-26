@@ -40,17 +40,16 @@ class BigQueryClient:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
 
-            # Sanitização segura de datas
-            for col in df.columns:
-                if df[col].dtype == "object":
-                    df[col] = df[col].replace({"": None, " ": None})
-
+            # Sanitização segura de campos vazios
+            df = df.replace({"": None, " ": None})
             df = df.astype(object).where(pd.notnull(df), None)
+
             return df
 
         except Exception as e:
-            print("🔥 ERRO SQL:")
+            print("\n🔥🔥🔥 ERRO SQL EXECUTANDO QUERY:")
             print(sql)
+            print("========================================\n")
             raise e
 
     # ============================================================
@@ -89,6 +88,7 @@ class BigQueryClient:
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
+        # NOVO SK
         sql_next = f"""
             SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`
@@ -132,15 +132,18 @@ class BigQueryClient:
 
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
+        operador = q(form.get("operador"))  # NOVO
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
+        # Datas
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
+        # Números
         def sql_num(x):
             try:
                 if not x:
@@ -163,6 +166,7 @@ class BigQueryClient:
             WHEN MATCHED THEN UPDATE SET
                 numero = '{numero}',
                 operadora = '{operadora}',
+                operador = '{operador}',
                 plano = '{plano}',
                 status = '{status}',
                 dt_inicio = {dt_inicio},
@@ -173,13 +177,13 @@ class BigQueryClient:
                 updated_at = CURRENT_TIMESTAMP()
 
             WHEN NOT MATCHED THEN INSERT (
-                id_chip, numero, operadora, plano, status,
+                id_chip, numero, operadora, operador, plano, status,
                 dt_inicio, ultima_recarga_valor, ultima_recarga_data,
                 total_gasto, sk_aparelho_atual, ativo,
                 created_at, updated_at
             )
             VALUES (
-                '{id_chip_sql}', '{numero}', '{operadora}', '{plano}', '{status}',
+                '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
                 {dt_inicio}, {val_recarga}, {dt_recarga},
                 {total_gasto}, {aparelho_sql}, TRUE,
                 CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()

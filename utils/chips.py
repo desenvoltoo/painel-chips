@@ -1,15 +1,13 @@
 # routes/chips.py
+
 from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
-from app import sanitize_df
+from utils.sanitizer import sanitize_df
 
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# =======================================================
-# LISTAGEM DE CHIPS
-# =======================================================
 @chips_bp.route("/chips")
 def chips_list():
     chips_df = bq.get_view("vw_chips_painel")
@@ -25,9 +23,6 @@ def chips_list():
     )
 
 
-# =======================================================
-# UPSERT (INSERIR + EDITAR)
-# =======================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
@@ -38,9 +33,6 @@ def chips_add():
         return "Erro ao salvar chip", 500
 
 
-# =======================================================
-# GET (RETORNAR APENAS 1 CHIP)
-# =======================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
     df = bq.get_view("vw_chips_painel")
@@ -52,26 +44,17 @@ def get_chip(id_chip):
     return jsonify(df.to_dict(orient="records")[0])
 
 
-# =======================================================
-# MOVIMENTAÇÃO DO CHIP
-# =======================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:
         dados = request.json
 
-        sk_chip = dados.get("sk_chip")
-        sk_aparelho = dados.get("sk_aparelho")  # pode ser None
-        tipo = dados.get("tipo")
-        origem = dados.get("origem", "Painel")
-        observacao = dados.get("observacao", "")
-
         ok = bq.registrar_movimento_chip(
-            sk_chip=sk_chip,
-            sk_aparelho=sk_aparelho,
-            tipo=tipo,
-            origem=origem,
-            observacao=observacao
+            sk_chip=dados.get("sk_chip"),
+            sk_aparelho=dados.get("sk_aparelho"),
+            tipo=dados.get("tipo"),
+            origem=dados.get("origem", "Painel"),
+            observacao=dados.get("observacao", "")
         )
 
         return jsonify({"success": ok})

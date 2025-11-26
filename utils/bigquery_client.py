@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import uuid
 
+
 # ===========================
 # VARIÁVEIS DE AMBIENTE
 # ===========================
@@ -23,6 +24,9 @@ def q(x: str):
 class BigQueryClient:
 
     def __init__(self):
+        self.project = PROJECT
+        self.dataset = DATASET
+
         self.client = bigquery.Client(
             project=PROJECT,
             location=LOCATION
@@ -31,30 +35,26 @@ class BigQueryClient:
     # ============================================================
     # EXECUTA SQL E RETORNA DATAFRAME
     # ============================================================
-def _run(self, sql: str):
-    try:
-        job = self.client.query(sql)
-        df = job.result().to_dataframe(create_bqstorage_client=False)
+    def _run(self, sql: str):
+        try:
+            job = self.client.query(sql)
+            df = job.result().to_dataframe(create_bqstorage_client=False)
 
-        # Remover strings vazias em colunas de data para evitar erro db_dtypes
-        for col in df.columns:
-            # Se a coluna é DATE, DATETIME ou TIMESTAMP → forçar None
-            if pd.api.types.is_datetime64_any_dtype(df[col]) or "datetime" in str(df[col].dtype).lower():
-                df[col] = df[col].replace({"": None, " ": None})
+            # Sanitização segura de datas
+            for col in df.columns:
+                if df[col].dtype == "object":
+                    df[col] = df[col].replace({"": None, " ": None})
 
-        # Agora converte NaT para string segura
-        df = df.astype(object).where(pd.notnull(df), None)
+            df = df.astype(object).where(pd.notnull(df), None)
+            return df
 
-        return df
-
-    except Exception as e:
-        print("🔥 ERRO SQL:")
-        print(sql)
-        raise e
-
+        except Exception as e:
+            print("🔥 ERRO SQL:")
+            print(sql)
+            raise e
 
     # ============================================================
-    # GET VIEW GENÉRICO
+    # GET VIEW
     # ============================================================
     def get_view(self, view_name: str):
         sql = f"""
@@ -89,7 +89,6 @@ def _run(self, sql: str):
         imei = q(form.get("imei"))
         status = q(form.get("status") or "ATIVO")
 
-        # próximo SK
         sql_next = f"""
             SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`
@@ -136,14 +135,12 @@ def _run(self, sql: str):
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
-        # datas
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
-        # valores numéricos
         def sql_num(x):
             try:
                 if not x:
@@ -191,7 +188,7 @@ def _run(self, sql: str):
         self._run(sql)
 
     # ============================================================
-    # MOVIMENTAÇÃO DO CHIP
+    # MOVIMENTAÇÃO
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -215,7 +212,7 @@ def _run(self, sql: str):
         return True
 
     # ============================================================
-    # EVENTOS DO CHIP
+    # EVENTOS
     # ============================================================
     def get_eventos(self):
         sql = f"""

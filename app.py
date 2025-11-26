@@ -13,7 +13,6 @@ from routes.chips import chips_bp
 from routes.recargas import recargas_bp
 from routes.relacionamentos import relacionamentos_bp
 
-
 # ===========================
 # CONFIGURAÇÃO GERAL
 # ===========================
@@ -26,28 +25,28 @@ bq = BigQueryClient()
 
 
 # ===========================
-# DASHBOARD
+# DASHBOARD PRINCIPAL
 # ===========================
 @app.route("/")
 @app.route("/dashboard")
 def dashboard():
 
-    # 1) Tabela principal
+    # 1 — Dados principais
     df = bq.get_view("vw_chips_painel")
     df = sanitize_df(df)
     tabela = df.to_dict(orient="records")
 
-    # 2) KPIs
+    # 2 — KPIs
     total_chips = len(tabela)
     chips_ativos = sum(1 for x in tabela if (x["status"] or "").upper() == "ATIVO")
     disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
     banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
 
-    # 3) Listas para filtros
+    # 3 — Filtros
     lista_status = sorted({(x["status"] or "").upper() for x in tabela if x["status"]})
     lista_operadora = sorted({x["operadora"] for x in tabela if x["operadora"]})
 
-    # 4) Alerta recarga
+    # 4 — Alertas de recarga
     alerta_sql = f"""
         SELECT
             numero,
@@ -57,41 +56,37 @@ def dashboard():
             DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) AS dias_sem_recarga
         FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel`
         WHERE ultima_recarga_data IS NOT NULL
-        AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
+          AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
         ORDER BY dias_sem_recarga DESC
     """
+
     alerta = bq._run(alerta_sql).to_dict(orient="records")
 
+    # Renderização
     return render_template(
         "dashboard.html",
         tabela=tabela,
-
         total_chips=total_chips,
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
-
         lista_status=lista_status,
         lista_operadora=lista_operadora,
-
         alerta_recarga=alerta,
         qtd_alerta=len(alerta),
     )
 
 
 # ===========================
-# MOVIMENTAÇÃO
+# MOVIMENTAÇÃO DE CHIP/APARELHO
 # ===========================
 @app.route("/movimentacao", methods=["GET", "POST"])
 def movimentacao():
 
     if request.method == "GET":
 
-        chips = bq.get_view("vw_chips_painel")
-        chips = sanitize_df(chips).to_dict(orient="records")
-
-        aparelhos = bq.get_view("vw_aparelhos")
-        aparelhos = sanitize_df(aparelhos).to_dict(orient="records")
+        chips = sanitize_df(bq.get_view("vw_chips_painel")).to_dict(orient="records")
+        aparelhos = sanitize_df(bq.get_view("vw_aparelhos")).to_dict(orient="records")
 
         return render_template(
             "movimentacao.html",
@@ -99,12 +94,11 @@ def movimentacao():
             aparelhos=aparelhos
         )
 
-    # POST → Registrar movimento
+    # POST — Registrar movimento
     data = request.form.to_dict()
 
     sk_chip = int(data.get("sk_chip"))
     sk_aparelho = int(data.get("sk_aparelho")) if data.get("sk_aparelho") else None
-
     tipo = data.get("tipo_movimento")
     origem = data.get("origem", "Painel")
     observacao = data.get("observacao", "")
@@ -121,7 +115,7 @@ def movimentacao():
 
 
 # ===========================
-# BLUEPRINTS
+# REGISTRO DOS BLUEPRINTS
 # ===========================
 app.register_blueprint(bp_aparelhos)
 app.register_blueprint(chips_bp)
@@ -130,7 +124,7 @@ app.register_blueprint(relacionamentos_bp)
 
 
 # ===========================
-# SERVER
+# RUN SERVER
 # ===========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)

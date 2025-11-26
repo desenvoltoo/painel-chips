@@ -8,6 +8,9 @@ chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
+# ===================================
+# LISTAGEM GERAL
+# ===================================
 @chips_bp.route("/chips")
 def chips_list():
     chips_df = bq.get_view("vw_chips_painel")
@@ -23,16 +26,28 @@ def chips_list():
     )
 
 
+# ===================================
+# ADICIONAR CHIP
+# ===================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
-        bq.upsert_chip(request.form)
+        dados = request.form.to_dict()
+
+        # Novo campo
+        dados["operador"] = request.form.get("operador", "")
+
+        bq.upsert_chip(dados)
         return redirect("/chips")
+
     except Exception as e:
         print("Erro ao salvar chip:", e)
         return "Erro ao salvar chip", 500
 
 
+# ===================================
+# BUSCAR CHIP
+# ===================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
     df = bq.get_view("vw_chips_painel")
@@ -44,6 +59,9 @@ def get_chip(id_chip):
     return jsonify(df.to_dict(orient="records")[0])
 
 
+# ===================================
+# REGISTRAR MOVIMENTO
+# ===================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:

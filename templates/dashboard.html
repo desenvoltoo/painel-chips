@@ -51,6 +51,7 @@
         text-transform: uppercase;
         font-size: 11px;
     }
+
     .status-disponivel { background:#4caf50aa; }
     .status-disparando { background:#e67e22aa; }
     .status-banido { background:#e74c3caa; }
@@ -221,7 +222,13 @@
         <td>{{ r.plano }}</td>
         <td><span class="status status-{{ r.status|lower|replace(' ','_') }}">{{ r.status }}</span></td>
         <td>{{ r.ultima_recarga_data }}</td>
-        <td>{% if r.marca_aparelho %} {{ r.marca_aparelho }} {{ r.modelo_aparelho }} {% else %}-{% endif %}</td>
+        <td>
+            {% if r.marca_aparelho %}
+                {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
     </tbody>
@@ -229,7 +236,6 @@
 
 
 
-<!-- =================== GRÁFICOS JS =================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>

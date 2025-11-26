@@ -35,25 +35,21 @@ class BigQueryClient:
     # VIEW PRINCIPAL — DASHBOARD
     # ============================================================
     def get_view(self):
-        """
-        Essa view deve conter apenas as colunas usadas no dashboard:
-        id_chip, numero, operadora, plano, status,
-        ultima_recarga_data, modelo_aparelho
-        """
-        sql = """
-        SELECT 
+    sql = f"""
+        SELECT
             id_chip,
             numero,
             operadora,
             plano,
             status,
             ultima_recarga_data,
-            modelo_aparelho,
-            marca_aparelho
-        FROM `painel-universidade.marts.vw_chips_dashboard`
+            marca_aparelho,
+            modelo_aparelho
+        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
         ORDER BY numero
-        """
-        return self._run(sql)
+    """
+    return self._run(sql)
+
 
     # ============================================================
     # ======================= APARELHOS ===========================

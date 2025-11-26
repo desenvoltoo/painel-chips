@@ -29,7 +29,7 @@
         </div>
 
         <div class="card-content">
-            <form action="/aparelhos/add" method="POST" class="chip-form">
+            <form action="{{ url_for('aparelhos.add_aparelho') }}" method="POST" class="chip-form">
 
                 <div class="form-row">
                     <div class="form-group">
@@ -111,19 +111,21 @@
                             <td>{{ a.marca }}</td>
                             <td>{{ a.imei or "-" }}</td>
                             <td>
-                                <span class="status-badge status-{{ a.status|lower }}">
-                                    {{ a.status }}
+                                {% set status_val = (a.status or 'DESCONHECIDO') %}
+                                <span class="status-badge status-{{ status_val|lower|replace(' ', '-') }}">
+                                    {{ status_val }}
                                 </span>
                             </td>
                             <td>
-                                <button class="btn-edit"
-                                        onclick="editarAparelho(
-                                            '{{ a.id_aparelho }}',
-                                            '{{ a.modelo }}',
-                                            '{{ a.marca }}',
-                                            '{{ a.imei }}',
-                                            '{{ a.status }}'
-                                        )">
+                                <button
+                                    class="btn-edit"
+                                    onclick="editarAparelho(
+                                        '{{ a.id_aparelho|replace(\"'\", \"\\'\") }}',
+                                        '{{ a.modelo|replace(\"'\", \"\\'\") }}',
+                                        '{{ a.marca|replace(\"'\", \"\\'\") }}',
+                                        '{{ (a.imei or '')|replace(\"'\", \"\\'\") }}',
+                                        '{{ status_val|replace(\"'\", \"\\'\") }}'
+                                    )">
                                     <i class="fas fa-pen"></i>
                                 </button>
                             </td>
@@ -144,8 +146,10 @@ function editarAparelho(id, modelo, marca, imei, status) {
     document.getElementById("imei").value = imei;
     document.getElementById("status").value = status;
 
-    document.getElementById("titulo-form").innerHTML = `<i class="fas fa-pen"></i> Editar Aparelho`;
-    document.getElementById("botao-salvar").innerHTML = `<i class="fas fa-save"></i> Salvar Alterações`;
+    document.getElementById("titulo-form").innerHTML =
+        '<i class="fas fa-pen"></i> Editar Aparelho';
+    document.getElementById("botao-salvar").innerHTML =
+        '<i class="fas fa-save"></i> Salvar Alterações';
 
     window.scrollTo({ top: 80, behavior: "smooth" });
 }

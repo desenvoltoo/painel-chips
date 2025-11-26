@@ -90,7 +90,7 @@
     .status-disponivel { background:#4caf5033; color:#4caf50; }
     .status-maturando { background:#00bcd433; color:#00bcd4; }
     .status-maturado { background:#8bc34a33; color:#8bc34a; }
-    .status-descanso_1, 
+    .status-descanso_1,
     .status-descanso_2 { background:#ffeb3b33; color:#fdd835; }
     .status-restringido { background:#79554833; color:#a1887f; }
     .status-banido { background:#f4433633; color:#ef5350; }
@@ -201,7 +201,7 @@
         <td>{{ r.plano }}</td>
 
         <td>
-            <span class="status status-{{ r.status|lower }}">
+            <span class="status status-{{ r.status|lower|replace(' ','_') }}">
                 {{ r.status }}
             </span>
         </td>

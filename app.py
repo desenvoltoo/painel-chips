@@ -20,17 +20,16 @@ PROJECT_ID = os.getenv("GCP_PROJECT_ID", "painel-universidade")
 DATASET = os.getenv("BQ_DATASET", "marts")
 PORT = int(os.getenv("PORT", 8080))
 
-bq = BigQueryClient()
-
 app = Flask(__name__)
+bq = BigQueryClient()
 
 
 # ===========================
-# SANITIZAÇÃO GLOBAL (JSON SAFE)
+# SANITIZAÇÃO (JSON SAFE)
 # ===========================
 def sanitize_df(df: pd.DataFrame):
     """
-    Garante compatibilidade Jinja + JSON + tabelas.
+    Garante compatibilidade com Jinja2, JSON e tabelas.
     """
     for col in df.columns:
 
@@ -39,10 +38,10 @@ def sanitize_df(df: pd.DataFrame):
             df[col] = df[col].astype(str).replace("NaT", "")
 
         # Números
-        elif pd.api.types.is_float_dtype(df[col]) or pd.api.types.is_numeric_dtype(df[col]):
+        elif pd.api.types.is_numeric_dtype(df[col]):
             df[col] = df[col].fillna(0)
 
-        # Texto
+        # Strings
         else:
             df[col] = df[col].fillna("")
 
@@ -50,7 +49,7 @@ def sanitize_df(df: pd.DataFrame):
 
 
 # ===========================
-# DASHBOARD PRINCIPAL
+# DASHBOARD
 # ===========================
 @app.route("/")
 @app.route("/dashboard")
@@ -66,11 +65,11 @@ def dashboard():
     disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
     banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
 
-    # Listas de filtros
+    # filtros / gráficos
     lista_status = sorted(list({(x["status"] or "").upper() for x in tabela if x["status"]}))
     lista_operadora = sorted(list({x["operadora"] for x in tabela if x["operadora"]}))
 
-    # Alerta de recarga
+    # Alerta de recarga atrasada
     alerta_sql = f"""
         SELECT
             numero,
@@ -80,10 +79,9 @@ def dashboard():
             DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) AS dias_sem_recarga
         FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel`
         WHERE ultima_recarga_data IS NOT NULL
-          AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
+        AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
         ORDER BY dias_sem_recarga DESC
     """
-
     alerta = bq._run(alerta_sql).to_dict(orient="records")
 
     return render_template(
@@ -110,9 +108,13 @@ def movimentacao():
         chips = bq.get_view("vw_chips_painel").to_dict(orient="records")
         aparelhos = bq.get_view("vw_aparelhos").to_dict(orient="records")
 
-        return render_template("movimentacao.html", chips=chips, aparelhos=aparelhos)
+        return render_template(
+            "movimentacao.html",
+            chips=chips,
+            aparelhos=aparelhos
+        )
 
-    # POST
+    # POST — registrar movimento
     data = request.form.to_dict()
 
     sk_chip = int(data.get("sk_chip"))
@@ -121,7 +123,13 @@ def movimentacao():
     origem = data.get("origem", "Painel")
     observacao = data.get("observacao", "")
 
-    ok = bq.registrar_movimento_chip(sk_chip, sk_aparelho, tipo, origem, observacao)
+    ok = bq.registrar_movimento_chip(
+        sk_chip=sk_chip,
+        sk_aparelho=sk_aparelho,
+        tipo=tipo,
+        origem=origem,
+        observacao=observacao
+    )
 
     return jsonify({"status": "ok" if ok else "erro"})
 
@@ -136,7 +144,7 @@ app.register_blueprint(relacionamentos_bp)
 
 
 # ===========================
-# RUN
+# RUN SERVER
 # ===========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)

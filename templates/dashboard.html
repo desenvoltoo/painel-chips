@@ -86,15 +86,16 @@
         font-size: 12px;
     }
 
-    .status-DISPARANDO { background:#ff572240; color:#ff7043; }
-    .status-DISPONIVEL { background:#4caf5033; color:#4caf50; }
-    .status-MATURANDO { background:#00bcd433; color:#00bcd4; }
-    .status-MATURADO { background:#8bc34a33; color:#8bc34a; }
-    .status-DESCANSO_1, .status-DESCANSO_2 { background:#ffeb3b33; color:#fdd835; }
-    .status-RESTRINGIDO { background:#79554833; color:#a1887f; }
-    .status-BANIDO { background:#f4433633; color:#ef5350; }
-    .status-ATIVO { background:#00968833; color:#26a69a; }
-    .status-BLOQUEADO { background:#9e9e9e33; color:#bdbdbd; }
+    .status-disparando { background:#ff572240; color:#ff7043; }
+    .status-disponivel { background:#4caf5033; color:#4caf50; }
+    .status-maturando { background:#00bcd433; color:#00bcd4; }
+    .status-maturado { background:#8bc34a33; color:#8bc34a; }
+    .status-descanso_1, 
+    .status-descanso_2 { background:#ffeb3b33; color:#fdd835; }
+    .status-restringido { background:#79554833; color:#a1887f; }
+    .status-banido { background:#f4433633; color:#ef5350; }
+    .status-ativo { background:#00968833; color:#26a69a; }
+    .status-bloqueado { background:#9e9e9e33; color:#bdbdbd; }
 
     /* GRÁFICOS */
     .charts {
@@ -198,9 +199,22 @@
         <td>{{ r.numero }}</td>
         <td>{{ r.operadora }}</td>
         <td>{{ r.plano }}</td>
-        <td><span class="status status-{{ r.status }}">{{ r.status }}</span></td>
+
+        <td>
+            <span class="status status-{{ r.status|lower }}">
+                {{ r.status }}
+            </span>
+        </td>
+
         <td>{{ r.ultima_recarga_data }}</td>
-        <td>{{ r.modelo_aparelho }}</td>
+
+        <td>
+            {% if r.marca_aparelho %}
+                {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
+            {% else %}
+                -
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
     </tbody>
@@ -220,7 +234,9 @@
         data: {
             labels: lista_status,
             datasets: [{
-                data: lista_status.map(s => tabela.filter(x => x.status === s).length)
+                data: lista_status.map(s =>
+                    tabela.filter(x => (x.status || "").toUpperCase() === s).length
+                )
             }]
         }
     });
@@ -230,7 +246,9 @@
         data: {
             labels: lista_operadora,
             datasets: [{
-                data: lista_operadora.map(o => tabela.filter(x => x.operadora === o).length)
+                data: lista_operadora.map(o =>
+                    tabela.filter(x => (x.operadora || "") === o).length
+                )
             }]
         }
     });

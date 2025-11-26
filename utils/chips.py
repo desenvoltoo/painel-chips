@@ -1,9 +1,10 @@
-# utils/chips.py
-from flask import Blueprint, render_template, request, redirect
+# routes/chips.py
+from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
+from app import sanitize_df
 
-bq = BigQueryClient()
 chips_bp = Blueprint("chips", __name__)
+bq = BigQueryClient()
 
 
 # =======================================================
@@ -11,12 +12,10 @@ chips_bp = Blueprint("chips", __name__)
 # =======================================================
 @chips_bp.route("/chips")
 def chips_list():
-    chips_df = bq.get_chips()
-    aparelhos_df = bq.get_aparelhos()
-
-    # === SANITIZA PARA EVITAR ERRO NA TABELA ===
-    from app import sanitize_df
+    chips_df = bq.get_view("vw_chips_painel")
     chips_df = sanitize_df(chips_df)
+
+    aparelhos_df = bq.get_view("vw_aparelhos")
     aparelhos_df = sanitize_df(aparelhos_df)
 
     return render_template(
@@ -25,62 +24,44 @@ def chips_list():
         aparelhos=aparelhos_df.to_dict(orient="records")
     )
 
+
 # =======================================================
 # UPSERT (INSERIR + EDITAR)
 # =======================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
-    bq.upsert_chip(request.form)
-    return redirect("/chips")
+    try:
+        bq.upsert_chip(request.form)
+        return redirect("/chips")
+    except Exception as e:
+        print("Erro ao salvar chip:", e)
+        return "Erro ao salvar chip", 500
 
 
 # =======================================================
-# GET (APENAS UM CHIP — se você quiser depois)
+# GET (RETORNAR APENAS 1 CHIP)
 # =======================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
-    df = bq.get_chips()
+    df = bq.get_view("vw_chips_painel")
     df = df[df["id_chip"] == id_chip]
 
-    if len(df) == 0:
-        return {"erro": "Chip não encontrado"}, 404
+    if df.empty:
+        return jsonify({"erro": "Chip não encontrado"}), 404
 
-    return df.to_dict(orient="records")[0]
+    return jsonify(df.to_dict(orient="records")[0])
 
-# =======================================================
-# EDIT VIEW (carrega formulário com dados preenchidos)
-# =======================================================
-@chips_bp.route("/chips/edit/<id_chip>")
-def get_chips(self):
-    sql = f"""
-        SELECT
-            sk_chip,
-            id_chip,
-            numero,
-            operadora,
-            plano,
-            status,
-            dt_inicio,
-            ultima_recarga_valor,
-            ultima_recarga_data,
-            total_gasto,
-            sk_aparelho_atual,
-            ativo
-        FROM `{PROJECT}.{DATASET}.dim_chip`
-        ORDER BY numero
-    """
-    return self._run(sql)
 
 # =======================================================
-# MOVIMENTAÇÃO DE CHIP (INSTALAR / REMOVER / TROCA)
+# MOVIMENTAÇÃO DO CHIP
 # =======================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:
         dados = request.json
-        
+
         sk_chip = dados.get("sk_chip")
-        sk_aparelho = dados.get("sk_aparelho")  # pode ser NULL
+        sk_aparelho = dados.get("sk_aparelho")  # pode ser None
         tipo = dados.get("tipo")
         origem = dados.get("origem", "Painel")
         observacao = dados.get("observacao", "")
@@ -93,10 +74,8 @@ def chips_movimento():
             observacao=observacao
         )
 
-        return {"success": ok}
+        return jsonify({"success": ok})
 
     except Exception as e:
         print("Erro movimento chip:", e)
-        return {"success": False, "erro": str(e)}, 500
-
-
+        return jsonify({"success": False, "erro": str(e)}), 500

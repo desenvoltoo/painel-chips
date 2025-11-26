@@ -167,7 +167,9 @@
                             <td>{{ c.id_chip }}</td>
                             <td>{{ c.numero }}</td>
                             <td>{{ c.operadora }}</td>
-                            <td><span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span></td>
+                            <td>
+                                <span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span>
+                            </td>
                             <td>{{ c.plano }}</td>
                             <td>{{ c.ultima_recarga_data }}</td>
                             <td>{{ c.ultima_recarga_valor }}</td>
@@ -180,7 +182,6 @@
                                     Editar
                                 </a>
                             </td>
-                            
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -215,7 +216,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-message">Nenhum chip encontrado.</td>
+                <td colspan="11" class="empty-message">Nenhum chip encontrado.</td>
             </tr>`;
         return;
     }
@@ -233,11 +234,14 @@ function renderRows(lista) {
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-            </tr>
-        `;
+                <td>
+                    <a class="btn btn-primary btn-sm" href="/chips/edit/${c.id_chip}">
+                        Editar
+                    </a>
+                </td>
+            </tr>`;
     });
 }
 </script>
-
 
 {% endblock %}

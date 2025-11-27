@@ -4,11 +4,11 @@
 {% block content %}
 
 <link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <main class="container chip-container">
 
     <section class="chip-card">
-
         <div class="chip-card-header">
             <div class="card-icon">
                 <i class="fas fa-edit"></i>
@@ -17,12 +17,16 @@
         </div>
 
         <div class="card-content">
-
             <form action="/chips/update" method="POST" class="chip-form">
 
                 <input type="hidden" name="id_chip" value="{{ chip.id_chip }}">
 
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>ID do Chip</label>
+                        <input type="text" value="{{ chip.id_chip }}" disabled>
+                    </div>
+
                     <div class="form-group">
                         <label>Número *</label>
                         <input type="text" name="numero" value="{{ chip.numero }}" required>
@@ -31,25 +35,29 @@
                     <div class="form-group">
                         <label>Operadora</label>
                         <select name="operadora">
-                            {% for op in ["VIVO","TIM","CLARO","OI","OUTRA"] %}
-                                <option value="{{ op }}" {% if chip.operadora==op %}selected{% endif %}>
-                                    {{ op }}
-                                </option>
-                            {% endfor %}
+                            <option value="VIVO" {{ 'selected' if chip.operadora=='VIVO' else '' }}>VIVO</option>
+                            <option value="TIM" {{ 'selected' if chip.operadora=='TIM' else '' }}>TIM</option>
+                            <option value="CLARO" {{ 'selected' if chip.operadora=='CLARO' else '' }}>CLARO</option>
+                            <option value="OI" {{ 'selected' if chip.operadora=='OI' else '' }}>OI</option>
+                            <option value="OUTRA" {{ 'selected' if chip.operadora=='OUTRA' else '' }}>OUTRA</option>
                         </select>
+                    </div>
+
+                    <!-- 🔥 CAMPO OPERADOR -->
+                    <div class="form-group">
+                        <label>Operador</label>
+                        <input type="text" name="operador" value="{{ chip.operador }}">
                     </div>
 
                     <div class="form-group">
                         <label>Status</label>
                         <select name="status">
-                            {% for st in [
-                                "DISPONIVEL","MATURANDO","MATURADO","DESCANSO_1","DESCANSO_2",
-                                "PRONTO_PARA_MATURAR","DISPARANDO","BANIDO","RESTRINGIDO",
-                                "ATIVO","BLOQUEADO"
+                            {% set list_status = [
+                                'DISPONIVEL','MATURANDO','MATURADO','DESCANSO_1','DESCANSO_2',
+                                'PRONTO_PARA_MATURAR','DISPARANDO','BANIDO','RESTRINGIDO','ATIVO','BLOQUEADO'
                             ] %}
-                                <option value="{{ st }}" {% if chip.status==st %}selected{% endif %}>
-                                    {{ st }}
-                                </option>
+                            {% for st in list_status %}
+                            <option value="{{ st }}" {{ 'selected' if chip.status==st else '' }}>{{ st }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -62,13 +70,13 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Data Início</label>
+                        <label>Data de Início</label>
                         <input type="date" name="dt_inicio" value="{{ chip.dt_inicio }}">
                     </div>
 
                     <div class="form-group">
-                        <label>Última Recarga (R$)</label>
-                        <input type="number" step="0.01" name="ultima_recarga_valor" value="{{ chip.ultima_recarga_valor }}">
+                        <label>Valor Última Recarga (R$)</label>
+                        <input type="number" name="ultima_recarga_valor" step="0.01" value="{{ chip.ultima_recarga_valor }}">
                     </div>
 
                     <div class="form-group">
@@ -78,29 +86,40 @@
                 </div>
 
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Gasto (R$)</label>
+                        <input type="number" name="total_gasto" step="0.01" value="{{ chip.total_gasto }}">
+                    </div>
+
                     <div class="form-group full">
                         <label>Aparelho Vinculado</label>
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
-
                             {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}"
-                                    {% if chip.sk_aparelho_atual == ap.sk_aparelho %} selected {% endif %}>
-                                    {{ ap.modelo }} ({{ ap.marca }})
-                                </option>
+                            <option value="{{ ap.sk_aparelho }}" 
+                                {{ 'selected' if chip.sk_aparelho_atual == ap.sk_aparelho else '' }}>
+                                {{ ap.modelo }} ({{ ap.marca }})
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
-                <button class="chip-btn" type="submit">
+                <!-- 🔥 CAMPO OBSERVAÇÃO -->
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label>Observação</label>
+                        <textarea name="observacao" rows="3">{{ chip.observacao }}</textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="chip-btn">
                     <i class="fas fa-save"></i> Salvar Alterações
                 </button>
-
             </form>
-
         </div>
     </section>
+
 </main>
 
 {% endblock %}

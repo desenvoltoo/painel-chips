@@ -4,141 +4,200 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
+
+    /* ===================== ESTILO GLOBAL ===================== */
     body { color: white !important; }
 
-    /* CARDS */
-    .cards {
+    .dash-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 25px;
         display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* ===================== KPI CARDS ===================== */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
         gap: 20px;
         margin-bottom: 25px;
-        flex-wrap: wrap;
     }
 
-    .card {
-        flex: 1;
-        min-width: 230px;
-        background: #1e1e1e;
-        border-radius: 14px;
-        padding: 20px;
-        color: white;
-        box-shadow: 0 0 15px #0005;
-        transition: 0.2s;
+    .kpi-card {
+        background: linear-gradient(135deg, #141b2d, #0d1320);
+        border: 1px solid #1e3a8a55;
+        padding: 22px;
+        border-radius: 16px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+        transition: 0.25s ease;
     }
 
-    .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0 20px #0008;
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 30px rgba(0,0,0,0.5);
+        border-color: #2563eb55;
     }
 
-    .card h3 {
+    .kpi-card h3 {
         margin: 0;
-        font-size: 20px;
-        opacity: .95;
+        font-size: 1rem;
+        opacity: .85;
     }
 
-    .card .value {
-        font-size: 40px;
-        font-weight: bold;
-        margin-top: 5px;
+    .kpi-value {
+        margin-top: 10px;
+        font-size: 2.3rem;
+        font-weight: 700;
+        color: #60a5fa;
     }
 
-    /* STATUS BADGE */
-    .status {
-        padding: 5px 10px;
+    /* ===================== FILTROS ===================== */
+    .filter-card {
+        background: #111827;
+        border: 1px solid #1e3a8a55;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 30px;
+    }
+
+    .filter-card select {
+        margin-top: 12px;
+        background: #0f172a;
+        color: white;
+        border: 1px solid #334155;
         border-radius: 8px;
-        font-weight: 600;
-        color: white;
-        text-transform: uppercase;
-        font-size: 11px;
+        padding: 10px;
     }
 
-    .status-disponivel { background:#4caf50aa; }
-    .status-disparando { background:#e67e22aa; }
-    .status-banido { background:#e74c3caa; }
-    .status-maturando { background:#3498dbaa; }
-    .status-maturado { background:#2ecc71aa; }
-    .status-descanso_1,
-    .status-descanso_2 { background:#f1c40faa; }
-
-    /* ALERTA */
+    /* ===================== ALERTA ===================== */
     .alerta-box {
-        background: #2a2a2a;
-        padding: 15px;
-        border-radius: 12px;
-        border-left: 6px solid #ff4444;
-        margin-bottom: 25px;
-        color: white;
-        box-shadow: 0 0 10px #0005;
+        background: #1b1b1b;
+        padding: 18px;
+        border-radius: 16px;
+        border-left: 6px solid #ff3333;
+        margin-bottom: 30px;
+        box-shadow: 0 0 15px #0006;
     }
 
-    table.alerta {
+    .alerta-box h3 {
+        margin-bottom: 12px;
+    }
+
+    .alerta-table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 10px;
+        font-size: .9rem;
     }
 
-    table.alerta th, table.alerta td {
-        padding: 8px;
-        border-bottom: 1px solid #444;
-    }
-
-    /* TABELA */
-    .tabela {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 25px;
-    }
-
-    .tabela th {
-        background: #202020;
+    .alerta-table th {
         padding: 10px;
+        background: #111;
+        border-bottom: 1px solid #333;
         color: #bbb;
     }
 
-    .tabela td {
+    .alerta-table td {
         padding: 10px;
-        border-bottom: 1px solid #2b2b2b;
+        border-bottom: 1px solid #222;
         color: #ddd;
     }
 
-    /* GRÁFICOS */
-    .charts {
-        display: flex;
+    /* ===================== GRÁFICOS ===================== */
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
         gap: 20px;
-        flex-wrap: wrap;
-        margin-top: 30px;
+        margin-top: 25px;
     }
 
     .chart-card {
-        background: #1e1e1e;
-        flex: 1;
-        min-width: 350px;
+        background: #111827;
+        border: 1px solid #1e3a8a55;
         padding: 20px;
-        border-radius: 14px;
-        box-shadow: 0 0 15px #0005;
+        border-radius: 16px;
+        box-shadow: 0 0 20px #0005;
     }
+
+    /* ===================== TABELA ===================== */
+    .table-section-title {
+        margin-top: 45px;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+    }
+
+    .tabela {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: .9rem;
+    }
+
+    .tabela th {
+        background: #0f172a;
+        padding: 12px;
+        border-bottom: 1px solid #1e3a8a;
+        color: #60a5fa;
+        text-align: left;
+    }
+
+    .tabela td {
+        padding: 12px;
+        border-bottom: 1px solid #1e293b;
+        color: #e2e8f0;
+    }
+
+    .tabela tr:hover {
+        background: #1b2333;
+    }
+
+    .status {
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: white;
+        text-transform: uppercase;
+    }
+
 </style>
 
 
-
-<h1 style="color:white; margin-bottom: 25px;">
+<h1 class="dash-title">
     <i class="fa-solid fa-chart-pie"></i> Dashboard Geral de Chips
 </h1>
 
 
-<!-- =================== KPI CARDS =================== -->
-<div class="cards">
-    <div class="card"><h3>Total de Chips</h3><div class="value">{{ total_chips }}</div></div>
-    <div class="card"><h3>Chips Ativos</h3><div class="value">{{ chips_ativos }}</div></div>
-    <div class="card"><h3>Disparando Agora</h3><div class="value">{{ disparando }}</div></div>
-    <div class="card"><h3>Banidos</h3><div class="value">{{ banidos }}</div></div>
+<!-- ===================== KPI CARDS ===================== -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <h3>Total de Chips</h3>
+        <div class="kpi-value">{{ total_chips }}</div>
+    </div>
+
+    <div class="kpi-card">
+        <h3>Chips Ativos</h3>
+        <div class="kpi-value">{{ chips_ativos }}</div>
+    </div>
+
+    <div class="kpi-card">
+        <h3>Disparando Agora</h3>
+        <div class="kpi-value">{{ disparando }}</div>
+    </div>
+
+    <div class="kpi-card">
+        <h3>Banidos</h3>
+        <div class="kpi-value">{{ banidos }}</div>
+    </div>
 </div>
 
 
-<!-- =================== FILTRO POR STATUS =================== -->
-<div class="card" style="background:#242424; margin-bottom:25px;">
+<!-- ===================== FILTRO ===================== -->
+<div class="filter-card">
     <h3>Filtrar Chips por Status</h3>
-    <select id="filtroStatus" class="form-control" style="margin-top:10px; background:#111; color:white;">
+    <select id="filtroStatus">
         <option value="">Todos</option>
         {% for s in lista_status %}
         <option value="{{ s }}">{{ s }}</option>
@@ -147,105 +206,98 @@
 </div>
 
 
-
-<!-- =================== ALERTAS =================== -->
+<!-- ===================== ALERTAS ===================== -->
 {% if qtd_alerta > 0 %}
 <div class="alerta-box">
-    <h3><i class="fa-solid fa-triangle-exclamation"></i>
-        Chips sem recarga há mais de 80 dias: {{ qtd_alerta }}
-    </h3>
+    <h3><i class="fa-solid fa-circle-exclamation"></i> Chips sem recarga há mais de 80 dias: {{ qtd_alerta }}</h3>
 
-    <table class="alerta">
+    <table class="alerta-table">
         <thead>
-        <tr>
-            <th>Número</th>
-            <th>Status</th>
-            <th>Operadora</th>
-            <th>Última Recarga</th>
-            <th>Dias</th>
-        </tr>
+            <tr>
+                <th>Número</th>
+                <th>Status</th>
+                <th>Operadora</th>
+                <th>Última Recarga</th>
+                <th>Dias</th>
+            </tr>
         </thead>
         <tbody>
-        {% for row in alerta_recarga %}
-        <tr>
-            <td>{{ row.numero }}</td>
-            <td>{{ row.status }}</td>
-            <td>{{ row.operadora }}</td>
-            <td>{{ row.ultima_recarga_data }}</td>
-            <td><b style="color:#ff7777;">{{ row.dias_sem_recarga }}</b></td>
-        </tr>
-        {% endfor %}
+            {% for row in alerta_recarga %}
+            <tr>
+                <td>{{ row.numero }}</td>
+                <td>{{ row.status }}</td>
+                <td>{{ row.operadora }}</td>
+                <td>{{ row.ultima_recarga_data }}</td>
+                <td style="color:#ff7777; font-weight:bold;">{{ row.dias_sem_recarga }}</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
 {% endif %}
 
 
-
-<!-- =================== GRÁFICOS =================== -->
-<div class="charts">
-
+<!-- ===================== GRÁFICOS ===================== -->
+<div class="chart-grid">
     <div class="chart-card">
-        <h3 style="color:white;">Distribuição por Status</h3>
+        <h3>Distribuição por Status</h3>
         <canvas id="chartStatus"></canvas>
     </div>
 
     <div class="chart-card">
-        <h3 style="color:white;">Operadoras</h3>
+        <h3>Operadoras</h3>
         <canvas id="chartOperadora"></canvas>
     </div>
-
 </div>
 
 
-
-<!-- =================== TABELA COMPLETA =================== -->
-<h2 style="color:white; margin-top:40px;">Lista Completa</h2>
+<!-- ===================== TABELA COMPLETA ===================== -->
+<h2 class="table-section-title">Lista Completa</h2>
 
 <table class="tabela" id="tabelaChips">
     <thead>
-    <tr>
-        <th>Número</th>
-        <th>Operadora</th>
-        <th>Plano</th>
-        <th>Status</th>
-        <th>Última Recarga</th>
-        <th>Aparelho Atual</th>
-    </tr>
+        <tr>
+            <th>Número</th>
+            <th>Operadora</th>
+            <th>Plano</th>
+            <th>Status</th>
+            <th>Última Recarga</th>
+            <th>Aparelho Atual</th>
+        </tr>
     </thead>
-
     <tbody>
-    {% for r in tabela %}
-    <tr>
-        <td>{{ r.numero }}</td>
-        <td>{{ r.operadora }}</td>
-        <td>{{ r.plano }}</td>
-        <td><span class="status status-{{ r.status|lower|replace(' ','_') }}">{{ r.status }}</span></td>
-        <td>{{ r.ultima_recarga_data }}</td>
-        <td>
-            {% if r.marca_aparelho %}
-                {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
-            {% else %}
-                -
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
+        {% for r in tabela %}
+        <tr>
+            <td>{{ r.numero }}</td>
+            <td>{{ r.operadora }}</td>
+            <td>{{ r.plano }}</td>
+            <td>
+                <span class="status status-{{ r.status|lower|replace(' ','_') }}">
+                    {{ r.status }}
+                </span>
+            </td>
+            <td>{{ r.ultima_recarga_data }}</td>
+            <td>
+                {% if r.marca_aparelho %}
+                    {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
     </tbody>
 </table>
-
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-
     const tabela = {{ tabela | tojson }};
     const lista_status = {{ lista_status | tojson }};
     const lista_operadora = {{ lista_operadora | tojson }};
 
-
-    // ========= GRÁFICO 1: STATUS =========
+    /* ===================== GRÁFICO DE STATUS ===================== */
     new Chart(document.getElementById("chartStatus"), {
         type: "pie",
         data: {
@@ -253,13 +305,13 @@
             datasets: [{
                 data: lista_status.map(s =>
                     tabela.filter(x => (x.status || "").toUpperCase() === s).length
-                )
+                ),
+                backgroundColor: ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
             }]
         }
     });
 
-
-    // ========= GRÁFICO 2: OPERADORAS =========
+    /* ===================== GRÁFICO DE OPERADORAS ===================== */
     new Chart(document.getElementById("chartOperadora"), {
         type: "bar",
         data: {
@@ -267,20 +319,26 @@
             datasets: [{
                 data: lista_operadora.map(o =>
                     tabela.filter(x => (x.operadora || "") === o).length
-                )
+                ),
+                backgroundColor: "#2563eb"
             }]
+        },
+        options: {
+            scales: {
+                y: { ticks: { color: "#e2e8f0" } },
+                x: { ticks: { color: "#e2e8f0" } }
+            }
         }
     });
 
-
-    // ========= FILTRO POR STATUS =========
+    /* ===================== FILTRO ===================== */
     document.getElementById("filtroStatus").addEventListener("change", function() {
         const filtro = this.value.toUpperCase();
         const linhas = document.querySelectorAll("#tabelaChips tbody tr");
 
         linhas.forEach(l => {
-            const status = l.querySelectorAll("td")[3].innerText.toUpperCase();
-            l.style.display = (filtro === "" || status === filtro) ? "" : "none";
+            const status = l.children[3].innerText.toUpperCase();
+            l.style.display = (filtro === "" || filtro === status) ? "" : "none";
         });
     });
 

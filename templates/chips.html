@@ -58,7 +58,7 @@
                         </select>
                     </div>
 
-                    <!-- CAMPO OPERADOR NOVO -->
+                    <!-- CAMPO OPERADOR -->
                     <div class="form-group">
                         <label>Operador</label>
                         <input type="text" name="operador" placeholder="Ex: João, Pedro, Bot 01">
@@ -120,8 +120,15 @@
                                 {{ ap.modelo }} ({{ ap.marca }})
                             </option>
                             {% endfor %}
-
                         </select>
+                    </div>
+                </div>
+
+                <!-- 🔥 CAMPO OBSERVAÇÃO NOVO -->
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label>Observação</label>
+                        <textarea name="observacao" rows="3" placeholder="Observações importantes sobre o chip..."></textarea>
                     </div>
                 </div>
 
@@ -164,6 +171,7 @@
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
                             <th>Data Início</th>
+                            <th>Obs</th> <!-- 🔥 NOVO -->
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -184,7 +192,7 @@
                             <td>{{ c.total_gasto }}</td>
                             <td>{{ c.modelo_aparelho or '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
-
+                            <td>{{ c.observacao or '-' }}</td> <!-- 🔥 NOVO -->
                             <td>
                                 <a class="btn btn-primary btn-sm" href="/chips/edit/{{ c.id_chip }}">
                                     Editar
@@ -224,7 +232,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="12" class="empty-message">Nenhum chip encontrado.</td>
+                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
             </tr>`;
         return;
     }
@@ -243,6 +251,7 @@ function renderRows(lista) {
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
+                <td>${c.observacao || "-"}</td> <!-- 🔥 NOVO -->
                 <td>
                     <a class="btn btn-primary btn-sm" href="/chips/edit/${c.id_chip}">
                         Editar

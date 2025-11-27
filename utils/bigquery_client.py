@@ -33,17 +33,16 @@ class BigQueryClient:
         )
 
     # ============================================================
-    # EXECUTA SQL E RETORNA DATAFRAME (CORRIGIDO)
+    # EXECUTA SQL E RETORNA DATAFRAME
     # ============================================================
     def _run(self, sql: str):
 
-        print("\n🔥🔥🔥 ERRO SQL EXECUTANDO QUERY:\n", sql, "\n========================================")
+        print("\n🔥🔥🔥 EXECUTANDO QUERY:\n", sql, "\n========================================")
 
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
 
-            # EVITA O BUG "bool has no attribute to_numpy"
             df = df.astype(object).where(pd.notnull(df), None)
 
             return df
@@ -132,10 +131,13 @@ class BigQueryClient:
         id_chip_sql = q(id_chip)
 
         numero = q(form.get("numero"))
-        operadora = q(form.get("operadora"))      # NOVO
-        operador = q(form.get("operador"))        # NOVO → SEU NOVO CAMPO
+        operadora = q(form.get("operadora"))
+        operador = q(form.get("operador"))
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
+
+        # 🔥 NOVO CAMPO
+        observacao = q(form.get("observacao"))
 
         def sql_date(x):
             return f"DATE('{x}')" if x else "NULL"
@@ -154,11 +156,9 @@ class BigQueryClient:
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
-        # FK do aparelho
         sk_aparelho = form.get("sk_aparelho_atual") or None
         aparelho_sql = sk_aparelho if sk_aparelho else "NULL"
 
-        # MERGE corrigido
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT '{id_chip_sql}' AS id_chip) S
@@ -170,6 +170,7 @@ class BigQueryClient:
                 operador = '{operador}',
                 plano = '{plano}',
                 status = '{status}',
+                observacao = '{observacao}',
                 dt_inicio = {dt_inicio},
                 ultima_recarga_valor = {val_recarga},
                 ultima_recarga_data = {dt_recarga},
@@ -179,12 +180,14 @@ class BigQueryClient:
 
             WHEN NOT MATCHED THEN INSERT (
                 id_chip, numero, operadora, operador, plano, status,
+                observacao,
                 dt_inicio, ultima_recarga_valor, ultima_recarga_data,
                 total_gasto, sk_aparelho_atual,
                 ativo, created_at, updated_at
             )
             VALUES (
                 '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
+                '{observacao}',
                 {dt_inicio}, {val_recarga}, {dt_recarga},
                 {total_gasto}, {aparelho_sql},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()

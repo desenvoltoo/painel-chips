@@ -1,5 +1,5 @@
 /* ============================================================
-   BASE GERAL – DARK BLUE PREMIUM
+   RESET GLOBAL
 ============================================================ */
 * {
     margin: 0;
@@ -15,7 +15,6 @@ body {
     min-height: 100vh;
 }
 
-/* Containers */
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -30,8 +29,8 @@ body {
     border-bottom: 1px solid #1e3a8a;
     position: sticky;
     top: 0;
-    z-index: 100;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
 }
 
 .chip-header-content {
@@ -56,6 +55,9 @@ body {
     font-size: 1.9rem;
 }
 
+/* ============================================================
+   TITULOS
+============================================================ */
 .chip-title {
     font-size: 2rem;
     font-weight: 700;
@@ -67,7 +69,7 @@ body {
 }
 
 /* ============================================================
-   MAIN
+   CONTEÚDO PRINCIPAL
 ============================================================ */
 .chip-container {
     padding: 2.5rem 1rem;
@@ -78,7 +80,7 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -89,8 +91,7 @@ body {
     background: #111827;
     border-radius: 14px;
     border: 1px solid #1e3a8a;
-    box-shadow: 0 4px 12px rgba(0,0,0,.5);
-    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,.45);
 }
 
 .chip-card-header {
@@ -123,7 +124,7 @@ body {
 }
 
 /* ============================================================
-   FORMULÁRIOS
+   GRID DOS FORMULÁRIOS (PERFEITO)
 ============================================================ */
 .chip-form {
     display: flex;
@@ -132,14 +133,19 @@ body {
 }
 
 .form-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.2rem;
-    flex-wrap: wrap;
 }
 
 .form-group {
-    flex: 1;
-    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group.full {
+    grid-column: span 3;
 }
 
 .form-group label {
@@ -148,6 +154,7 @@ body {
     color: #cbd5e1;
 }
 
+/* Inputs premium */
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -157,10 +164,12 @@ body {
     font-size: .95rem;
     background: #0f172a;
     color: #f1f5f9;
+    transition: .2s;
 }
 
 .form-group textarea {
     resize: vertical;
+    min-height: 70px;
 }
 
 .form-group input:focus,
@@ -168,10 +177,12 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37,99,235,.3);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.25);
 }
 
-/* Botão padrão */
+/* ============================================================
+   BOTÕES
+============================================================ */
 .chip-btn {
     background: linear-gradient(135deg, #2563eb, #1e40af);
     color: white;
@@ -184,17 +195,51 @@ body {
     display: flex;
     gap: .5rem;
     align-items: center;
-    box-shadow: 0px 4px 12px rgba(37,99,235,.4);
+    box-shadow: 0px 4px 12px rgba(37,99,235,.35);
+    transition: .2s ease;
 }
 
 .chip-btn:hover {
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
     transform: translateY(-2px);
 }
 
+/* Para o modal */
+.chip-btn.save { background: #2563eb !important; }
+.chip-btn.cancel { background: #52525b !important; }
+
 /* ============================================================
-   TABELA
+   BARRA DE BUSCA
 ============================================================ */
-.chip-table-wrapper { overflow-x: auto; }
+.search-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: .8rem;
+    padding-left: 2.5rem;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #f1f5f9;
+}
+
+.search-icon {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    color: #64748b;
+}
+
+/* ============================================================
+   TABELA PREMIUM
+============================================================ */
+.chip-table-wrapper {
+    overflow-x: auto;
+}
 
 .chip-table {
     width: 100%;
@@ -211,6 +256,7 @@ body {
     border-bottom: 1px solid #1e3a8a;
     color: #60a5fa;
     white-space: nowrap;
+    font-weight: 600;
 }
 
 .chip-table td {
@@ -223,12 +269,33 @@ body {
 }
 
 /* ============================================================
-   TOOLTIP ELEGANTE
+   BADGE DE STATUS
+============================================================ */
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    font-size: .7rem;
+}
+
+.status-disponivel { background: #16a34a; }
+.status-maturando { background: #ca8a04; }
+.status-disparando { background: #2563eb; }
+.status-bloqueado { background: #dc2626; }
+.status-banido { background: #991b1b; }
+.status-ativo { background: #0ea5e9; }
+.status-restrito { background: #7e22ce; }
+
+/* ============================================================
+   TOOLTIP DE OBSERVAÇÃO
 ============================================================ */
 .obs-tooltip {
     position: relative;
     cursor: pointer;
     color: #00c3ff;
+    font-size: 17px;
 }
 
 .obs-tooltip:hover::after {
@@ -260,12 +327,12 @@ body {
 }
 
 /* ============================================================
-   MODAL PROFISSIONAL
+   MODAL PREMIUM
 ============================================================ */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: #00000099;
+    background: #00000090;
     display: none;
     justify-content: center;
     align-items: center;
@@ -277,71 +344,32 @@ body {
     padding: 25px;
     border-radius: 16px;
     width: 450px;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 0 25px #000;
 }
 
 .modal-content h2 {
-    margin-bottom: 20px;
     font-size: 1.4rem;
-}
-
-.chip-btn.save { background: #2563eb !important; }
-.chip-btn.cancel { background: #444 !important; }
-
-/* ============================================================
-   SIDEBAR FIXA
-============================================================ */
-.sidebar {
-    width: 260px;
-    height: 100vh;
-    background: #0d1320;
-    color: #e2e8f0;
-    position: fixed;
-    left: 0;
-    top: 0;
-    padding: 25px 20px;
-    border-right: 1px solid #1e3a8a;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.side-title {
-    font-size: 22px;
-    font-weight: 700;
-    text-align: center;
     margin-bottom: 20px;
-}
-
-.sidebar a {
-    color: #cbd5e1;
-    text-decoration: none;
-    padding: 12px;
-    border-radius: 8px;
-    transition: .2s;
-    display: flex;
-    gap: 10px;
-}
-
-.sidebar a:hover {
-    background: #1e3a8a;
-    color: white;
-}
-
-/* ============================================================
-   AJUSTE DE CONTEÚDO
-============================================================ */
-.content {
-    margin-left: 260px;
-    padding: 35px;
 }
 
 /* ============================================================
    RESPONSIVO
 ============================================================ */
-@media (max-width: 768px) {
-    .sidebar { display: none; }
-    .content { margin-left: 0; padding: 15px; }
+@media (max-width: 900px) {
+    .form-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .chip-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

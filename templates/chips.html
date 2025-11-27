@@ -52,7 +52,7 @@
     width: 100%;
     height: 100%;
     background: #0009;
-    display: none; /* começa escondido */
+    display: none;
     align-items: center;
     justify-content: center;
     z-index: 2000;
@@ -110,7 +110,7 @@
 
 <main class="container chip-container">
 
-    <!-- Card Novo Chip -->
+    <!-- Novo Chip -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -120,15 +120,18 @@
         <div class="card-content">
             <form action="/chips/add" method="POST" class="chip-form">
 
+                <!-- Linha 1 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>ID do Chip *</label>
                         <input type="text" name="id_chip" required>
                     </div>
+
                     <div class="form-group">
                         <label>Número *</label>
                         <input type="text" name="numero" required>
                     </div>
+
                     <div class="form-group">
                         <label>Operadora</label>
                         <select name="operadora">
@@ -139,10 +142,15 @@
                             <option value="OUTRA">OUTRA</option>
                         </select>
                     </div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="form-row">
                     <div class="form-group">
                         <label>Operador</label>
                         <input type="text" name="operador">
                     </div>
+
                     <div class="form-group">
                         <label>Status</label>
                         <select name="status">
@@ -159,34 +167,39 @@
                             <option>BLOQUEADO</option>
                         </select>
                     </div>
-                </div>
 
-                <div class="form-row">
                     <div class="form-group">
                         <label>Plano</label>
                         <input type="text" name="plano">
                     </div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="form-row">
                     <div class="form-group">
                         <label>Data Início</label>
                         <input type="date" name="dt_inicio">
                     </div>
+
                     <div class="form-group">
                         <label>Valor Última Recarga</label>
                         <input type="number" step="0.01" name="ultima_recarga_valor">
                     </div>
+
                     <div class="form-group">
                         <label>Data Última Recarga</label>
                         <input type="date" name="ultima_recarga_data">
                     </div>
                 </div>
 
+                <!-- Linha 4 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Total Gasto</label>
                         <input type="number" step="0.01" name="total_gasto">
                     </div>
 
-                    <div class="form-group full">
+                    <div class="form-group">
                         <label>Aparelho Vinculado</label>
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
@@ -197,6 +210,7 @@
                     </div>
                 </div>
 
+                <!-- Observação -->
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
@@ -207,11 +221,12 @@
                 <button type="submit" class="chip-btn">
                     <i class="fas fa-plus"></i> Cadastrar Chip
                 </button>
+
             </form>
         </div>
     </section>
 
-    <!-- Card Tabela -->
+    <!-- Tabela -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -243,9 +258,7 @@
                             <th>Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <!-- preenchido via JS -->
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -253,7 +266,7 @@
 
 </main>
 
-<!-- MODAL COMPLETO -->
+<!-- Modal -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content">
         <h2>Editar Chip</h2>
@@ -326,19 +339,15 @@
 </div>
 
 <script>
-// dados vindos do Flask
 let chipsData = {{ chips | tojson | safe }};
 
-// Renderização da tabela
+// Renderização
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
-    if (!lista || !lista.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
-            </tr>`;
+    if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
         return;
     }
 
@@ -349,116 +358,84 @@ function renderRows(lista) {
                 <td>${c.numero || "-"}</td>
                 <td>${c.operadora || "-"}</td>
                 <td>${c.operador || "-"}</td>
-                <td>
-                    <span class="status-badge status-${(c.status || "").toLowerCase()}">
-                        ${c.status || "-"}
-                    </span>
-                </td>
+                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status || "-"}</span></td>
                 <td>${c.plano || "-"}</td>
                 <td>${c.ultima_recarga_data || "-"}</td>
                 <td>${c.ultima_recarga_valor || "-"}</td>
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>
-                    ${c.observacao ?
-                        `<span class="obs-tooltip" data-tooltip="${c.observacao}">
-                            <i class="fa fa-comment-dots"></i>
-                         </span>`
-                    : "-"}
-                </td>
-                <td>
-                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">
-                        Editar
-                    </button>
-                </td>
+                <td>${c.observacao ? `<span class='obs-tooltip' data-tooltip='${c.observacao}'><i class='fa fa-comment-dots'></i></span>` : "-"}</td>
+                <td><button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button></td>
             </tr>`;
     });
 
     bindEditButtons();
 }
 
-// Bind dos botões de edição (precisa rodar sempre que a tabela é redesenhada)
+// Bind botões de editar
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
+
             const id = btn.dataset.id;
-            try {
-                const res = await fetch(`/chips/${id}`);
-                const chip = await res.json();
+            const res = await fetch(`/chips/${id}`);
+            const chip = await res.json();
 
-                if (chip.erro) {
-                    alert(chip.erro);
-                    return;
-                }
+            document.getElementById("editModal").style.display = "flex";
 
-                // Abre modal
-                document.getElementById("editModal").style.display = "flex";
+            document.getElementById("modal_id_chip").value = chip.id_chip;
+            document.getElementById("modal_numero").value = chip.numero;
+            document.getElementById("modal_operadora").value = chip.operadora;
+            document.getElementById("modal_operador").value = chip.operador;
+            document.getElementById("modal_status").value = chip.status;
 
-                document.getElementById("modal_id_chip").value = chip.id_chip;
-                document.getElementById("modal_numero").value = chip.numero || "";
-                document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
-                document.getElementById("modal_operador").value = chip.operador || "";
-                document.getElementById("modal_status").value = chip.status || "DISPONIVEL";
-
-                document.getElementById("modal_plano").value = chip.plano || "";
-                document.getElementById("modal_dt_inicio").value = chip.dt_inicio || "";
-                document.getElementById("modal_ultima_recarga_data").value = chip.ultima_recarga_data || "";
-                document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
-                document.getElementById("modal_total_gasto").value = chip.total_gasto || "";
-                document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
-                document.getElementById("modal_observacao").value = chip.observacao || "";
-
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao carregar chip para edição.");
-            }
+            document.getElementById("modal_plano").value = chip.plano || "";
+            document.getElementById("modal_dt_inicio").value = chip.dt_inicio || "";
+            document.getElementById("modal_ultima_recarga_data").value = chip.ultima_recarga_data || "";
+            document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
+            document.getElementById("modal_total_gasto").value = chip.total_gasto || "";
+            document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
+            document.getElementById("modal_observacao").value = chip.observacao || "";
         };
     });
 }
 
-// Busca dinâmica
-const searchInput = document.getElementById("searchInput");
-if (searchInput) {
-    searchInput.addEventListener("input", e => {
-        const termo = e.target.value.toLowerCase();
-        const filtrados = chipsData.filter(chip =>
-            Object.values(chip).some(val =>
-                String(val || "").toLowerCase().includes(termo)
-            )
-        );
-        renderRows(filtrados);
-    });
-}
-
-// Botão fechar modal
+// Fechar modal
 document.getElementById("modalCloseBtn").addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
 });
 
-// Salvar alterações via AJAX
+// Salvar edição
 document.getElementById("modalSaveBtn").addEventListener("click", async () => {
-    const formEl = document.getElementById("modalForm");
-    const data = Object.fromEntries(new FormData(formEl));
+    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
-    try {
-        const res = await fetch("/chips/update-json", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
+    const res = await fetch("/chips/update-json", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
 
-        const r = await res.json();
+    const r = await res.json();
 
-        if (r.success) {
-            location.reload();
-        } else {
-            alert("Erro ao salvar: " + (r.erro || ""));
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Erro inesperado ao salvar.");
+    if (r.success) {
+        location.reload();
+    } else {
+        alert("Erro ao salvar.");
     }
+});
+
+// Busca
+document.getElementById("searchInput").addEventListener("input", e => {
+    const termo = e.target.value.toLowerCase();
+
+    const filtrados = chipsData.filter(chip =>
+        Object.values(chip).some(val =>
+            String(val || "").toLowerCase().includes(termo)
+        )
+    );
+
+    renderRows(filtrados);
 });
 
 // Render inicial

@@ -5,7 +5,6 @@ import uuid
 import pandas as pd
 from google.cloud import bigquery
 
-
 # ===========================
 # VARIÁVEIS DE AMBIENTE
 # ===========================
@@ -14,7 +13,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Escapa aspas simples
+# SANITIZADOR DE STRINGS PARA SQL
 def q(value: str):
     if value in (None, "", "None"):
         return ""
@@ -129,11 +128,11 @@ class BigQueryClient:
         Aceita dados de formulário normal ou JSON (modal).
         """
 
-        # ID
+        # ID do chip
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
-        # Campos texto
+        # Strings
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador = q(form.get("operador"))
@@ -146,7 +145,7 @@ class BigQueryClient:
 
         # Datas
         def sql_date(x):
-            return f"DATE('{x}')" if x else "NULL"
+            return f"DATE('{x}')" if x and x not in ("None", "") else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
@@ -164,8 +163,8 @@ class BigQueryClient:
         total_gasto = sql_num(form.get("total_gasto"))
 
         # FK aparelho
-        sk_aparelho = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_aparelho if sk_aparelho not in (None, "", "None") else "NULL"
+        sk_ap = form.get("sk_aparelho_atual")
+        aparelho_sql = sk_ap if sk_ap not in (None, "", "None") else "NULL"
 
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T

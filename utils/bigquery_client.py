@@ -37,20 +37,18 @@ class BigQueryClient:
     # ============================================================
     def _run(self, sql: str):
 
-        print("\n🔥🔥🔥 EXECUTANDO QUERY:\n", sql, "\n========================================")
+        print("\n🔥 SQL EXECUTANDO:\n", sql, "\n========================================")
 
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
 
-            # evita bug de tipos estranhos
             df = df.astype(object).where(pd.notnull(df), None)
 
             return df
 
         except Exception as e:
-            print("\n🚨 ERRO NO SQL:")
-            print(sql)
+            print("\n🚨 ERRO NO SQL:\n", sql)
             raise e
 
     # ============================================================
@@ -128,33 +126,27 @@ class BigQueryClient:
 
     def upsert_chip(self, form):
         """
-        Aceita tanto dados vindos de request.form (ImmutableMultiDict)
-        quanto de request.json (dict) — usado no modal AJAX.
+        Aceita dados de formulário normal ou JSON (modal).
         """
 
-        # ID (mantém se existir, senão cria UUID)
+        # ID
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
-        # Campos texto básicos
+        # Campos texto
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador = q(form.get("operador"))
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
-        # Observação — pode ser NULL
-        observacao_raw = form.get("observacao")
-        if observacao_raw and str(observacao_raw).strip():
-            observacao_sql = f"'{q(observacao_raw)}'"
-        else:
-            observacao_sql = "NULL"
+        # Observação
+        obs_raw = form.get("observacao")
+        observacao_sql = f"'{q(obs_raw)}'" if obs_raw and str(obs_raw).strip() else "NULL"
 
         # Datas
         def sql_date(x):
-            if not x:
-                return "NULL"
-            return f"DATE('{x}')"
+            return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
@@ -164,15 +156,14 @@ class BigQueryClient:
             if x in (None, "", "None"):
                 return "NULL"
             try:
-                v = float(str(x).replace(",", "."))
-                return str(v)
+                return str(float(str(x).replace(",", ".")))
             except:
                 return "NULL"
 
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
-        # FK do aparelho
+        # FK aparelho
         sk_aparelho = form.get("sk_aparelho_atual")
         aparelho_sql = sk_aparelho if sk_aparelho not in (None, "", "None") else "NULL"
 

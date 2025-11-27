@@ -43,6 +43,7 @@ class BigQueryClient:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
 
+            # evita bug de tipos estranhos
             df = df.astype(object).where(pd.notnull(df), None)
 
             return df
@@ -126,38 +127,54 @@ class BigQueryClient:
         return self.get_view("vw_chips_painel")
 
     def upsert_chip(self, form):
+        """
+        Aceita tanto dados vindos de request.form (ImmutableMultiDict)
+        quanto de request.json (dict) — usado no modal AJAX.
+        """
 
+        # ID (mantém se existir, senão cria UUID)
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
+        # Campos texto básicos
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador = q(form.get("operador"))
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
-        # 🔥 NOVO CAMPO
-        observacao = q(form.get("observacao"))
+        # Observação — pode ser NULL
+        observacao_raw = form.get("observacao")
+        if observacao_raw and str(observacao_raw).strip():
+            observacao_sql = f"'{q(observacao_raw)}'"
+        else:
+            observacao_sql = "NULL"
 
+        # Datas
         def sql_date(x):
-            return f"DATE('{x}')" if x else "NULL"
+            if not x:
+                return "NULL"
+            return f"DATE('{x}')"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
+        # Números
         def sql_num(x):
+            if x in (None, "", "None"):
+                return "NULL"
             try:
-                if not x:
-                    return 0
-                return float(str(x).replace(",", "."))
+                v = float(str(x).replace(",", "."))
+                return str(v)
             except:
-                return 0
+                return "NULL"
 
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
-        sk_aparelho = form.get("sk_aparelho_atual") or None
-        aparelho_sql = sk_aparelho if sk_aparelho else "NULL"
+        # FK do aparelho
+        sk_aparelho = form.get("sk_aparelho_atual")
+        aparelho_sql = sk_aparelho if sk_aparelho not in (None, "", "None") else "NULL"
 
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
@@ -170,7 +187,7 @@ class BigQueryClient:
                 operador = '{operador}',
                 plano = '{plano}',
                 status = '{status}',
-                observacao = '{observacao}',
+                observacao = {observacao_sql},
                 dt_inicio = {dt_inicio},
                 ultima_recarga_valor = {val_recarga},
                 ultima_recarga_data = {dt_recarga},
@@ -187,7 +204,7 @@ class BigQueryClient:
             )
             VALUES (
                 '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
-                '{observacao}',
+                {observacao_sql},
                 {dt_inicio}, {val_recarga}, {dt_recarga},
                 {total_gasto}, {aparelho_sql},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()

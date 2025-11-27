@@ -93,7 +93,7 @@
 }
 </style>
 
-<!-- Header -->
+
 <header class="chip-header">
     <div class="container">
         <div class="chip-header-content">
@@ -108,15 +108,13 @@
     </div>
 </header>
 
-<!-- Main Content -->
+
 <main class="container chip-container">
 
-    <!-- Form Card -->
+    <!-- Card Novo Chip -->
     <section class="chip-card">
         <div class="chip-card-header">
-            <div class="card-icon">
-                <i class="fas fa-plus"></i>
-            </div>
+            <div class="card-icon"><i class="fas fa-plus"></i></div>
             <h2 class="card-title">Novo Chip</h2>
         </div>
 
@@ -124,16 +122,8 @@
             <form action="/chips/add" method="POST" class="chip-form">
 
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>ID do Chip *</label>
-                        <input type="text" name="id_chip" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Número *</label>
-                        <input type="text" name="numero" required>
-                    </div>
-
+                    <div class="form-group"><label>ID do Chip *</label><input type="text" name="id_chip" required></div>
+                    <div class="form-group"><label>Número *</label><input type="text" name="numero" required></div>
                     <div class="form-group">
                         <label>Operadora</label>
                         <select name="operadora">
@@ -144,12 +134,7 @@
                             <option value="OUTRA">OUTRA</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label>Operador</label>
-                        <input type="text" name="operador">
-                    </div>
-
+                    <div class="form-group"><label>Operador</label><input type="text" name="operador"></div>
                     <div class="form-group">
                         <label>Status</label>
                         <select name="status">
@@ -169,39 +154,21 @@
                 </div>
 
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Plano</label>
-                        <input type="text" name="plano">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Início</label>
-                        <input type="date" name="dt_inicio">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Valor Última Recarga (R$)</label>
-                        <input type="number" name="ultima_recarga_valor" step="0.01">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Última Recarga</label>
-                        <input type="date" name="ultima_recarga_data">
-                    </div>
+                    <div class="form-group"><label>Plano</label><input type="text" name="plano"></div>
+                    <div class="form-group"><label>Data Início</label><input type="date" name="dt_inicio"></div>
+                    <div class="form-group"><label>Valor Última Recarga</label><input type="number" step="0.01" name="ultima_recarga_valor"></div>
+                    <div class="form-group"><label>Data Última Recarga</label><input type="date" name="ultima_recarga_data"></div>
                 </div>
 
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>Total Gasto (R$)</label>
-                        <input type="number" name="total_gasto" step="0.01">
-                    </div>
+                    <div class="form-group"><label>Total Gasto</label><input type="number" step="0.01" name="total_gasto"></div>
 
                     <div class="form-group full">
                         <label>Aparelho Vinculado</label>
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
                             {% for ap in aparelhos %}
-                            <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
+                                <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -210,24 +177,20 @@
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
-                        <textarea name="observacao" rows="3"></textarea>
+                        <textarea name="observacao"></textarea>
                     </div>
                 </div>
 
-                <button type="submit" class="chip-btn">
-                    <i class="fas fa-plus"></i> Cadastrar Chip
-                </button>
-
+                <button type="submit" class="chip-btn"><i class="fas fa-plus"></i> Cadastrar Chip</button>
             </form>
         </div>
     </section>
 
-    <!-- Table Card -->
+
+    <!-- Card Tabela -->
     <section class="chip-card">
         <div class="chip-card-header">
-            <div class="card-icon">
-                <i class="fas fa-list"></i>
-            </div>
+            <div class="card-icon"><i class="fas fa-list"></i></div>
             <h2 class="card-title">Chips Cadastrados</h2>
         </div>
 
@@ -241,19 +204,9 @@
                 <table class="chip-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Número</th>
-                            <th>Operadora</th>
-                            <th>Operador</th>
-                            <th>Status</th>
-                            <th>Plano</th>
-                            <th>Últ. Recarga</th>
-                            <th>Valor</th>
-                            <th>Total Gasto</th>
-                            <th>Aparelho</th>
-                            <th>Data Início</th>
-                            <th>Obs</th>
-                            <th>Ações</th>
+                            <th>ID</th><th>Número</th><th>Operadora</th><th>Operador</th><th>Status</th>
+                            <th>Plano</th><th>Últ. Recarga</th><th>Valor</th><th>Total Gasto</th>
+                            <th>Aparelho</th><th>Data Início</th><th>Obs</th><th>Ações</th>
                         </tr>
                     </thead>
 
@@ -276,9 +229,7 @@
                                     <span class="obs-tooltip" data-tooltip="{{ c.observacao }}">
                                         <i class="fa fa-comment-dots"></i>
                                     </span>
-                                {% else %}
-                                    -
-                                {% endif %}
+                                {% else %}-{% endif %}
                             </td>
                             <td>
                                 <button class="btn btn-primary btn-sm edit-btn" data-id="{{ c.id_chip }}">
@@ -296,7 +247,8 @@
 
 </main>
 
-<!-- MODAL -->
+
+<!-- MODAL COMPLETO -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content">
         <h2>Editar Chip</h2>
@@ -335,6 +287,29 @@
                 <option>BLOQUEADO</option>
             </select>
 
+            <label>Plano</label>
+            <input type="text" name="plano" id="modal_plano">
+
+            <label>Data Início</label>
+            <input type="date" name="dt_inicio" id="modal_dt_inicio">
+
+            <label>Data Última Recarga</label>
+            <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
+
+            <label>Valor Última Recarga (R$)</label>
+            <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+
+            <label>Total Gasto (R$)</label>
+            <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
+
+            <label>Aparelho Vinculado</label>
+            <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
+                <option value="">— Nenhum —</option>
+                {% for ap in aparelhos %}
+                    <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
+                {% endfor %}
+            </select>
+
             <label>Observação</label>
             <textarea name="observacao" id="modal_observacao"></textarea>
 
@@ -349,7 +324,7 @@
 <script>
 let chipsData = {{ chips | tojson | safe }};
 
-// Busca dinâmica
+// 🔍 Busca dinâmica
 document.getElementById("searchInput").addEventListener("input", e => {
     const termo = e.target.value.toLowerCase();
 
@@ -367,8 +342,8 @@ function renderRows(lista) {
     tbody.innerHTML = "";
 
     if (!lista.length) {
-        tbody.innerHTML = `
-            <tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
+        tbody.innerHTML =
+            `<tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
         return;
     }
 
@@ -387,20 +362,19 @@ function renderRows(lista) {
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
                 <td>
-                    ${c.observacao ? 
+                    ${c.observacao ?
                         `<span class="obs-tooltip" data-tooltip="${c.observacao}">
                             <i class='fa fa-comment-dots'></i>
-                         </span>`
-                    : "-"}
+                        </span>` : "-"
+                    }
                 </td>
-                <td>
-                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button>
-                </td>
+                <td><button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button></td>
             </tr>`;
     });
 }
 
-// Abrir modal ao clicar em EDITAR
+
+// 🔥 Abrir modal + preencher campos
 document.querySelectorAll(".edit-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
 
@@ -416,16 +390,23 @@ document.querySelectorAll(".edit-btn").forEach(btn => {
         document.getElementById("modal_operadora").value = chip.operadora;
         document.getElementById("modal_operador").value = chip.operador;
         document.getElementById("modal_status").value = chip.status;
-        document.getElementById("modal_observacao").value = chip.observacao;
+
+        document.getElementById("modal_plano").value = chip.plano || "";
+        document.getElementById("modal_dt_inicio").value = chip.dt_inicio || "";
+        document.getElementById("modal_ultima_recarga_data").value = chip.ultima_recarga_data || "";
+        document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
+        document.getElementById("modal_total_gasto").value = chip.total_gasto || "";
+        document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
+        document.getElementById("modal_observacao").value = chip.observacao || "";
     });
 });
 
-// Botão fechar modal
+// ✔ Botão fechar modal
 document.getElementById("modalCloseBtn").addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
 });
 
-// Salvar alterações via AJAX
+// ✔ Salvar alterações via AJAX
 document.getElementById("modalSaveBtn").addEventListener("click", async () => {
 
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));

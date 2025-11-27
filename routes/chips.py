@@ -8,27 +8,32 @@ chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# =====================================================================
-# 📌 LISTA DE CHIPS — PÁGINA PRINCIPAL
-# =====================================================================
+# =============================================================================
+# 📌 LISTAR CHIPS – PÁGINA PRINCIPAL
+# =============================================================================
 @chips_bp.route("/chips")
 def chips_list():
-    chips_df = bq.get_view("vw_chips_painel")
-    chips_df = sanitize_df(chips_df)
+    try:
+        chips_df = bq.get_view("vw_chips_painel")
+        chips_df = sanitize_df(chips_df)
 
-    aparelhos_df = bq.get_view("vw_aparelhos")
-    aparelhos_df = sanitize_df(aparelhos_df)
+        aparelhos_df = bq.get_view("vw_aparelhos")
+        aparelhos_df = sanitize_df(aparelhos_df)
 
-    return render_template(
-        "chips.html",
-        chips=chips_df.to_dict(orient="records"),
-        aparelhos=aparelhos_df.to_dict(orient="records")
-    )
+        return render_template(
+            "chips.html",
+            chips=chips_df.to_dict(orient="records"),
+            aparelhos=aparelhos_df.to_dict(orient="records")
+        )
+
+    except Exception as e:
+        print("🚨 Erro ao carregar /chips:", e)
+        return "Erro ao carregar chips", 500
 
 
-# =====================================================================
-# ➕ CRIAR NOVO CHIP
-# =====================================================================
+# =============================================================================
+# ➕ ADICIONAR NOVO CHIP
+# =============================================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
@@ -41,27 +46,38 @@ def chips_add():
         return "Erro ao adicionar chip", 500
 
 
-# =====================================================================
-# 🔍 API — OBTER CHIP (JSON) — usado para carregar o modal
-# =====================================================================
+# =============================================================================
+# 🔍 API — OBTER CHIP ESPECÍFICO (JSON) — para o modal
+# =============================================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
-    df = bq.get_view("vw_chips_painel")
-    df = df[df["id_chip"] == id_chip]
+    try:
+        df = bq.get_view("vw_chips_painel")
 
-    if df.empty:
-        return jsonify({"erro": "Chip não encontrado"}), 404
+        # BigQuery devolve STRING → importante converter corretamente
+        df = df[df["id_chip"].astype(str) == str(id_chip)]
 
-    return jsonify(df.to_dict(orient="records")[0])
+        if df.empty:
+            return jsonify({"erro": "Chip não encontrado"}), 404
+
+        return jsonify(df.to_dict(orient="records")[0])
+
+    except Exception as e:
+        print("🚨 Erro ao buscar chip:", e)
+        return jsonify({"erro": "Erro interno"}), 500
 
 
-# =====================================================================
-# 🔥 UPDATE VIA MODAL (JSON / AJAX)
-# =====================================================================
+# =============================================================================
+# 🔥 UPDATE VIA MODAL (AJAX / JSON)
+# =============================================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
         dados = request.json
+
+        if not dados or "id_chip" not in dados:
+            return jsonify({"success": False, "erro": "Dados inválidos"}), 400
+
         bq.upsert_chip(dados)
         return jsonify({"success": True})
 
@@ -70,9 +86,9 @@ def chips_update_json():
         return jsonify({"success": False, "erro": str(e)}), 500
 
 
-# =====================================================================
+# =============================================================================
 # 🔄 REGISTRAR MOVIMENTO DE CHIP
-# =====================================================================
+# =============================================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:

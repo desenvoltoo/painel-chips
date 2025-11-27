@@ -6,6 +6,93 @@
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<style>
+/* Tooltip elegante */
+.obs-tooltip {
+    position: relative;
+    cursor: pointer;
+    color: #00c3ff;
+    font-size: 17px;
+}
+
+.obs-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: 120%;
+    transform: translateX(-50%);
+    background: #111;
+    color: #fff;
+    padding: 10px 12px;
+    border-radius: 8px;
+    width: 260px;
+    white-space: normal;
+    font-size: 13px;
+    box-shadow: 0 0 12px #000;
+    text-align: left;
+    z-index: 999;
+}
+
+.obs-tooltip:hover::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 110%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #111 transparent transparent transparent;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0009;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    display: none;
+}
+
+.modal-content {
+    background: #1e1e1e;
+    padding: 25px;
+    border-radius: 16px;
+    width: 420px;
+    color: #fff;
+    box-shadow: 0 0 25px #000;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+    width: 100%;
+    background: #2b2b2b;
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 8px;
+    color: white;
+    margin-bottom: 14px;
+}
+
+.chip-btn.save {
+    background: #007bff !important;
+}
+
+.chip-btn.cancel {
+    background: #555 !important;
+}
+</style>
+
 <!-- Header -->
 <header class="chip-header">
     <div class="container">
@@ -39,12 +126,12 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>ID do Chip *</label>
-                        <input type="text" name="id_chip" placeholder="Ex: CHIP-001" required>
+                        <input type="text" name="id_chip" required>
                     </div>
 
                     <div class="form-group">
                         <label>Número *</label>
-                        <input type="text" name="numero" placeholder="5511999999999" required>
+                        <input type="text" name="numero" required>
                     </div>
 
                     <div class="form-group">
@@ -58,26 +145,25 @@
                         </select>
                     </div>
 
-                    <!-- CAMPO OPERADOR -->
                     <div class="form-group">
                         <label>Operador</label>
-                        <input type="text" name="operador" placeholder="Ex: João, Pedro, Bot 01">
+                        <input type="text" name="operador">
                     </div>
 
                     <div class="form-group">
                         <label>Status</label>
                         <select name="status">
-                            <option value="DISPONIVEL">DISPONÍVEL</option>
-                            <option value="MATURANDO">MATURANDO</option>
-                            <option value="MATURADO">MATURADO</option>
-                            <option value="DESCANSO_1">DESCANSO 1</option>
-                            <option value="DESCANSO_2">DESCANSO 2</option>
-                            <option value="PRONTO_PARA_MATURAR">PRONTO PARA MATURAR</option>
-                            <option value="DISPARANDO">DISPARANDO</option>
-                            <option value="BANIDO">BANIDO</option>
-                            <option value="RESTRINGIDO">RESTRINGIDO</option>
-                            <option value="ATIVO">ATIVO</option>
-                            <option value="BLOQUEADO">BLOQUEADO</option>
+                            <option>DISPONIVEL</option>
+                            <option>MATURANDO</option>
+                            <option>MATURADO</option>
+                            <option>DESCANSO_1</option>
+                            <option>DESCANSO_2</option>
+                            <option>PRONTO_PARA_MATURAR</option>
+                            <option>DISPARANDO</option>
+                            <option>BANIDO</option>
+                            <option>RESTRINGIDO</option>
+                            <option>ATIVO</option>
+                            <option>BLOQUEADO</option>
                         </select>
                     </div>
                 </div>
@@ -85,17 +171,17 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Plano</label>
-                        <input type="text" name="plano" placeholder="Ex: Controle 50GB">
+                        <input type="text" name="plano">
                     </div>
 
                     <div class="form-group">
-                        <label>Data de Início</label>
+                        <label>Data Início</label>
                         <input type="date" name="dt_inicio">
                     </div>
 
                     <div class="form-group">
                         <label>Valor Última Recarga (R$)</label>
-                        <input type="number" name="ultima_recarga_valor" step="0.01" placeholder="0.00">
+                        <input type="number" name="ultima_recarga_valor" step="0.01">
                     </div>
 
                     <div class="form-group">
@@ -107,34 +193,29 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Total Gasto (R$)</label>
-                        <input type="number" name="total_gasto" step="0.01" placeholder="0.00">
+                        <input type="number" name="total_gasto" step="0.01">
                     </div>
 
                     <div class="form-group full">
                         <label>Aparelho Vinculado</label>
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
-
                             {% for ap in aparelhos %}
-                            <option value="{{ ap.sk_aparelho }}">
-                                {{ ap.modelo }} ({{ ap.marca }})
-                            </option>
+                            <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
-                <!-- 🔥 CAMPO OBSERVAÇÃO NOVO -->
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
-                        <textarea name="observacao" rows="3" placeholder="Observações importantes sobre o chip..."></textarea>
+                        <textarea name="observacao" rows="3"></textarea>
                     </div>
                 </div>
 
                 <button type="submit" class="chip-btn">
-                    <i class="fas fa-plus"></i>
-                    Cadastrar Chip
+                    <i class="fas fa-plus"></i> Cadastrar Chip
                 </button>
 
             </form>
@@ -167,11 +248,11 @@
                             <th>Status</th>
                             <th>Plano</th>
                             <th>Últ. Recarga</th>
-                            <th>Valor (R$)</th>
+                            <th>Valor</th>
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
                             <th>Data Início</th>
-                            <th>Obs</th> <!-- 🔥 NOVO -->
+                            <th>Obs</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -183,20 +264,26 @@
                             <td>{{ c.numero }}</td>
                             <td>{{ c.operadora }}</td>
                             <td>{{ c.operador or '-' }}</td>
-                            <td>
-                                <span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span>
-                            </td>
+                            <td><span class="status-badge status-{{ c.status|lower }}">{{ c.status }}</span></td>
                             <td>{{ c.plano }}</td>
                             <td>{{ c.ultima_recarga_data }}</td>
                             <td>{{ c.ultima_recarga_valor }}</td>
                             <td>{{ c.total_gasto }}</td>
                             <td>{{ c.modelo_aparelho or '-' }}</td>
                             <td>{{ c.dt_inicio }}</td>
-                            <td>{{ c.observacao or '-' }}</td> <!-- 🔥 NOVO -->
                             <td>
-                                <a class="btn btn-primary btn-sm" href="/chips/edit/{{ c.id_chip }}">
+                                {% if c.observacao %}
+                                    <span class="obs-tooltip" data-tooltip="{{ c.observacao }}">
+                                        <i class="fa fa-comment-dots"></i>
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-primary btn-sm edit-btn" data-id="{{ c.id_chip }}">
                                     Editar
-                                </a>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -208,6 +295,56 @@
     </section>
 
 </main>
+
+<!-- MODAL -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>Editar Chip</h2>
+
+        <form id="modalForm">
+
+            <input type="hidden" name="id_chip" id="modal_id_chip">
+
+            <label>Número</label>
+            <input type="text" name="numero" id="modal_numero">
+
+            <label>Operadora</label>
+            <select name="operadora" id="modal_operadora">
+                <option value="VIVO">VIVO</option>
+                <option value="TIM">TIM</option>
+                <option value="CLARO">CLARO</option>
+                <option value="OI">OI</option>
+                <option value="OUTRA">OUTRA</option>
+            </select>
+
+            <label>Operador</label>
+            <input type="text" name="operador" id="modal_operador">
+
+            <label>Status</label>
+            <select name="status" id="modal_status">
+                <option>DISPONIVEL</option>
+                <option>MATURANDO</option>
+                <option>MATURADO</option>
+                <option>DESCANSO_1</option>
+                <option>DESCANSO_2</option>
+                <option>PRONTO_PARA_MATURAR</option>
+                <option>DISPARANDO</option>
+                <option>BANIDO</option>
+                <option>RESTRINGIDO</option>
+                <option>ATIVO</option>
+                <option>BLOQUEADO</option>
+            </select>
+
+            <label>Observação</label>
+            <textarea name="observacao" id="modal_observacao"></textarea>
+
+            <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
+            <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
+
+        </form>
+    </div>
+</div>
+
 
 <script>
 let chipsData = {{ chips | tojson | safe }};
@@ -231,9 +368,7 @@ function renderRows(lista) {
 
     if (!lista.length) {
         tbody.innerHTML = `
-            <tr>
-                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
-            </tr>`;
+            <tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
         return;
     }
 
@@ -251,15 +386,64 @@ function renderRows(lista) {
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>${c.observacao || "-"}</td> <!-- 🔥 NOVO -->
                 <td>
-                    <a class="btn btn-primary btn-sm" href="/chips/edit/${c.id_chip}">
-                        Editar
-                    </a>
+                    ${c.observacao ? 
+                        `<span class="obs-tooltip" data-tooltip="${c.observacao}">
+                            <i class='fa fa-comment-dots'></i>
+                         </span>`
+                    : "-"}
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button>
                 </td>
             </tr>`;
     });
 }
+
+// Abrir modal ao clicar em EDITAR
+document.querySelectorAll(".edit-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+
+        const id = btn.dataset.id;
+
+        const res = await fetch(`/chips/${id}`);
+        const chip = await res.json();
+
+        document.getElementById("editModal").style.display = "flex";
+
+        document.getElementById("modal_id_chip").value = chip.id_chip;
+        document.getElementById("modal_numero").value = chip.numero;
+        document.getElementById("modal_operadora").value = chip.operadora;
+        document.getElementById("modal_operador").value = chip.operador;
+        document.getElementById("modal_status").value = chip.status;
+        document.getElementById("modal_observacao").value = chip.observacao;
+    });
+});
+
+// Botão fechar modal
+document.getElementById("modalCloseBtn").addEventListener("click", () => {
+    document.getElementById("editModal").style.display = "none";
+});
+
+// Salvar alterações via AJAX
+document.getElementById("modalSaveBtn").addEventListener("click", async () => {
+
+    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
+
+    const res = await fetch("/chips/update-json", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    const r = await res.json();
+
+    if (r.success) {
+        location.reload();
+    } else {
+        alert("Erro ao salvar");
+    }
+});
 </script>
 
 {% endblock %}

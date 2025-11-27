@@ -117,7 +117,6 @@ body {
 .chip-container {
     margin-left: 240px;
     transition: 0.25s ease;
-    padding: 35px;
 }
 
 .sidebar.collapsed ~ .content,
@@ -133,8 +132,8 @@ body {
     border-bottom: 1px solid #1e3a8a;
     position: sticky;
     top: 0;
-    z-index: 10;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .chip-header-content {
@@ -151,7 +150,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
 }
 
 .icon-wrapper i {
@@ -162,17 +161,20 @@ body {
 .chip-title {
     font-size: 2rem;
     font-weight: 700;
+    color: #ffffff;
 }
 
 .chip-subtitle {
     font-size: 0.95rem;
     color: #94a3b8;
+    margin-top: 5px;
 }
 
 /* ============================================================
    CONTEÚDO PRINCIPAL
 ============================================================ */
 .chip-container {
+    padding: 2.5rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -192,6 +194,7 @@ body {
     border-radius: 14px;
     border: 1px solid #1e3a8a;
     box-shadow: 0 4px 12px rgba(0,0,0,.45);
+    overflow: hidden;
 }
 
 .chip-card-header {
@@ -207,17 +210,34 @@ body {
     background: rgba(37,99,235,.25);
     padding: .5rem;
     border-radius: .5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-icon i {
+    color: #60a5fa;
+    font-size: 1.2rem;
 }
 
 .card-title {
     font-size: 1.3rem;
     font-weight: 600;
+    color: #ffffff;
+}
+
+.card-content {
+    padding: 1.5rem;
 }
 
 /* ============================================================
    GRID FORM
 ============================================================ */
-.chip-form { display: flex; flex-direction: column; gap: 1.4rem; }
+.chip-form { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 1.4rem; 
+}
 
 .form-row {
     display: grid;
@@ -225,9 +245,15 @@ body {
     gap: 1.2rem;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 6px; 
+}
 
-.form-group.full { grid-column: span 3; }
+.form-group.full { 
+    grid-column: span 3; 
+}
 
 .form-group label {
     font-size: .9rem;
@@ -243,6 +269,20 @@ body {
     border: 1px solid #334155;
     background: #0f172a;
     color: #f1f5f9;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.form-group input::placeholder {
+    color: #64748b;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
 }
 
 /* ============================================================
@@ -256,17 +296,72 @@ body {
     cursor: pointer;
     font-weight: 600;
     transition: .2s;
+    border: none;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    align-self: flex-start;
 }
 
-.chip-btn:hover { transform: translateY(-2px); }
+.chip-btn:hover { 
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.6);
+}
+
+.chip-btn:active {
+    transform: translateY(0);
+}
 
 .chip-btn.save { background: #2563eb !important; }
 .chip-btn.cancel { background: #424242 !important; }
 
 /* ============================================================
+   SEARCH
+============================================================ */
+.search-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: #0f172a;
+    color: #f1f5f9;
+}
+
+.search-input::placeholder {
+    color: #64748b;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+/* ============================================================
    TABELA
 ============================================================ */
-.chip-table-wrapper { overflow-x: auto; }
+.chip-table-wrapper { 
+    overflow-x: auto; 
+}
 
 .chip-table {
     width: 100%;
@@ -274,21 +369,39 @@ body {
     font-size: .9rem;
 }
 
-.chip-table thead { background: #0d1320; }
+.chip-table thead { 
+    background: #0d1320; 
+}
 
 .chip-table th {
     padding: .9rem;
+    text-align: left;
     border-bottom: 1px solid #1e3a8a;
     color: #60a5fa;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .chip-table td {
     padding: .9rem;
     border-bottom: 1px solid #1f2a3c;
+    color: #e2e8f0;
 }
 
-.chip-table tbody tr:hover { background: #1e2333; }
+.chip-table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.chip-table tbody tr:hover { 
+    background: #1e2333; 
+}
+
+.empty-message {
+    text-align: center;
+    color: #64748b;
+    padding: 3rem 1rem !important;
+    font-style: italic;
+}
 
 /* ============================================================
    TOOLTIP
@@ -322,14 +435,119 @@ body {
 }
 
 /* ============================================================
+   STATUS BADGES
+============================================================ */
+.status-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-disponivel {
+    background: #065f46;
+    color: #d1fae5;
+}
+
+.status-maturando {
+    background: #78350f;
+    color: #fde68a;
+}
+
+.status-maturado {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+.status-descanso_1,
+.status-descanso_2 {
+    background: #6d28d9;
+    color: #e9d5ff;
+}
+
+.status-pronto_para_maturar {
+    background: #0f766e;
+    color: #99f6e4;
+}
+
+.status-disparando {
+    background: #3730a3;
+    color: #c7d2fe;
+}
+
+.status-banido {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+.status-restringido {
+    background: #9a3412;
+    color: #fed7aa;
+}
+
+.status-ativo {
+    background: #047857;
+    color: #d1fae5;
+}
+
+.status-bloqueado {
+    background: #7f1d1d;
+    color: #fee2e2;
+}
+
+.status-default {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+/* ============================================================
+   FOOTER
+============================================================ */
+.footer {
+    background: #0d1320;
+    border-top: 1px solid #1e3a8a;
+    margin-top: 4rem;
+}
+
+.footer p {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+/* ============================================================
    RESPONSIVO
 ============================================================ */
 @media (max-width: 900px) {
-    .sidebar { display: none; }
+    .sidebar { 
+        display: none; 
+    }
     .content,
-    .chip-container { margin-left: 0 !important; }
+    .chip-container { 
+        margin-left: 0 !important; 
+    }
+}
+
+@media (max-width: 768px) {
+    .chip-title {
+        font-size: 1.5rem;
+    }
+    
+    .chip-table {
+        font-size: 0.8rem;
+    }
+    
+    .chip-table th,
+    .chip-table td {
+        padding: 0.6rem;
+    }
 }
 
 @media (max-width: 600px) {
-    .form-row { grid-template-columns: 1fr; }
+    .form-row { 
+        grid-template-columns: 1fr; 
+    }
 }

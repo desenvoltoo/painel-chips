@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Painel{% endblock %}</title>
+    <title>{% block title %}Painel Chips{% endblock %}</title>
 
     <!-- Ícones -->
     <link rel="stylesheet"
@@ -12,52 +13,71 @@
     <link rel="stylesheet"
           href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
-    <!-- CSS GERAL (Dark Premium) -->
+    <!-- CSS Geral -->
     <link rel="stylesheet" href="/static/css/style.css">
 
-    <!-- JS -->
+    <!-- jQuery + DataTables -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-    <style>
-        /* Ajustes simples que NÃO quebram o estilo do style.css */
-        body {
-            margin: 0;
-            font-family: "Inter", sans-serif;
-            background: #0b0f1a !important;
-            color: #e2e8f0 !important;
-        }
-
-        .content {
-            margin-left: 260px;
-            padding: 35px;
-            min-height: 100vh;
-            color: #e2e8f0 !important;
-        }
-
-        h1, h2, h3, p, span, td, th, label {
-            color: #e2e8f0 !important;
-        }
-    </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
+<!-- ================================
+     SIDEBAR PREMIUM
+================================= -->
+<div class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
     <h2 class="side-title">Painel Chips</h2>
 
-    <a href="/dashboard"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="/chips"><i class="fas fa-sim-card"></i> Chips</a>
-    <a href="/aparelhos"><i class="fas fa-mobile-alt"></i> Aparelhos</a>
-    <a href="/movimentacao"><i class="fas fa-random"></i> Movimentação</a>
+    <a href="/dashboard">
+        <i class="fas fa-chart-line"></i>
+        <span>Dashboard</span>
+    </a>
+
+    <a href="/chips">
+        <i class="fas fa-sim-card"></i>
+        <span>Chips</span>
+    </a>
+
+    <a href="/aparelhos">
+        <i class="fas fa-mobile-alt"></i>
+        <span>Aparelhos</span>
+    </a>
+
+    <a href="/movimentacao">
+        <i class="fas fa-random"></i>
+        <span>Movimentação</span>
+    </a>
 </div>
 
-<!-- CONTEÚDO -->
-<div class="content">
+
+<!-- ================================
+     CONTEÚDO PRINCIPAL
+================================= -->
+<div class="content" id="content">
     {% block content %}
     {% endblock %}
 </div>
+
+
+<!-- ================================
+     JS PARA ABRIR/FECHAR SIDEBAR
+================================= -->
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const content = document.getElementById("content");
+    const toggle = document.getElementById("sidebarToggle");
+
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+        content.classList.toggle("collapsed");
+    });
+</script>
 
 </body>
 </html>

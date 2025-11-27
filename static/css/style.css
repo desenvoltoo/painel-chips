@@ -115,14 +115,18 @@ body {
 ============================================================ */
 .content,
 .chip-container {
-    margin-left: 240px;
+    margin-left: 0;
     transition: 0.25s ease;
 }
 
-.sidebar.collapsed ~ .content,
-.sidebar.collapsed ~ .chip-container {
+.sidebar.collapsed ~ .content {
     margin-left: 75px !important;
 }
+
+.sidebar.collapsed ~ .chip-container {
+    margin-left: 0 !important;
+}
+
 
 /* ============================================================
    HEADER

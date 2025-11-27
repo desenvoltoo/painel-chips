@@ -52,6 +52,21 @@ def chips_edit(id_chip):
 
 
 # =====================================================================
+# CRIAR NOVO CHIP
+# =====================================================================
+@chips_bp.route("/chips/add", methods=["POST"])
+def chips_add():
+    try:
+        dados = request.form.to_dict()
+        bq.upsert_chip(dados)
+        return redirect("/chips")
+
+    except Exception as e:
+        print("Erro ao adicionar chip:", e)
+        return "Erro ao adicionar chip", 500
+
+
+# =====================================================================
 # SALVAR ALTERAÇÕES DO CHIP
 # =====================================================================
 @chips_bp.route("/chips/update", methods=["POST"])

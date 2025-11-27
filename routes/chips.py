@@ -9,7 +9,7 @@ bq = BigQueryClient()
 
 
 # =====================================================================
-# LISTA DE CHIPS
+# LISTA DE CHIPS — PÁGINA PRINCIPAL
 # =====================================================================
 @chips_bp.route("/chips")
 def chips_list():
@@ -27,32 +27,35 @@ def chips_list():
 
 
 # =====================================================================
-# FORM HTML DE EDIÇÃO
+# ❌ ANTIGA PÁGINA DE EDIÇÃO (NÃO SERÁ MAIS USADA)
 # =====================================================================
-@chips_bp.route("/chips/edit/<id_chip>")
-def chips_edit(id_chip):
-    chips_df = bq.get_view("vw_chips_painel")
-    chips_df = sanitize_df(chips_df)
-
-    chip = chips_df[chips_df["id_chip"] == id_chip]
-
-    if chip.empty:
-        return "Chip não encontrado", 404
-
-    chip = chip.to_dict(orient="records")[0]
-
-    aparelhos_df = bq.get_view("vw_aparelhos")
-    aparelhos_df = sanitize_df(aparelhos_df).to_dict(orient="records")
-
-    return render_template(
-        "chips_edit.html",
-        chip=chip,
-        aparelhos=aparelhos_df
-    )
+# Vamos desativar mas manter comentado por segurança.
+# Depois do deploy validado podemos apagar.
+#
+# @chips_bp.route("/chips/edit/<id_chip>")
+# def chips_edit(id_chip):
+#     chips_df = bq.get_view("vw_chips_painel")
+#     chips_df = sanitize_df(chips_df)
+#
+#     chip = chips_df[chips_df["id_chip"] == id_chip]
+#
+#     if chip.empty:
+#         return "Chip não encontrado", 404
+#
+#     chip = chip.to_dict(orient="records")[0]
+#
+#     aparelhos_df = bq.get_view("vw_aparelhos")
+#     aparelhos_df = sanitize_df(aparelhos_df).to_dict(orient="records")
+#
+#     return render_template(
+#         "chips_edit.html",
+#         chip=chip,
+#         aparelhos=aparelhos_df
+#     )
 
 
 # =====================================================================
-# CRIAR NOVO CHIP
+# CRIAR NOVO CHIP — CONTINUA IGUAL
 # =====================================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -67,21 +70,22 @@ def chips_add():
 
 
 # =====================================================================
-# SALVAR ALTERAÇÕES DO CHIP
+# ❌ ANTIGO UPDATE POR FORM (AGORA NÃO PRECISA MAIS)
 # =====================================================================
-@chips_bp.route("/chips/update", methods=["POST"])
-def chips_update():
-    try:
-        bq.upsert_chip(request.form)
-        return redirect("/chips")
-
-    except Exception as e:
-        print("Erro ao atualizar chip:", e)
-        return "Erro ao atualizar chip", 500
+# Mantido temporariamente, mas não será mais usado:
+#
+# @chips_bp.route("/chips/update", methods=["POST"])
+# def chips_update():
+#     try:
+#         bq.upsert_chip(request.form)
+#         return redirect("/chips")
+#     except Exception as e:
+#         print("Erro ao atualizar chip:", e)
+#         return "Erro ao atualizar chip", 500
 
 
 # =====================================================================
-# API - GET CHIP (JSON)
+# API — OBTER CHIP (JSON)
 # =====================================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
@@ -92,6 +96,21 @@ def get_chip(id_chip):
         return jsonify({"erro": "Chip não encontrado"}), 404
 
     return jsonify(df.to_dict(orient="records")[0])
+
+
+# =====================================================================
+# 🔥 NOVA ROTA — UPDATE VIA JSON (USADA PELO MODAL)
+# =====================================================================
+@chips_bp.route("/chips/update-json", methods=["POST"])
+def chips_update_json():
+    try:
+        dados = request.json
+        bq.upsert_chip(dados)
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print("Erro update-json:", e)
+        return jsonify({"success": False, "erro": str(e)}), 500
 
 
 # =====================================================================

@@ -184,77 +184,113 @@
 
 </main>
 
-<!-- ========================= -->
-<!-- MODAL DE EDIÇÃO -->
-<!-- ========================= -->
+<!-- MODAL PREMIUM ORGANIZADO -->
 <div id="editModal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content modal-chip">
+
         <h2>Editar Chip</h2>
 
-        <form id="modalForm">
+        <form id="modalForm" class="modal-grid">
 
             <input type="hidden" name="id_chip" id="modal_id_chip">
 
-            <label>Número</label>
-            <input type="text" name="numero" id="modal_numero">
+            <!-- Campo Número -->
+            <div class="form-group">
+                <label>Número</label>
+                <input type="text" name="numero" id="modal_numero">
+            </div>
 
-            <label>Operadora</label>
-            <select name="operadora" id="modal_operadora">
-                <option value="VIVO">VIVO</option>
-                <option value="TIM">TIM</option>
-                <option value="CLARO">CLARO</option>
-                <option value="OI">OI</option>
-                <option value="OUTRA">OUTRA</option>
-            </select>
+            <!-- Operadora -->
+            <div class="form-group">
+                <label>Operadora</label>
+                <select name="operadora" id="modal_operadora">
+                    <option value="VIVO">VIVO</option>
+                    <option value="TIM">TIM</option>
+                    <option value="CLARO">CLARO</option>
+                    <option value="OI">OI</option>
+                    <option value="OUTRA">OUTRA</option>
+                </select>
+            </div>
 
-            <label>Operador</label>
-            <input type="text" name="operador" id="modal_operador">
+            <!-- Operador -->
+            <div class="form-group">
+                <label>Operador</label>
+                <input type="text" name="operador" id="modal_operador">
+            </div>
 
-            <label>Status</label>
-            <select name="status" id="modal_status">
-                <option>DISPONIVEL</option>
-                <option>MATURANDO</option>
-                <option>MATURADO</option>
-                <option>DESCANSO_1</option>
-                <option>DESCANSO_2</option>
-                <option>PRONTO_PARA_MATURAR</option>
-                <option>DISPARANDO</option>
-                <option>BANIDO</option>
-                <option>RESTRINGIDO</option>
-                <option>ATIVO</option>
-                <option>BLOQUEADO</option>
-            </select>
+            <!-- Status -->
+            <div class="form-group">
+                <label>Status</label>
+                <select name="status" id="modal_status">
+                    <option>DISPONIVEL</option>
+                    <option>MATURANDO</option>
+                    <option>MATURADO</option>
+                    <option>DESCANSO_1</option>
+                    <option>DESCANSO_2</option>
+                    <option>PRONTO_PARA_MATURAR</option>
+                    <option>DISPARANDO</option>
+                    <option>BANIDO</option>
+                    <option>RESTRINGIDO</option>
+                    <option>ATIVO</option>
+                    <option>BLOQUEADO</option>
+                </select>
+            </div>
 
-            <label>Plano</label>
-            <input type="text" name="plano" id="modal_plano">
+            <!-- Plano -->
+            <div class="form-group">
+                <label>Plano</label>
+                <input type="text" name="plano" id="modal_plano">
+            </div>
 
-            <label>Data Início</label>
-            <input type="date" name="dt_inicio" id="modal_dt_inicio">
+            <!-- Data Início -->
+            <div class="form-group">
+                <label>Data Início</label>
+                <input type="date" name="dt_inicio" id="modal_dt_inicio">
+            </div>
 
-            <label>Data Última Recarga</label>
-            <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
+            <!-- Data Última Recarga -->
+            <div class="form-group">
+                <label>Data Última Recarga</label>
+                <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
+            </div>
 
-            <label>Valor Última Recarga (R$)</label>
-            <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+            <!-- Valor Última Recarga -->
+            <div class="form-group">
+                <label>Valor Última Recarga (R$)</label>
+                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+            </div>
 
-            <label>Total Gasto (R$)</label>
-            <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
+            <!-- Total Gasto -->
+            <div class="form-group">
+                <label>Total Gasto (R$)</label>
+                <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
+            </div>
 
-            <label>Aparelho Vinculado</label>
-            <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
-                <option value="">— Nenhum —</option>
-                {% for ap in aparelhos %}
-                    <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
-                {% endfor %}
-            </select>
+            <!-- Aparelho vinculado -->
+            <div class="form-group full">
+                <label>Aparelho Vinculado</label>
+                <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
+                    <option value="">— Nenhum —</option>
+                    {% for ap in aparelhos %}
+                        <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <label>Observação</label>
-            <textarea name="observacao" id="modal_observacao"></textarea>
+            <!-- Observação -->
+            <div class="form-group full">
+                <label>Observação</label>
+                <textarea name="observacao" id="modal_observacao" style="height: 70px;"></textarea>
+            </div>
 
-            <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
-            <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
+            <!-- Botões -->
+            <div class="modal-actions full">
+                <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
+                <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
+            </div>
 
         </form>
+
     </div>
 </div>
 

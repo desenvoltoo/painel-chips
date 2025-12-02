@@ -1,4 +1,29 @@
 /* ============================================================
+   FORCE SIDEBAR CLOSED ON LOAD
+============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+    const sidebar = document.getElementById("sidebar");
+    const toggle = document.getElementById("sidebarToggle");
+
+    // Sidebar SEMPRE inicia fechada
+    if (sidebar && !sidebar.classList.contains("collapsed")) {
+        sidebar.classList.add("collapsed");
+    }
+
+    // Abre/fecha ao clicar no botão
+    if (toggle) {
+        toggle.addEventListener("click", () => {
+            sidebar.classList.toggle("collapsed");
+        });
+    }
+
+    // Mantém renderização dos chips funcionando
+    if (typeof renderRows === "function") {
+        renderRows(chipsData);
+    }
+});
+
+/* ============================================================
    CHIP PANEL – JS PREMIUM (Dark Blue Integration)
 ============================================================ */
 
@@ -94,16 +119,13 @@ function bindEditButtons() {
    ABRIR MODAL + CARREGAR DADOS
 ============================================================ */
 async function abrirModalEdicao(id_chip) {
-
     const res = await fetch(`/chips/${id_chip}`);
     const chip = await res.json();
 
     if (!chip) return alert("Erro ao carregar dados!");
 
-    // Mostra modal
     document.getElementById("editModal").style.display = "flex";
 
-    /* Preenche campos */
     setValue("modal_id_chip", chip.id_chip);
     setValue("modal_numero", chip.numero);
     setValue("modal_operadora", chip.operadora);
@@ -118,7 +140,6 @@ async function abrirModalEdicao(id_chip) {
 
     setValue("modal_observacao", chip.observacao);
 
-    // Aparelhos
     const selectAp = document.getElementById("modal_sk_aparelho_atual");
     selectAp.innerHTML = `<option value="">— Nenhum —</option>`;
 
@@ -148,7 +169,6 @@ document.getElementById("modalCloseBtn").addEventListener("click", () => {
    SALVAR ALTERAÇÕES
 ============================================================ */
 document.getElementById("modalSaveBtn").addEventListener("click", async () => {
-
     const formData = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
@@ -165,11 +185,4 @@ document.getElementById("modalSaveBtn").addEventListener("click", async () => {
     } else {
         alert(r.error || "Erro ao salvar.");
     }
-});
-
-/* ============================================================
-   INICIALIZAÇÃO
-============================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-    renderRows(chipsData);
 });

@@ -1,19 +1,13 @@
 # routes/aparelhos.py
-# ---------------------------------------------
-# Rotas da gestão de Aparelhos (CRUD)
-# ---------------------------------------------
-
 from flask import Blueprint, render_template, request, redirect
 from utils.bigquery_client import BigQueryClient
-from utils.sanitizer import sanitize_df  # usa a sanitização padrão
+from utils.sanitizer import sanitize_df
 
-# Nome do blueprint (é isso que vamos importar no app.py)
 aparelhos_bp = Blueprint("aparelhos", __name__)
 bq = BigQueryClient()
 
-
 # =======================================================
-# LISTAGEM DE APARELHOS
+# LISTAGEM
 # =======================================================
 @aparelhos_bp.route("/aparelhos")
 def aparelhos_list():
@@ -32,12 +26,12 @@ def aparelhos_list():
 
 
 # =======================================================
-# INSERIR / EDITAR (UPSERT)
+# UPSERT (INSERT + UPDATE)
 # =======================================================
 @aparelhos_bp.route("/aparelhos/add", methods=["POST"])
 def aparelhos_add():
     try:
-        dados = {
+        payload = {
             "id_aparelho": request.form.get("id_aparelho"),
             "modelo": request.form.get("modelo"),
             "marca": request.form.get("marca"),
@@ -45,10 +39,8 @@ def aparelhos_add():
             "status": request.form.get("status"),
         }
 
-        # upsert no BigQuery
-        bq.upsert_aparelho(dados)
+        bq.upsert_aparelho(payload)
 
-        # volta para a tela de aparelhos
         return redirect("/aparelhos")
 
     except Exception as e:

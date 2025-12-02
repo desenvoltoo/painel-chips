@@ -8,7 +8,7 @@ from utils.bigquery_client import BigQueryClient
 from app import sanitize_df  # usa a sanitização correta
 from utils.sanitizer import sanitize_df
 
-bp_aparelhos = Blueprint("aparelhos", __name__)
+aparelhos_bp = Blueprint("aparelhos", __name__)
 bq = BigQueryClient()
 
 

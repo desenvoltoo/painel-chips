@@ -8,7 +8,7 @@ from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
 # Blueprints
-from routes.aparelhos import bp_aparelhos
+from routes.aparelhos import aparelhos_bp
 from routes.chips import chips_bp
 from routes.recargas import recargas_bp
 from routes.relacionamentos import relacionamentos_bp

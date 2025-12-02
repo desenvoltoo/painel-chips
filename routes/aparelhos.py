@@ -1,113 +1,55 @@
 # routes/aparelhos.py
+# ---------------------------------------------
+# Rotas da gestão de Aparelhos (CRUD)
+# ---------------------------------------------
 
-from flask import Blueprint, render_template, request, redirect, jsonify, session
-from utils.db import db_query, db_execute
-from utils.auth_required import login_required
+from flask import Blueprint, render_template, request, redirect
+from utils.bigquery_client import BigQueryClient
+from app import sanitize_df  # usa a sanitização correta
+from utils.sanitizer import sanitize_df
 
-aparelhos_bp = Blueprint("aparelhos", __name__)
-
-
-# =============================================================================
-# 📌 LISTAR APARELHOS (multi-empresa)
-# =============================================================================
-@aparelhos_bp.route("/aparelhos")
-@login_required
-def aparelhos_list():
-    id_empresa = session["id_empresa"]
-
-    aparelhos = db_query("""
-        SELECT *
-        FROM aparelhos
-        WHERE id_empresa = %s
-        ORDER BY modelo ASC;
-    """, (id_empresa,))
-
-    return render_template(
-        "aparelhos.html",
-        aparelhos=aparelhos
-    )
+bp_aparelhos = Blueprint("aparelhos", __name__)
+bq = BigQueryClient()
 
 
-# =============================================================================
-# ➕ ADICIONAR APARELHO
-# =============================================================================
-@aparelhos_bp.route("/aparelhos/add", methods=["POST"])
-@login_required
-def aparelhos_add():
-    id_empresa = session["id_empresa"]
+# =======================================================
+# LISTAGEM
+# =======================================================
+@bp_aparelhos.route("/aparelhos")
+def aparelhos():
+    try:
+        aparelhos_df = bq.get_view("vw_aparelhos")
+        aparelhos_df = sanitize_df(aparelhos_df)
 
-    id_aparelho = request.form.get("id_aparelho")
-    modelo = request.form.get("modelo")
-    marca = request.form.get("marca")
-    imei = request.form.get("imei")
-    status = request.form.get("status", "ATIVO")
-
-    db_execute("""
-        INSERT INTO aparelhos (
-            id_empresa, id_aparelho, modelo, marca, imei, status, ativo
+        return render_template(
+            "aparelhos.html",
+            aparelhos=aparelhos_df.to_dict(orient="records")
         )
-        VALUES (%s, %s, %s, %s, %s, %s, TRUE);
-    """, (
-        id_empresa, id_aparelho, modelo, marca, imei, status
-    ))
 
-    return redirect("/aparelhos")
+    except Exception as e:
+        print("Erro ao carregar aparelhos:", e)
+        return "Erro ao carregar aparelhos", 500
 
 
-# =============================================================================
-# 🔍 OBTER APARELHO (JSON) – Para modal
-# =============================================================================
-@aparelhos_bp.route("/aparelhos/<int:sk_aparelho>")
-@login_required
-def aparelhos_get(sk_aparelho):
-    id_empresa = session["id_empresa"]
+# =======================================================
+# UPSERT (INSERT + UPDATE)
+# =======================================================
+@bp_aparelhos.route("/aparelhos/add", methods=["POST"])
+def add_aparelho():
+    try:
+        dados = {
+        bq.upsert_aparelho({
+            "id_aparelho": request.form.get("id_aparelho"),
+            "modelo": request.form.get("modelo"),
+            "marca": request.form.get("marca"),
+            "imei": request.form.get("imei"),
+            "status": request.form.get("status"),
+        }
+        })
 
-    aparelho = db_query("""
-        SELECT *
-        FROM aparelhos
-        WHERE sk_aparelho = %s AND id_empresa = %s
-        LIMIT 1;
-    """, (sk_aparelho, id_empresa))
+        bq.upsert_aparelho(dados)
+        return redirect("/aparelhos")
 
-    if not aparelho:
-        return jsonify({"erro": "Aparelho não encontrado"}), 404
-
-    return jsonify(aparelho[0])
-
-
-# =============================================================================
-# ✏️ ATUALIZAR APARELHO (JSON via modal)
-# =============================================================================
-@aparelhos_bp.route("/aparelhos/update-json", methods=["POST"])
-@login_required
-def aparelhos_update():
-    dados = request.json
-    id_empresa = session["id_empresa"]
-
-    sk_aparelho = dados.get("sk_aparelho")
-    if not sk_aparelho:
-        return jsonify({"success": False, "erro": "ID inválido"}), 400
-
-    db_execute("""
-        UPDATE aparelhos
-        SET
-            id_aparelho = %s,
-            modelo = %s,
-            marca = %s,
-            imei = %s,
-            status = %s,
-            ativo = %s,
-            updated_at = NOW()
-        WHERE sk_aparelho = %s AND id_empresa = %s;
-    """, (
-        dados.get("id_aparelho"),
-        dados.get("modelo"),
-        dados.get("marca"),
-        dados.get("imei"),
-        dados.get("status"),
-        dados.get("ativo", True),
-        sk_aparelho,
-        id_empresa
-    ))
-
-    return jsonify({"success": True})
+    except Exception as e:
+        print("Erro ao salvar aparelho:", e)
+        return "Erro ao salvar aparelho", 500

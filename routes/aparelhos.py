@@ -4,19 +4,26 @@ from flask import Blueprint, render_template, request, redirect
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-bp_aparelhos = Blueprint("aparelhos", __name__)
+# Nome interno do blueprint
+aparelhos_bp = Blueprint("aparelhos", __name__)
+
+# Cliente do BigQuery
 bq = BigQueryClient()
 
 
-@bp_aparelhos.route("/aparelhos")
-def aparelhos():
+# =====================================================
+# LISTAGEM DE APARELHOS
+# =====================================================
+@aparelhos_bp.route("/aparelhos")
+def aparelhos_list():
     try:
-        aparelhos_df = bq.get_view("vw_aparelhos")
-        aparelhos_df = sanitize_df(aparelhos_df)
+        # Agora usando view padronizada
+        df = bq.get_view("vw_aparelhos")
+        df = sanitize_df(df)
 
         return render_template(
             "aparelhos.html",
-            aparelhos=aparelhos_df.to_dict(orient="records")
+            aparelhos=df.to_dict(orient="records")
         )
 
     except Exception as e:
@@ -24,16 +31,21 @@ def aparelhos():
         return "Erro ao carregar aparelhos", 500
 
 
-@bp_aparelhos.route("/aparelhos/add", methods=["POST"])
-def add_aparelho():
+# =====================================================
+# INSERIR / EDITAR (UPSERT)
+# =====================================================
+@aparelhos_bp.route("/aparelhos/add", methods=["POST"])
+def aparelhos_add():
     try:
-        bq.upsert_aparelho({
+        payload = {
             "id_aparelho": request.form.get("id_aparelho"),
             "modelo": request.form.get("modelo"),
             "marca": request.form.get("marca"),
             "imei": request.form.get("imei"),
             "status": request.form.get("status"),
-        })
+        }
+
+        bq.upsert_aparelho(payload)
 
         return redirect("/aparelhos")
 

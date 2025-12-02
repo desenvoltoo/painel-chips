@@ -12,19 +12,3 @@ from .dashboard import bp_dashboard
 
 
 
-# ============================
-# REGISTRO DOS BLUEPRINTS
-# ============================
-
-def register_blueprints(app):
-
-
-    # Dashboard geral
-    app.register_blueprint(bp_dashboard)
-
-    # Módulos operacionais
-    app.register_blueprint(chips_bp)
-    app.register_blueprint(aparelhos_bp)
-    app.register_blueprint(recargas_bp)
-    app.register_blueprint(relacionamentos_bp)
-

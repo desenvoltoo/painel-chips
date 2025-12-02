@@ -1,6 +1,6 @@
 /* ============================================================
    FORCE SIDEBAR CLOSED ON LOAD
-============================================================ */
+============================================================ */ 
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     const toggle = document.getElementById("sidebarToggle");

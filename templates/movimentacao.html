@@ -2,70 +2,82 @@
 {% block title %}Movimentação{% endblock %}
 
 {% block content %}
+
 <div class="page-header">
     <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
 </div>
 
+<!-- =========================================
+     FORMULÁRIO DE REGISTRO DE MOVIMENTO
+========================================= -->
 <div class="card form-card">
     <h2 class="card-title"><i class="fas fa-plus-circle"></i> Registrar Movimentação</h2>
 
-    <form action="/movimentacao/add" method="POST" class="form-grid">
+    <form action="/movimentacao" method="POST" class="form-grid">
 
         <div class="form-group">
             <label>Chip</label>
             <select name="sk_chip" required>
                 {% for c in chips %}
-                    <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
+                    <option value="{{ c.sk_chip }}">
+                        {{ c.numero }} • {{ c.operadora }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
             <label>Aparelho</label>
-            <select name="sk_aparelho" required>
+            <select name="sk_aparelho">
+                <option value="">— Nenhum —</option>
                 {% for a in aparelhos %}
-                    <option value="{{ a.sk_aparelho }}">{{ a.modelo }} • {{ a.marca }}</option>
+                    <option value="{{ a.sk_aparelho }}">
+                        {{ a.marca }} {{ a.modelo }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
-            <label>Data</label>
-            <input type="date" name="data_uso" required>
-        </div>
-
-        <div class="form-group">
             <label>Tipo</label>
-            <select name="tipo_movimento">
+            <select name="tipo_movimento" required>
                 <option value="VINCULO">Vínculo</option>
                 <option value="DESVINCULO">Desvínculo</option>
                 <option value="TROCA">Troca</option>
+                <option value="ATUALIZAÇÃO">Atualização</option>
             </select>
         </div>
 
         <div class="form-group">
             <label>Origem</label>
-            <input type="text" name="origem">
+            <input type="text" name="origem" placeholder="Painel">
         </div>
 
         <div class="form-group col-12">
             <label>Observação</label>
-            <textarea name="observacao"></textarea>
+            <textarea name="observacao" placeholder="Detalhes da movimentação..."></textarea>
         </div>
 
-        <button class="btn-primary" type="submit">Salvar</button>
+        <button class="btn-primary" type="submit">
+            Registrar
+        </button>
     </form>
 </div>
 
+
+<!-- =========================================
+     TABELA COM HISTÓRICO REAL (vw_chip_historico)
+========================================= -->
 <div class="card table-card">
-    <h2 class="card-title"><i class="fas fa-list"></i> Últimos Registros</h2>
+    <h2 class="card-title"><i class="fas fa-history"></i> Últimos Movimentos</h2>
 
     <table id="tabela-eventos" class="display stripe compact">
         <thead>
             <tr>
-                <th>Chip</th>
-                <th>Aparelho</th>
                 <th>Data</th>
+                <th>Chip</th>
+                <th>Operadora</th>
+                <th>Aparelho</th>
                 <th>Tipo</th>
                 <th>Origem</th>
                 <th>Obs</th>
@@ -75,9 +87,10 @@
         <tbody>
             {% for e in eventos %}
             <tr>
-                <td>{{ e.sk_chip }}</td>
-                <td>{{ e.sk_aparelho }}</td>
-                <td>{{ e.data_uso }}</td>
+                <td>{{ e.data_movimento }}</td>
+                <td>{{ e.numero }}</td>
+                <td>{{ e.operadora }}</td>
+                <td>{{ e.marca_aparelho }} {{ e.modelo_aparelho }}</td>
                 <td>{{ e.tipo_movimento }}</td>
                 <td>{{ e.origem }}</td>
                 <td>{{ e.observacao }}</td>
@@ -91,7 +104,7 @@
 $(document).ready(function () {
     $('#tabela-eventos').DataTable({
         pageLength: 20,
-        order: [[2, 'desc']]
+        order: [[0, 'desc']]
     });
 });
 </script>

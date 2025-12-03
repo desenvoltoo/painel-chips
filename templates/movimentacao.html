@@ -1,3 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Movimentação{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
+</div>
+
+<!-- =========================================
+     FORMULÁRIO DE REGISTRO DE MOVIMENTO
+========================================= -->
+<div class="card form-card">
+    <h2 class="card-title"><i class="fas fa-plus-circle"></i> Registrar Movimentação</h2>
+
+    <form action="/movimentacao" method="POST" class="form-grid">
+
+        <div class="form-group">
+            <label>Chip</label>
+            <select name="sk_chip" required>
+                {% for c in chips %}
+                    <option value="{{ c.sk_chip }}">
+                        {{ c.numero }} • {{ c.operadora }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Aparelho</label>
+            <select name="sk_aparelho">
+                <option value="">— Nenhum —</option>
+                {% for a in aparelhos %}
+                    <option value="{{ a.sk_aparelho }}">
+                        {{ a.marca }} {{ a.modelo }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo_movimento" required>
+                <option value="VINCULO">Vínculo</option>
+                <option value="DESVINCULO">Desvínculo</option>
+                <option value="TROCA">Troca</option>
+                <option value="ATUALIZACAO">Atualização</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Origem</label>
+            <input type="text" name="origem" placeholder="Painel">
+        </div>
+
+        <div class="form-group col-12">
+            <label>Observação</label>
+            <textarea name="observacao" placeholder="Detalhes da movimentação..."></textarea>
+        </div>
+
+        <button class="btn-primary" type="submit">
+            Registrar
+        </button>
+    </form>
+</div>
+
+
+<!-- =========================================
+     DROPDOWN + TIMELINE POR CHIP
+========================================= -->
 <div class="card form-card">
     <h2 class="card-title"><i class="fas fa-history"></i> Histórico do Chip</h2>
 
@@ -51,3 +121,51 @@
     opacity: .85;
 }
 </style>
+
+<script>
+document.getElementById("chipSelector").addEventListener("change", function () {
+    const sk = this.value;
+
+    if (!sk) {
+        document.getElementById("timeline").innerHTML = "";
+        document.getElementById("timelineCard").style.display = "none";
+        return;
+    }
+
+    fetch(`/movimentacao/historico/${sk}`)
+        .then(res => res.json())
+        .then(data => renderTimeline(data));
+});
+
+function renderTimeline(eventos) {
+    const container = document.getElementById("timeline");
+    container.innerHTML = "";
+
+    if (!eventos.length) {
+        container.innerHTML = `<p>Nenhum evento encontrado.</p>`;
+        return;
+    }
+
+    document.getElementById("timelineCard").style.display = "block";
+
+    eventos.forEach(ev => {
+        container.innerHTML += `
+            <div class="timeline-item">
+                <div class="timeline-date">${ev.data_movimento}</div>
+
+                <div class="timeline-title">${ev.tipo_movimento}</div>
+
+                <div class="timeline-details">
+                    <b>Chip:</b> ${ev.numero} • ${ev.operadora}<br>
+                    <b>Aparelho:</b> ${ev.marca_aparelho || ''} ${ev.modelo_aparelho || ''}<br>
+                    <b>Status Atual:</b> ${ev.status_chip || '-'}<br>
+                    <b>Origem:</b> ${ev.origem || '-'}<br>
+                    <b>Obs:</b> ${ev.observacao || '-'}
+                </div>
+            </div>
+        `;
+    });
+}
+</script>
+
+{% endblock %}

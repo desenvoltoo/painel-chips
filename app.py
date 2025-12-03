@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template
 
 # Utils
 from utils.bigquery_client import BigQueryClient
@@ -15,9 +15,9 @@ from routes.relacionamentos import relacionamentos_bp
 from routes.movimentacao import movimentacao_bp
 
 
-# ===========================
+# ================================
 # CONFIGURAÇÃO GERAL
-# ===========================
+# ================================
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "painel-universidade")
 DATASET = os.getenv("BQ_DATASET", "marts")
 PORT = int(os.getenv("PORT", 8080))
@@ -26,9 +26,9 @@ app = Flask(__name__)
 bq = BigQueryClient()
 
 
-# ===========================
+# ================================
 # DASHBOARD PRINCIPAL
-# ===========================
+# ================================
 @app.route("/")
 @app.route("/dashboard")
 def dashboard():
@@ -40,9 +40,9 @@ def dashboard():
 
     # 2 — KPIs
     total_chips = len(tabela)
-    chips_ativos = sum(1 for x in tabela if (x["status"] or "").upper() == "ATIVO")
-    disparando = sum(1 for x in tabela if (x["status"] or "").upper() == "DISPARANDO")
-    banidos = sum(1 for x in tabela if (x["status"] or "").upper() == "BANIDO")
+    chips_ativos = sum(x["status"] and x["status"].upper() == "ATIVO" for x in tabela)
+    disparando = sum(x["status"] and x["status"].upper() == "DISPARANDO" for x in tabela)
+    banidos = sum(x["status"] and x["status"].upper() == "BANIDO" for x in tabela)
 
     # 3 — Filtros
     lista_status = sorted({(x["status"] or "").upper() for x in tabela if x["status"]})
@@ -62,35 +62,38 @@ def dashboard():
         ORDER BY dias_sem_recarga DESC
     """
 
-    alerta = bq._run(alerta_sql).to_dict(orient="records")
+    alerta_recarga = bq._run(alerta_sql).to_dict(orient="records")
 
     # Renderização
     return render_template(
         "dashboard.html",
         tabela=tabela,
+
         total_chips=total_chips,
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
+
         lista_status=lista_status,
         lista_operadora=lista_operadora,
-        alerta_recarga=alerta,
-        qtd_alerta=len(alerta),
+
+        alerta_recarga=alerta_recarga,
+        qtd_alerta=len(alerta_recarga),
     )
 
 
-# ===========================
+# ================================
 # REGISTRO DOS BLUEPRINTS
-# ===========================
+# ================================
 app.register_blueprint(aparelhos_bp)
 app.register_blueprint(chips_bp)
 app.register_blueprint(recargas_bp)
 app.register_blueprint(relacionamentos_bp)
-app.register_blueprint(movimentacao_bp) 
+app.register_blueprint(movimentacao_bp)
 
 
-# ===========================
+# ================================
 # RUN SERVER
-# ===========================
+# ================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)

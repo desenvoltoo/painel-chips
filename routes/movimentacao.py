@@ -5,36 +5,27 @@ from utils.sanitizer import sanitize_df
 movimentacao_bp = Blueprint("movimentacao", __name__)
 bq = BigQueryClient()
 
-# ===========================
-# PÁGINA DE HISTÓRICO
-# ===========================
 @movimentacao_bp.route("/movimentacao", methods=["GET"])
 def movimentacao_home():
-
     chips = sanitize_df(bq.get_view("vw_chips_painel")).to_dict(orient="records")
+    return render_template("movimentacao.html", chips=chips)
 
-    return render_template(
-        "movimentacao.html",
-        chips=chips
-    )
-
-# ===========================
-# API DO HISTÓRICO
-# ===========================
 @movimentacao_bp.route("/movimentacao/historico/<int:sk_chip>", methods=["GET"])
 def movimentacao_historico(sk_chip):
 
     sql = f"""
         SELECT 
-            data_movimento,
-            tipo_movimento,
+            sk_chip,
+            data_evento,
+            tipo_evento,
+            campo,
+            valor_antigo,
+            valor_novo,
             origem,
-            observacao,
-            marca_aparelho,
-            modelo_aparelho
+            observacao
         FROM `{bq.project}.{bq.dataset}.vw_chip_historico_completo`
         WHERE sk_chip = {sk_chip}
-        ORDER BY data_movimento DESC
+        ORDER BY data_evento DESC
     """
 
     df = bq._run(sql)

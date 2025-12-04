@@ -7,11 +7,12 @@
     <h1><i class="fas fa-history"></i> Histórico de Movimentação</h1>
 </div>
 
+<!-- Seleção do chip -->
 <div class="card form-card">
     <h2 class="card-title"><i class="fas fa-sim-card"></i> Selecionar Chip</h2>
 
     <div class="form-group">
-        <select id="chipHistorico" class="form-control">
+        <select id="chipHistorico" class="form-control" onchange="carregarTimeline(this.value)">
             <option value="">— Escolha um Chip —</option>
             {% for c in chips %}
                 <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
@@ -20,6 +21,7 @@
     </div>
 </div>
 
+<!-- Timeline -->
 <div class="card table-card">
     <h2 class="card-title"><i class="fas fa-stream"></i> Linha do Tempo</h2>
 
@@ -28,20 +30,20 @@
     </div>
 </div>
 
+<!-- JS -->
 <script>
-document.getElementById("chipHistorico").addEventListener("change", async function () {
+async function carregarTimeline(sk_chip) {
 
-    const sk = this.value;
     const box = document.getElementById("historicoLista");
 
-    if (!sk) {
+    if (!sk_chip) {
         box.innerHTML = "<p>Selecione um chip para visualizar o histórico.</p>";
         return;
     }
 
     box.innerHTML = "<p>Carregando...</p>";
 
-    const resp = await fetch(`/movimentacao/historico/${sk}`);
+    const resp = await fetch(`/movimentacao/timeline/${sk_chip}`);
     const eventos = await resp.json();
 
     if (!eventos.length) {
@@ -49,41 +51,73 @@ document.getElementById("chipHistorico").addEventListener("change", async functi
         return;
     }
 
-    box.innerHTML = "";
+    let html = "";
 
     eventos.forEach(ev => {
-        box.innerHTML += `
-            <div class="mov-card">
-                <div class="mov-date">${ev.data_evento}</div>
-                <div class="mov-type">${ev.tipo_evento} • ${ev.campo}</div>
-                <div class="mov-body">
-                    <b>Antes:</b> ${ev.valor_antigo || "—"}<br>
-                    <b>Depois:</b> ${ev.valor_novo || "—"}<br>
-                    <b>Origem:</b> ${ev.origem}<br>
-                    <b>Obs:</b> ${ev.observacao || ""}
-                </div>
+
+        let badgeClass =
+            ev.categoria === "EVENTO" ? "badge-evento" :
+            ev.categoria === "MOVIMENTO" ? "badge-movimento" :
+            "badge-aparelho";
+
+        html += `
+            <div class="timeline-item">
+
+                <span class="badge ${badgeClass}">${ev.categoria}</span>
+
+                <strong>${ev.tipo_evento}</strong>
+                <div class="mov-date">${ev.data_fmt}</div>
+
+                ${ev.valor_antigo || ev.valor_novo ?
+                    `<p><b>Alteração:</b> ${ev.valor_antigo || "—"} → ${ev.valor_novo || "—"}</p>`
+                    : ""
+                }
+
+                ${ev.origem ? `<p><b>Origem:</b> ${ev.origem}</p>` : ""}
+
+                ${ev.observacao ? `<p><b>Obs:</b> ${ev.observacao}</p>` : ""}
             </div>
         `;
     });
-});
+
+    box.innerHTML = html;
+}
 </script>
 
+<!-- ESTILO -->
 <style>
-.mov-card {
+.timeline-box {
+    background: #0f172a;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #1e293b;
+    margin-top: 20px;
+}
+
+.timeline-item {
     background: #1b1f2a;
-    padding: 12px;
+    padding: 15px;
     border-left: 4px solid #3b82f6;
-    margin: 10px 0;
+    margin: 12px 0;
     border-radius: 6px;
 }
-.mov-type {
-    font-size: 15px;
-    font-weight: bold;
-}
+
 .mov-date {
     font-size: 13px;
     opacity: 0.7;
 }
+
+.badge {
+    padding: 3px 8px;
+    font-size: 12px;
+    border-radius: 8px;
+    margin-right: 6px;
+    color: white;
+}
+
+.badge-evento { background: #7c3aed; }
+.badge-movimento { background: #2563eb; }
+.badge-aparelho { background: #059669; }
 </style>
 
 {% endblock %}

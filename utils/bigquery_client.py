@@ -135,7 +135,7 @@ class BigQueryClient:
         # Strings
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
-        operador = q(form.get("operador"))
+        operador = q(form.get("operador"))  # ⚠ Campo pode não existir na tabela
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
 
@@ -204,7 +204,7 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # MOVIMENTAÇÃO
+    # MOVIMENTAÇÃO (TROCA DE APARELHO)
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -228,12 +228,49 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS
+    # EVENTOS (TROCA DE STATUS, OPERADORA, PLANO ETC)
+    # ============================================================
+    def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
+
+        query = f"""
+            CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+                @sk_chip, @tipo_evento, @valor_old, @valor_new, @origem, @obs
+            )
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
+                bigquery.ScalarQueryParameter("tipo_evento", "STRING", tipo_evento),
+                bigquery.ScalarQueryParameter("valor_old", "STRING", valor_antigo),
+                bigquery.ScalarQueryParameter("valor_new", "STRING", valor_novo),
+                bigquery.ScalarQueryParameter("origem", "STRING", origem),
+                bigquery.ScalarQueryParameter("obs", "STRING", obs),
+            ]
+        )
+
+        self.client.query(query, job_config=job_config).result()
+        return True
+
+    # ============================================================
+    # LISTAGEM DE EVENTOS (NÃO APAGUEI O SEU)
     # ============================================================
     def get_eventos(self):
         sql = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.f_chip_aparelho`
             ORDER BY data_movimento DESC
+        """
+        return self._run(sql)
+
+    # ============================================================
+    # EVENTOS CORRETOS POR CHIP (NOVO)
+    # ============================================================
+    def get_eventos_chip(self, sk_chip):
+        sql = f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.vw_chip_historico_completo`
+            WHERE sk_chip = {sk_chip}
+            ORDER BY data_evento DESC
         """
         return self._run(sql)

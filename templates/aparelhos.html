@@ -99,6 +99,7 @@
                             <th>Marca</th>
                             <th>IMEI</th>
                             <th>Status</th>
+                            <th>Chips</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -109,30 +110,52 @@
                             <td>{{ a.id_aparelho }}</td>
                             <td>{{ a.modelo }}</td>
                             <td>{{ a.marca }}</td>
-                            <td>{{ a.imei or "-" }}</td>
+                            <td>{{ a.imei }}</td>
+                            <td>{{ a.status }}</td>
+
+                            <!-- COLUNA DE CHIPS -->
                             <td>
-                                {% set status_val = (a.status or 'DESCONHECIDO') %}
-                                <span class="status-badge status-{{ status_val|lower|replace(' ', '-') }}">
-                                    {{ status_val }}
-                                </span>
+                                {% set chips = chips_por_aparelho.get(a.id_aparelho|string, []) %}
+                                {% if chips %}
+                                    <ul class="chip-list" style="list-style:none;padding:0;margin:0;">
+                                        {% for c in chips %}
+                                        <li style="margin-bottom:6px;">
+                                            <strong>{{ c.numero }}</strong>
+                                            {% if c.operadora %} — {{ c.operadora }}{% endif %}
+                                            {% if c.plano %} — {{ c.plano }}{% endif %}
+                                            {% if c.status %} — <span class="chip-status">{{ c.status }}</span>{% endif %}
+                                            {% if c.observacao %}
+                                                <div class="chip-obs" style="font-size:0.85em;color:#666;margin-top:2px;">
+                                                    {{ c.observacao }}
+                                                </div>
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span>-</span>
+                                {% endif %}
                             </td>
+
+                            <!-- AÇÕES -->
                             <td>
-                                <button
-                                    class="btn-edit"
+                                {% set status_val = a.status or "" %}
+                                <button class="btn-edit"
                                     onclick='editarAparelho(
                                         {{ a.id_aparelho|tojson }},
                                         {{ a.modelo|tojson }},
                                         {{ a.marca|tojson }},
                                         {{ (a.imei or "")|tojson }},
                                         {{ status_val|tojson }}
-                                    )'
-                                >
+                                    )'>
                                     <i class="fas fa-pen"></i>
                                 </button>
                             </td>
+
                         </tr>
                         {% endfor %}
                     </tbody>
+
                 </table>
             </div>
         </div>

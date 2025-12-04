@@ -1,56 +1,51 @@
-# routes/movimentacao.py
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, jsonify, request, render_template
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-movimentacao_bp = Blueprint("movimentacao", __name__)
+mov_bp = Blueprint("movimentacao", __name__)
 bq = BigQueryClient()
 
-
 # ============================================================
-# TELA PRINCIPAL - Movimentação + Timeline
+# 📌 Página da Movimentação
 # ============================================================
-@movimentacao_bp.route("/movimentacao")
-def movimentacao_home():
-
-    chips = sanitize_df(bq.get_view("vw_chips_painel"))
-    aparelhos = sanitize_df(bq.get_view("vw_aparelhos"))
-
-    chips_list = chips.to_dict(orient="records")
-
-    # timeline inicial → primeiro chip
-    first_sk = chips_list[0]["sk_chip"] if chips_list else None
-
-    if first_sk:
-        timeline = sanitize_df(bq._run(f"""
-            SELECT *
-            FROM `{bq.project}.{bq.dataset}.vw_chip_timeline`
-            WHERE sk_chip = {first_sk}
-            ORDER BY data_evento DESC
-        """)).to_dict(orient="records")
-    else:
-        timeline = []
-
-    return render_template(
-        "movimentacao.html",
-        chips=chips_list,
-        aparelhos=aparelhos.to_dict(orient="records"),
-        timeline=timeline,
-        selected_chip=first_sk
-    )
+@mov_bp.route("/movimentacao")
+def pagina_movimentacao():
+    chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+    return render_template("movimentacao.html", chips=chips_df.to_dict(orient="records"))
 
 
 # ============================================================
-# API - Timeline dinâmica por AJAX
+# 🔎 AUTOCOMPLETE — Buscar chip por número
 # ============================================================
-@movimentacao_bp.route("/movimentacao/timeline/<int:sk_chip>")
-def movimentacao_timeline(sk_chip):
+@mov_bp.route("/movimentacao/buscar")
+def buscar_chip():
+    termo = request.args.get("numero", "").strip()
 
-    df = sanitize_df(bq._run(f"""
+    if not termo:
+        return jsonify([])
+
+    sql = f"""
+        SELECT sk_chip, numero, operadora
+        FROM `{bq.project}.{bq.dataset}.vw_chips_painel`
+        WHERE numero LIKE '%{termo}%'
+        ORDER BY numero
+        LIMIT 10
+    """
+
+    df = bq._run(sql)
+    return jsonify(df.to_dict(orient="records"))
+
+
+# ============================================================
+# 📜 TIMELINE COMPLETA DO CHIP
+# ============================================================
+@mov_bp.route("/movimentacao/timeline/<int:sk_chip>")
+def timeline_chip(sk_chip):
+    sql = f"""
         SELECT *
         FROM `{bq.project}.{bq.dataset}.vw_chip_timeline`
         WHERE sk_chip = {sk_chip}
         ORDER BY data_evento DESC
-    """))
-
+    """
+    df = bq._run(sql)
     return jsonify(df.to_dict(orient="records"))

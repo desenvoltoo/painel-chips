@@ -1,82 +1,36 @@
 {% extends "base.html" %}
-{% block title %}Movimentação{% endblock %}
+{% block title %}Histórico de Movimentação{% endblock %}
 
 {% block content %}
 
 <div class="page-header">
-    <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
+    <h1><i class="fas fa-history"></i> Histórico de Movimentação</h1>
 </div>
 
-<!-- =========================== -->
-<!-- FORMULÁRIO DE REGISTRO -->
-<!-- =========================== -->
+<!-- ============ SELETOR DE CHIP ============ -->
 <div class="card form-card">
-    <h2 class="card-title"><i class="fas fa-plus-circle"></i> Registrar Movimentação</h2>
+    <h2 class="card-title"><i class="fas fa-sim-card"></i> Selecionar Chip</h2>
 
-    <form action="/movimentacao" method="POST" class="form-grid">
-        <div class="form-group">
-            <label>Chip</label>
-            <select name="sk_chip" required>
-                {% for c in chips %}
-                    <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Aparelho</label>
-            <select name="sk_aparelho">
-                <option value="">— Nenhum —</option>
-                {% for a in aparelhos %}
-                    <option value="{{ a.sk_aparelho }}">{{ a.marca }} {{ a.modelo }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Tipo</label>
-            <select name="tipo_movimento" required>
-                <option value="VINCULO">Vínculo</option>
-                <option value="DESVINCULO">Desvínculo</option>
-                <option value="TROCA">Troca</option>
-                <option value="ATUALIZAÇÃO">Atualização</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Origem</label>
-            <input type="text" name="origem" placeholder="Painel">
-        </div>
-
-        <div class="form-group col-12">
-            <label>Observação</label>
-            <textarea name="observacao" placeholder="Detalhes da movimentação..."></textarea>
-        </div>
-
-        <button class="btn-primary" type="submit">Registrar</button>
-    </form>
+    <div class="form-group">
+        <select id="chipHistorico" class="form-control">
+            <option value="">— Escolha um Chip —</option>
+            {% for c in chips %}
+                <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
+            {% endfor %}
+        </select>
+    </div>
 </div>
 
-<!-- =========================== -->
-<!-- HISTÓRICO DO CHIP -->
-<!-- =========================== -->
+<!-- ============ TIMELINE DE EVENTOS ============ -->
 <div class="card table-card">
-    <h2 class="card-title"><i class="fas fa-history"></i> Histórico do Chip</h2>
+    <h2 class="card-title"><i class="fas fa-stream"></i> Linha do Tempo</h2>
 
-    <label>Selecionar Chip</label>
-    <select id="chipHistorico" class="form-control">
-        <option value="">— Escolha um Chip —</option>
-        {% for c in chips %}
-            <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
-        {% endfor %}
-    </select>
-
-    <div id="historicoLista" class="timeline-box"></div>
+    <div id="historicoLista" class="timeline-box">
+        <p>Selecione um chip para visualizar o histórico.</p>
+    </div>
 </div>
 
-<!-- =========================== -->
-<!-- JS DA TIMELINE -->
-<!-- =========================== -->
+<!-- ============ JS DA TIMELINE ============ -->
 <script>
 document.getElementById("chipHistorico").addEventListener("change", async function () {
 
@@ -84,21 +38,21 @@ document.getElementById("chipHistorico").addEventListener("change", async functi
     const box = document.getElementById("historicoLista");
 
     if (!sk) {
-        box.innerHTML = "";
+        box.innerHTML = "<p>Selecione um chip para visualizar o histórico.</p>";
         return;
     }
 
-    box.innerHTML = "<p>Carregando histórico...</p>";
+    box.innerHTML = "<p>Carregando...</p>";
 
     const resp = await fetch(`/movimentacao/historico/${sk}`);
     const eventos = await resp.json();
-
-    box.innerHTML = "";
 
     if (!eventos.length) {
         box.innerHTML = "<p class='empty'>Nenhum evento registrado.</p>";
         return;
     }
+
+    box.innerHTML = "";
 
     eventos.forEach(ev => {
         box.innerHTML += `

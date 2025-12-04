@@ -9,7 +9,7 @@ bq = BigQueryClient()
 # =======================================================
 # LISTAGEM
 # =======================================================
-@aparelhos_bp.route("/aparelhos")
+@aparelhos_bp.route("/aparelhos") 
 def aparelhos_list():
     try:
         df = bq.get_view("vw_aparelhos")

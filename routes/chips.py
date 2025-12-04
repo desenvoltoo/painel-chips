@@ -14,11 +14,8 @@ bq = BigQueryClient()
 @chips_bp.route("/chips")
 def chips_list():
     try:
-        chips_df = bq.get_view("vw_chips_painel")
-        chips_df = sanitize_df(chips_df)
-
-        aparelhos_df = bq.get_view("vw_aparelhos")
-        aparelhos_df = sanitize_df(aparelhos_df)
+        chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+        aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
 
         return render_template(
             "chips.html",
@@ -47,14 +44,12 @@ def chips_add():
 
 
 # =============================================================================
-# 🔍 API — OBTER CHIP ESPECÍFICO (JSON) — para o modal
+# 🔍 API — OBTER CHIP ESPECÍFICO (JSON) — para MODAL
 # =============================================================================
 @chips_bp.route("/chips/<id_chip>")
 def get_chip(id_chip):
     try:
-        df = bq.get_view("vw_chips_painel")
-
-        # BigQuery devolve STRING → importante converter corretamente
+        df = sanitize_df(bq.get_view("vw_chips_painel"))
         df = df[df["id_chip"].astype(str) == str(id_chip)]
 
         if df.empty:
@@ -68,7 +63,10 @@ def get_chip(id_chip):
 
 
 # =============================================================================
-# 🔥 UPDATE VIA MODAL (AJAX / JSON)
+# 🔄 UPDATE COMPLETO VIA MODAL (JSON)
+#     → Atualiza chip
+#     → Identifica campos alterados
+#     → Grava evento automático na f_chip_evento
 # =============================================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -78,7 +76,55 @@ def chips_update_json():
         if not dados or "id_chip" not in dados:
             return jsonify({"success": False, "erro": "Dados inválidos"}), 400
 
+        # 1) Recupera estado atual
+        atual_df = sanitize_df(bq.get_view("vw_chips_painel"))
+        atual = atual_df[atual_df["id_chip"].astype(str) == str(dados["id_chip"])]
+
+        if atual.empty:
+            return jsonify({"success": False, "erro": "Chip não encontrado"}), 404
+
+        atual = atual.to_dict(orient="records")[0]
+
+        # 2) Aplica update normal
         bq.upsert_chip(dados)
+
+        # 3) Detecta mudanças campo a campo
+        campos_monitorados = {
+            "status": "STATUS",
+            "operadora": "OPERADORA",
+            "plano": "PLANO",
+            "sk_aparelho_atual": "APARELHO"
+        }
+
+        eventos = []
+
+        for campo, nome_evento in campos_monitorados.items():
+            antigo = str(atual.get(campo) or "")
+            novo = str(dados.get(campo) or "")
+
+            if antigo != novo:
+                eventos.append((nome_evento, antigo, novo))
+
+        # Nenhuma mudança → ok
+        if not eventos:
+            return jsonify({"success": True, "msg": "Sem alterações"})
+
+        # 4) Para cada mudança → grava evento automático no BigQuery
+        for ev in eventos:
+            tipo_evento, valor_old, valor_new = ev
+
+            sql = f"""
+                CALL `{bq.project}.{bq.dataset}.sp_registrar_evento_chip`(
+                    {atual['sk_chip']},
+                    '{tipo_evento}',
+                    '{valor_old}',
+                    '{valor_new}',
+                    'Painel',
+                    'Alteração automática detectada pelo painel'
+                );
+            """
+            bq._run(sql)
+
         return jsonify({"success": True})
 
     except Exception as e:
@@ -87,7 +133,8 @@ def chips_update_json():
 
 
 # =============================================================================
-# 🔄 REGISTRAR MOVIMENTO DE CHIP
+# 🔄 REGISTRAR MOVIMENTO DE CHIP (TROCA DE APARELHO)
+#     → USADO pelo botão de transferência
 # =============================================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
@@ -99,11 +146,3 @@ def chips_movimento():
             sk_aparelho=dados.get("sk_aparelho"),
             tipo=dados.get("tipo"),
             origem=dados.get("origem", "Painel"),
-            observacao=dados.get("observacao", "")
-        )
-
-        return jsonify({"success": ok})
-
-    except Exception as e:
-        print("🚨 Erro movimento chip:", e)
-        return jsonify({"success": False, "erro": str(e)}), 500

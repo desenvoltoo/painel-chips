@@ -12,7 +12,7 @@ from routes.aparelhos import aparelhos_bp
 from routes.chips import chips_bp
 from routes.recargas import recargas_bp
 from routes.relacionamentos import relacionamentos_bp
-from routes.movimentacao import movimentacao_bp
+from routes.movimentacao import mov_bp
 from routes.timeline import timeline_bp
 
 # ================================
@@ -89,7 +89,7 @@ app.register_blueprint(aparelhos_bp)
 app.register_blueprint(chips_bp)
 app.register_blueprint(recargas_bp)
 app.register_blueprint(relacionamentos_bp)
-app.register_blueprint(movimentacao_bp)
+app.register_blueprint(mov_bp)
 app.register_blueprint(timeline_bp)
 
 # ================================

@@ -7,7 +7,8 @@ from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-mov_bp = Blueprint("movimentacao", __name__)
+# Nome correto do Blueprint
+movimentacao_bp = Blueprint("movimentacao", __name__)
 
 bq = BigQueryClient()
 
@@ -15,7 +16,7 @@ bq = BigQueryClient()
 # =======================================================
 # TELA DE MOVIMENTAÇÕES (GET)
 # =======================================================
-@mov_bp.route("/movimentacao", methods=["GET"])
+@movimentacao_bp.route("/movimentacao", methods=["GET"])
 def movimentacao_home():
 
     # Chips completos
@@ -24,21 +25,34 @@ def movimentacao_home():
     # Aparelhos completos
     aparelhos = sanitize_df(bq.get_view("vw_aparelhos")).to_dict(orient="records")
 
-    # Histórico de movimentações
-    eventos = sanitize_df(bq.get_view("vw_chip_historico")).to_dict(orient="records")
-
     return render_template(
         "movimentacao.html",
         chips=chips,
-        aparelhos=aparelhos,
-        eventos=eventos
+        aparelhos=aparelhos
     )
+
+
+# =======================================================
+# HISTÓRICO AJAX PARA TIMELINE
+# =======================================================
+@movimentacao_bp.route("/movimentacao/historico/<int:sk_chip>", methods=["GET"])
+def historico_chip(sk_chip):
+
+    query = f"""
+        SELECT *
+        FROM `painel-universidade.marts.vw_chip_historico_completo`
+        WHERE sk_chip = {sk_chip}
+        ORDER BY data_movimento DESC
+    """
+
+    eventos = bq._run(query).to_dict(orient="records")
+    return jsonify(eventos)
 
 
 # =======================================================
 # REGISTRAR MOVIMENTAÇÃO (POST)
 # =======================================================
-@mov_bp.route("/movimentacao", methods=["POST"])
+@movimentacao_bp.route("/movimentacao", methods=["POST"])
 def movimentacao_add():
 
     data = request.form.to_dict()
@@ -49,7 +63,6 @@ def movimentacao_add():
     origem = data.get("origem", "Painel")
     observacao = data.get("observacao", "")
 
-    # Chamada da SP que registra o movimento
     ok = bq.registrar_movimento_chip(
         sk_chip=sk_chip,
         sk_aparelho=sk_aparelho,
@@ -58,7 +71,4 @@ def movimentacao_add():
         observacao=observacao
     )
 
-    if ok:
-        return redirect("/movimentacao")
-    else:
-        return jsonify({"erro": "Falha ao registrar movimentação"}), 500
+    return redirect("/movimentacao") if ok else jsonify({"erro": "Falha ao registrar"}), 500

@@ -7,39 +7,72 @@
     <h1><i class="fas fa-history"></i> Histórico de Movimentação</h1>
 </div>
 
-<!-- Seleção do chip -->
 <div class="card form-card">
-    <h2 class="card-title"><i class="fas fa-sim-card"></i> Selecionar Chip</h2>
+    <h2 class="card-title"><i class="fas fa-search"></i> Buscar Chip</h2>
 
-    <div class="form-group">
-        <select id="chipHistorico" class="form-control" onchange="carregarTimeline(this.value)">
-            <option value="">— Escolha um Chip —</option>
-            {% for c in chips %}
-                <option value="{{ c.sk_chip }}">{{ c.numero }} • {{ c.operadora }}</option>
-            {% endfor %}
-        </select>
+    <div class="autocomplete-box">
+        <input 
+            type="text" 
+            id="buscaChip" 
+            placeholder="Digite o número do chip..."
+            autocomplete="off"
+        >
+        <div id="autocompleteLista" class="autocomplete-results"></div>
     </div>
 </div>
 
-<!-- Timeline -->
 <div class="card table-card">
     <h2 class="card-title"><i class="fas fa-stream"></i> Linha do Tempo</h2>
 
     <div id="historicoLista" class="timeline-box">
-        <p>Selecione um chip para visualizar o histórico.</p>
+        <p>Busque um chip para visualizar o histórico.</p>
     </div>
 </div>
 
-<!-- JS -->
 <script>
-async function carregarTimeline(sk_chip) {
+let timeout = null;
 
-    const box = document.getElementById("historicoLista");
+// Busca dinâmica no backend
+document.getElementById("buscaChip").addEventListener("input", function () {
+    const termo = this.value.trim();
 
-    if (!sk_chip) {
-        box.innerHTML = "<p>Selecione um chip para visualizar o histórico.</p>";
+    clearTimeout(timeout);
+    if (!termo) {
+        document.getElementById("autocompleteLista").innerHTML = "";
         return;
     }
+
+    timeout = setTimeout(async () => {
+        const resp = await fetch(`/movimentacao/buscar?numero=${encodeURIComponent(termo)}`);
+        const lista = await resp.json();
+
+        const box = document.getElementById("autocompleteLista");
+        box.innerHTML = "";
+
+        if (!lista.length) {
+            box.innerHTML = "<div class='item disabled'>Nenhum chip encontrado</div>";
+            return;
+        }
+
+        lista.forEach(c => {
+            const div = document.createElement("div");
+            div.classList.add("item");
+            div.innerHTML = `${c.numero} • ${c.operadora}`;
+            div.onclick = () => selecionarChip(c.sk_chip, `${c.numero} • ${c.operadora}`);
+            box.appendChild(div);
+        });
+
+    }, 250);
+});
+
+function selecionarChip(sk_chip, label) {
+    document.getElementById("buscaChip").value = label;
+    document.getElementById("autocompleteLista").innerHTML = "";
+    carregarTimeline(sk_chip);
+}
+
+async function carregarTimeline(sk_chip) {
+    const box = document.getElementById("historicoLista");
 
     box.innerHTML = "<p>Carregando...</p>";
 
@@ -62,19 +95,17 @@ async function carregarTimeline(sk_chip) {
 
         html += `
             <div class="timeline-item">
-
                 <span class="badge ${badgeClass}">${ev.categoria}</span>
 
                 <strong>${ev.tipo_evento}</strong>
                 <div class="mov-date">${ev.data_fmt}</div>
 
                 ${ev.valor_antigo || ev.valor_novo ?
-                    `<p><b>Alteração:</b> ${ev.valor_antigo || "—"} → ${ev.valor_novo || "—"}</p>`
+                    `<p><b>Alteração:</b> ${ev.valor_antigo || "—"} → ${ev.valor_novo || "—"}</p>` 
                     : ""
                 }
 
                 ${ev.origem ? `<p><b>Origem:</b> ${ev.origem}</p>` : ""}
-
                 ${ev.observacao ? `<p><b>Obs:</b> ${ev.observacao}</p>` : ""}
             </div>
         `;
@@ -84,8 +115,48 @@ async function carregarTimeline(sk_chip) {
 }
 </script>
 
-<!-- ESTILO -->
 <style>
+.autocomplete-box {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-box input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: white;
+}
+
+.autocomplete-results {
+    position: absolute;
+    top: 105%;
+    left: 0;
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    z-index: 20;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.autocomplete-results .item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.autocomplete-results .item:hover {
+    background: #1e293b;
+}
+
+.autocomplete-results .item.disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .timeline-box {
     background: #0f172a;
     padding: 20px;

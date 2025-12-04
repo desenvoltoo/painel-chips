@@ -7,14 +7,14 @@ from flask import Blueprint, render_template, request, redirect, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-# Nome correto do Blueprint
+# Nome correto e esperado pelo app.py
 movimentacao_bp = Blueprint("movimentacao", __name__)
 
 bq = BigQueryClient()
 
 
 # =======================================================
-# TELA DE MOVIMENTAÇÕES (GET)
+# TELA DE MOVIMENTAÇÃO (GET)
 # =======================================================
 @movimentacao_bp.route("/movimentacao", methods=["GET"])
 def movimentacao_home():
@@ -33,7 +33,7 @@ def movimentacao_home():
 
 
 # =======================================================
-# HISTÓRICO AJAX PARA TIMELINE
+# ENDPOINT AJAX — HISTÓRICO DO CHIP
 # =======================================================
 @movimentacao_bp.route("/movimentacao/historico/<int:sk_chip>", methods=["GET"])
 def historico_chip(sk_chip):
@@ -45,12 +45,16 @@ def historico_chip(sk_chip):
         ORDER BY data_movimento DESC
     """
 
-    eventos = bq._run(query).to_dict(orient="records")
-    return jsonify(eventos)
+    try:
+        df = bq._run(query)
+        eventos = sanitize_df(df).to_dict(orient="records")
+        return jsonify(eventos)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
 
 # =======================================================
-# REGISTRAR MOVIMENTAÇÃO (POST)
+# REGISTRAR MOVIMENTO (POST)
 # =======================================================
 @movimentacao_bp.route("/movimentacao", methods=["POST"])
 def movimentacao_add():
@@ -63,12 +67,15 @@ def movimentacao_add():
     origem = data.get("origem", "Painel")
     observacao = data.get("observacao", "")
 
-    ok = bq.registrar_movimento_chip(
-        sk_chip=sk_chip,
-        sk_aparelho=sk_aparelho,
-        tipo=tipo,
-        origem=origem,
-        observacao=observacao
-    )
+    try:
+        ok = bq.registrar_movimento_chip(
+            sk_chip=sk_chip,
+            sk_aparelho=sk_aparelho,
+            tipo=tipo,
+            origem=origem,
+            observacao=observacao
+        )
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
 
-    return redirect("/movimentacao") if ok else jsonify({"erro": "Falha ao registrar"}), 500
+    return redirect("/movimentacao")

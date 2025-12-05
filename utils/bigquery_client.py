@@ -3,6 +3,7 @@
 import os
 import uuid
 import pandas as pd
+from datetime import datetime
 from google.cloud import bigquery
 
 # ===========================
@@ -20,6 +21,53 @@ def q(value: str):
     return str(value).replace("'", "''")
 
 
+# ------------------------------
+# 🔧 Normalizar datas
+# ------------------------------
+def normalize_date(value):
+    """
+    Converte datas vindas do frontend para formato padrão BigQuery → DATE('YYYY-MM-DD').
+    """
+    if not value:
+        return "NULL"
+
+    try:
+        # Se já vier no formato certo
+        if len(value) == 10 and value[4] == "-" and value[7] == "-":
+            return f"DATE('{value}')"
+
+        # DD/MM/YYYY → YYYY-MM-DD
+        if "/" in value:
+            d, m, y = value.split("/")
+            return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
+
+        # Timestamps → pega só a data
+        if "T" in value:
+            date_part = value.split("T")[0]
+            return f"DATE('{date_part}')"
+
+        # Tentativa genérica
+        dt = datetime.fromisoformat(value)
+        return f"DATE('{dt.strftime('%Y-%m-%d')}')"
+
+    except:
+        return "NULL"
+
+
+# ------------------------------
+# 🔧 Normalizar números
+# ------------------------------
+def normalize_number(value):
+    if not value:
+        return "NULL"
+
+    try:
+        value = str(value).replace(",", ".")
+        return str(float(value))
+    except:
+        return "NULL"
+
+
 class BigQueryClient:
 
     def __init__(self):
@@ -28,7 +76,7 @@ class BigQueryClient:
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
     # ============================================================
-    # 🔥 EXECUTA SQL E RETORNA DATAFRAME
+    # EXECUTA SQL E RETORNA DATAFRAME
     # ============================================================
     def _run(self, sql: str):
 
@@ -45,7 +93,7 @@ class BigQueryClient:
             raise e
 
     # ============================================================
-    # 🔍 GET VIEW
+    # GET VIEW
     # ============================================================
     def get_view(self, view_name: str):
         sql = f"""
@@ -55,7 +103,7 @@ class BigQueryClient:
         return self._run(sql)
 
     # ============================================================
-    # 📱 APARELHOS
+    # APARELHOS
     # ============================================================
     def get_aparelhos(self):
         sql = f"""
@@ -104,19 +152,15 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # 📡 CHIPS — CADASTRO + DETECÇÃO DE EVENTOS
+    # 📡 CHIPS — UPSERT COMPLETO + EVENTOS
     # ============================================================
     def upsert_chip(self, form):
-        """
-        Atualiza chip e registra eventos automaticamente quando houver alterações.
-        """
 
-        # ------------------------------------------------------------
-        # 1) Buscar estado atual
-        # ------------------------------------------------------------
+        # 1) Identificação do chip
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
+        # 2) Buscar estado anterior
         sql_busca = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -127,9 +171,7 @@ class BigQueryClient:
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-        # ------------------------------------------------------------
-        # 2) Novos valores
-        # ------------------------------------------------------------
+        # 3) Coleta de valores novos
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador = q(form.get("operador"))
@@ -137,29 +179,16 @@ class BigQueryClient:
         status = q(form.get("status") or "DISPONIVEL")
         observacao = q(form.get("observacao") or "")
 
-        def sql_date(x):
-            return f"DATE('{x}')" if x else "NULL"
+        dt_inicio = normalize_date(form.get("dt_inicio"))
+        dt_recarga = normalize_date(form.get("ultima_recarga_data"))
 
-        dt_inicio = sql_date(form.get("dt_inicio"))
-        dt_recarga = sql_date(form.get("ultima_recarga_data"))
-
-        def sql_num(x):
-            if not x:
-                return "NULL"
-            try:
-                return str(float(str(x).replace(",", ".")))
-            except:
-                return "NULL"
-
-        val_recarga = sql_num(form.get("ultima_recarga_valor"))
-        total_gasto = sql_num(form.get("total_gasto"))
+        val_recarga = normalize_number(form.get("ultima_recarga_valor"))
+        total_gasto = normalize_number(form.get("total_gasto"))
 
         sk_ap = form.get("sk_aparelho_atual")
         aparelho_sql = sk_ap if sk_ap else "NULL"
 
-        # ------------------------------------------------------------
-        # 3) Detectar e registrar eventos automaticamente
-        # ------------------------------------------------------------
+        # 4) Detectar eventos
         if antigo:
             campos = {
                 "numero": numero,
@@ -184,9 +213,7 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # ------------------------------------------------------------
-        # 4) MERGE final para salvar o chip
-        # ------------------------------------------------------------
+        # 5) Merge final
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT '{id_chip_sql}' AS id_chip) S
@@ -225,7 +252,7 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # 🔄 MOVIMENTAÇÃO (TROCA DE APARELHO)
+    # MOVIMENTAÇÃO
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -249,7 +276,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # 🧾 EVENTOS (DETALHES)
+    # EVENTOS
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -274,7 +301,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # TIMELINE (HISTÓRICO COMPLETO)
+    # TIMELINE
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""

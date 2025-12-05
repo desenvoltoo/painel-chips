@@ -31,24 +31,27 @@ def chips_list():
 def chips_add():
     dados = request.form.to_dict()
 
+    def q(v):  # helper para string ou NULL
+        return f"'{v}'" if v else "NULL"
+
     query = f"""
         INSERT INTO `painel-universidade.marts.dim_chip`
         (id_chip, numero, operadora, operador, status, plano, dt_inicio,
          ultima_recarga_valor, ultima_recarga_data, total_gasto, 
          sk_aparelho_atual, observacao)
         VALUES (
-            '{dados.get("id_chip")}',
-            '{dados.get("numero")}',
-            '{dados.get("operadora")}',
-            '{dados.get("operador")}',
-            '{dados.get("status")}',
-            '{dados.get("plano")}',
-            {'NULL' if not dados.get("dt_inicio") else f"'{dados.get('dt_inicio')}'"},
+            {q(dados.get("id_chip"))},
+            {q(dados.get("numero"))},
+            {q(dados.get("operadora"))},
+            {q(dados.get("operador"))},
+            {q(dados.get("status"))},
+            {q(dados.get("plano"))},
+            {q(dados.get("dt_inicio"))},
             {dados.get("ultima_recarga_valor") or "NULL"},
-            {'NULL' if not dados.get("ultima_recarga_data") else f"'{dados.get('ultima_recarga_data')}'"},
+            {q(dados.get("ultima_recarga_data"))},
             {dados.get("total_gasto") or "NULL"},
             {dados.get("sk_aparelho_atual") or "NULL"},
-            '{dados.get("observacao")}'
+            {q(dados.get("observacao"))}
         )
     """
 
@@ -57,7 +60,7 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA EDIÇÃO — BUSCA PELO SK_CHIP (CORRETO)
+# BUSCAR CHIP PARA EDIÇÃO — AGORA USA SK_CORRETAMENTE
 # ============================================================
 @chips_bp.route("/chips/sk/<sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -84,23 +87,25 @@ def chips_get_by_sk(sk_chip):
 def chips_update_json():
     data = request.json
 
+    def q(v):  # helper para strings
+        return f"'{v}'" if v else "NULL"
+
     query = f"""
         UPDATE `painel-universidade.marts.dim_chip`
         SET
-            numero = '{data.get("numero")}',
-            operadora = '{data.get("operadora")}',
-            operador = '{data.get("operador")}',
-            status = '{data.get("status")}',
-            plano = '{data.get("plano")}',
-            dt_inicio = {'NULL' if not data.get("dt_inicio") else f"'{data.get('dt_inicio')}'"},
-            ultima_recarga_data = {'NULL' if not data.get("ultima_recarga_data") else f"'{data.get('ultima_recarga_data')}'"},
+            numero = {q(data.get("numero"))},
+            operadora = {q(data.get("operadora"))},
+            operador = {q(data.get("operador"))},
+            status = {q(data.get("status"))},
+            plano = {q(data.get("plano"))},
+            dt_inicio = {q(data.get("dt_inicio"))},
+            ultima_recarga_data = {q(data.get("ultima_recarga_data"))},
             ultima_recarga_valor = {data.get("ultima_recarga_valor") or "NULL"},
             total_gasto = {data.get("total_gasto") or "NULL"},
             sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
-            observacao = '{data.get("observacao")}'
+            observacao = {q(data.get("observacao"))}
         WHERE sk_chip = {data.get("sk_chip")}
     """
 
     bq.execute_query(query)
-
     return jsonify({"success": True})

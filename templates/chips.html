@@ -6,8 +6,9 @@
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<!-- SIDEBAR PREMIUM -->
+<!-- SIDEBAR PREMIUM (FECHADA POR PADRÃO) -->
 <aside class="sidebar" id="sidebar">
+
     <button class="sidebar-toggle" onclick="toggleSidebar()">
         <i class="fas fa-bars"></i>
     </button>
@@ -38,6 +39,7 @@
         <i class="fas fa-cog"></i>
         <span>Configurações</span>
     </a>
+
 </aside>
 
 <!-- HEADER -->
@@ -56,9 +58,9 @@
 </header>
 
 <!-- CONTEÚDO PRINCIPAL -->
-<main class="container chip-container">
+<main class="chip-container">
 
-    <!-- CARD CADASTRO DE NOVO CHIP -->
+    <!-- CARD: NOVO CHIP -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -66,6 +68,7 @@
         </div>
 
         <div class="card-content">
+
             <form action="/chips/add" method="POST" class="chip-form">
 
                 <div class="form-row">
@@ -148,9 +151,7 @@
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
                             {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}">
-                                    {{ ap.modelo }} ({{ ap.marca }})
-                                </option>
+                                <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -168,10 +169,12 @@
                 </button>
 
             </form>
+
         </div>
     </section>
 
-    <!-- CARD TABELA -->
+
+    <!-- CARD: TABELA -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -206,8 +209,9 @@
                     </thead>
 
                     <tbody id="tableBody">
-                        <!-- preenchido via JS -->
+                        <!-- POPULADO PELO JS -->
                     </tbody>
+
                 </table>
             </div>
 
@@ -216,11 +220,12 @@
 
 </main>
 
+
 <!-- MODAL EDITAR CHIP -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
 
-        <h2>Editar Chip</h2>
+        <h2 style="margin-bottom:1rem;">Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
 
@@ -314,16 +319,21 @@
     </div>
 </div>
 
+
 <script>
-/* Desenvolvido especialmente para manter tudo funcionando */
-function toggleSidebar(){
-    const sb = document.getElementById("sidebar");
-    sb.classList.toggle("collapsed");
+/* ========================
+    ABRIR / FECHAR SIDEBAR
+===========================*/
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("open");
 }
 
+
+/* ========================
+    RENDERIZAÇÃO DA TABELA
+===========================*/
 let chipsData = {{ chips | tojson | safe }};
 
-// RENDERIZAÇÃO DA TABELA
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
@@ -347,14 +357,19 @@ function renderRows(lista) {
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>${c.observacao ? `<span class='obs-tooltip'><i class="fas fa-comment-dots"></i></span>` : "-"}</td>
-                <td><button class="chip-btn" style="padding:5px 10px;" data-id="${c.id_chip}">Editar</button></td>
-            </tr>`;
+                <td>${c.observacao ? `<i class='fas fa-comment-dots'></i>` : "-"}</td>
+                <td><button class="chip-btn" data-id="${c.id_chip}">Editar</button></td>
+            </tr>
+        `;
     });
 
     bindEditButtons();
 }
 
+
+/* ========================
+    BOTÕES DE EDITAR
+===========================*/
 function bindEditButtons() {
     document.querySelectorAll("button[data-id]").forEach(btn => {
 
@@ -365,7 +380,7 @@ function bindEditButtons() {
 
             document.getElementById("editModal").style.display = "flex";
 
-            document.getElementById("modal_id_chip").value = chip.id_chip || "";
+            document.getElementById("modal_id_chip").value = chip.id_chip;
             document.getElementById("modal_numero").value = chip.numero || "";
             document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
             document.getElementById("modal_operador").value = chip.operador || "";
@@ -381,9 +396,10 @@ function bindEditButtons() {
     });
 }
 
-document.getElementById("modalCloseBtn").onclick = () =>
-    document.getElementById("editModal").style.display = "none";
 
+/* ========================
+    SALVAR NO MODAL
+===========================*/
 document.getElementById("modalSaveBtn").onclick = async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
@@ -398,14 +414,28 @@ document.getElementById("modalSaveBtn").onclick = async () => {
     else alert("Erro ao salvar.");
 };
 
+document.getElementById("modalCloseBtn").onclick = () => {
+    document.getElementById("editModal").style.display = "none";
+};
+
+
+/* ========================
+    BUSCA DINÂMICA
+===========================*/
 document.getElementById("searchInput").addEventListener("input", e => {
-    const termo = e.target.value.toLowerCase();
+    const term = e.target.value.toLowerCase();
+
     const filtrados = chipsData.filter(chip =>
-        Object.values(chip).some(val => String(val || "").toLowerCase().includes(termo))
+        Object.values(chip).some(val =>
+            String(val || "").toLowerCase().includes(term)
+        )
     );
+
     renderRows(filtrados);
 });
 
+
+/* CARREGAMENTO INICIAL */
 renderRows(chipsData);
 </script>
 

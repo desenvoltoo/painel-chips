@@ -6,185 +6,184 @@
 
 <style>
 
-    /* ===========================
-       🔍 CAMPO DE BUSCA
-    ============================ */
-    .search-box {
-        width: 100%;
-        max-width: 450px;
-        margin-bottom: 25px;
-        position: relative;
-    }
-    .search-box input {
-        width: 100%;
-        background: #0f172a;
-        border: 1px solid #334155;
-        padding: 14px 16px;
-        border-radius: 10px;
-        color: #e2e8f0;
-        font-size: 16px;
-    }
-    .search-box i {
-        position: absolute;
-        right: 15px;
-        top: 14px;
-        color: #64748b;
-    }
+/* ===========================
+   🔍 CAMPO DE BUSCA
+=========================== */
+.search-box {
+    width: 100%;
+    max-width: 450px;
+    margin-bottom: 25px;
+    position: relative;
+}
+.search-box input {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    padding: 14px 16px;
+    border-radius: 10px;
+    color: #e2e8f0;
+    font-size: 16px;
+}
+.search-box i {
+    position: absolute;
+    right: 15px;
+    top: 14px;
+    color: #64748b;
+}
 
-    /* Sugestões */
-    .autocomplete-list {
-        position: absolute;
-        background: #1e293b;
-        border: 1px solid #334155;
-        width: 100%;
-        margin-top: 4px;
-        border-radius: 8px;
-        max-height: 220px;
-        overflow-y: auto;
-        display: none;
-        z-index: 999;
-    }
-    .autocomplete-item {
-        padding: 10px 15px;
-        cursor: pointer;
-        color: #e2e8f0;
-    }
-    .autocomplete-item:hover {
-        background: #334155;
-    }
+/* Sugestões */
+.autocomplete-list {
+    position: absolute;
+    background: #1e293b;
+    border: 1px solid #334155;
+    width: 100%;
+    margin-top: 4px;
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    display: none;
+    z-index: 999;
+}
+.autocomplete-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #e2e8f0;
+}
+.autocomplete-item:hover {
+    background: #334155;
+}
 
-    /* ===========================
-       🔘 FILTROS
-    ============================ */
-    .filters {
-        margin-top: 10px;
-        margin-bottom: 25px;
-    }
-    .filter-btn {
-        display: inline-block;
-        padding: 8px 14px;
-        border-radius: 20px;
-        margin-right: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        background: #1e293b;
-        border: 1px solid #334155;
-        color: #cbd5e1;
-        transition: .2s;
-    }
-    .filter-btn.active {
-        background: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-    }
-    .filter-btn:hover {
-        transform: translateY(-2px);
-    }
+/* ===========================
+   🔘 FILTROS
+=========================== */
+.filters {
+    margin-top: 10px;
+    margin-bottom: 25px;
+}
+.filter-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 20px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    transition: .2s;
+}
+.filter-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+.filter-btn:hover {
+    transform: translateY(-2px);
+}
 
-    /* ===========================
-       🧵 TIMELINE
-    ============================ */
+/* ===========================
+   🧵 TIMELINE
+=========================== */
 
-    .timeline-section-title {
-        font-size: 18px;
-        margin: 20px 0 10px;
-        color: #e2e8f0;
-        font-weight: bold;
-    }
+.timeline-section-title {
+    font-size: 18px;
+    margin: 20px 0 10px;
+    color: #e2e8f0;
+    font-weight: bold;
+}
 
-    .timeline-item {
-        display: flex;
-        gap: 18px;
-        position: relative;
-        padding-bottom: 30px;
-        animation: fadeIn .4s ease-in-out;
-    }
+.timeline-item {
+    display: flex;
+    gap: 18px;
+    position: relative;
+    padding-bottom: 30px;
+    animation: fadeIn .4s ease-in-out;
+}
 
-    /* Linha vertical */
-    .timeline-item:before {
-        content: "";
-        position: absolute;
-        left: 12px;
-        top: 0;
-        width: 3px;
-        height: 100%;
-        background: #1e293b;
-    }
+/* Linha vertical */
+.timeline-item:before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: #1e293b;
+}
 
-    /* Bolinha */
-    .timeline-icon {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #3b82f6;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        z-index: 10;
-        font-size: 12px;
-        flex-shrink: 0;
-    }
+/* Bolinha */
+.timeline-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #3b82f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 10;
+    font-size: 12px;
+    flex-shrink: 0;
+}
 
-    /* Card */
-    .timeline-card {
-        flex: 1;
-        background: #0f172a;
-        padding: 16px 18px;
-        border-radius: 12px;
-        border-left: 3px solid #3b82f6;
-        box-shadow: 0 0 12px #0005;
-        transition: .2s;
-    }
-    .timeline-card:hover {
-        transform: translateX(4px);
-        box-shadow: 0 0 18px #0007;
-    }
+/* Card */
+.timeline-card {
+    flex: 1;
+    background: #0f172a;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border-left: 3px solid #3b82f6;
+    box-shadow: 0 0 12px #0005;
+    transition: .2s;
+}
+.timeline-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 0 18px #0007;
+}
 
-    .badges {
-        margin-bottom: 6px;
-    }
-    .badge {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        margin-right: 6px;
-        color: white;
-    }
-    .b-evento { background: #6366f1; }
-    .b-movimento { background: #0ea5e9; }
-    .b-aparelho { background: #14b8a6; }
+.badges {
+    margin-bottom: 6px;
+}
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-right: 6px;
+    color: white;
+}
+.b-evento { background: #6366f1; }
+.b-movimento { background: #0ea5e9; }
+.b-aparelho { background: #14b8a6; }
 
-    .timeline-title {
-        font-size: 17px;
-        font-weight: bold;
-        color: #e2e8f0;
-        margin-bottom: 5px;
-    }
-    .timeline-date {
-        color: #94a3b8;
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
-    .timeline-desc {
-        color: #cbd5e1;
-        font-size: 14px;
-    }
+.timeline-title {
+    font-size: 17px;
+    font-weight: bold;
+    color: #e2e8f0;
+    margin-bottom: 5px;
+}
+.timeline-date {
+    color: #94a3b8;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.timeline-desc {
+    color: #cbd5e1;
+    font-size: 14px;
+}
 
-    /* Loading */
-    #loading {
-        text-align: center;
-        color: #3b82f6;
-        font-size: 16px;
-        margin-top: 20px;
-        display: none;
-    }
+#loading {
+    text-align: center;
+    color: #3b82f6;
+    font-size: 16px;
+    margin-top: 20px;
+    display: none;
+}
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 </style>
 
@@ -215,142 +214,134 @@
 </div>
 
 
-<!-- LOADING -->
 <div id="loading">
     <i class="fas fa-spinner fa-spin"></i> Carregando histórico...
 </div>
 
-
-<!-- ===========================
-     🧵 TIMELINE
-=========================== -->
 <div id="timeline"></div>
 
 
 <script>
 
-    const autocompleteBox = document.getElementById("autocomplete");
-    const input = document.getElementById("buscarChip");
-    const timeline = document.getElementById("timeline");
-    const loading = document.getElementById("loading");
+const autocompleteBox = document.getElementById("autocomplete");
+const input = document.getElementById("buscarChip");
+const timeline = document.getElementById("timeline");
+const loading = document.getElementById("loading");
 
-    let eventosGlobais = []; // Para filtros
+let eventosGlobais = [];
 
-    // ======================================================
-    //  🔎 AUTOCOMPLETE
-    // ======================================================
-    input.addEventListener("input", () => {
-        const q = input.value.trim();
-        autocompleteBox.innerHTML = "";
-        if (q.length < 2) {
-            autocompleteBox.style.display = "none";
-            return;
-        }
-
-        fetch(`/movimentacao/buscar?q=${q}`)
-            .then(r => r.json())
-            .then(data => {
-                autocompleteBox.innerHTML = "";
-                data.forEach(chip => {
-                    const item = document.createElement("div");
-                    item.classList.add("autocomplete-item");
-                    item.innerHTML = `${chip.numero} — ${chip.operadora}`;
-                    item.onclick = () => carregarTimeline(chip.sk_chip, chip.numero);
-                    autocompleteBox.appendChild(item);
-                });
-                autocompleteBox.style.display = "block";
-            });
-    });
-
-
-    // ======================================================
-    //  📌 CARREGAR TIMELINE
-    // ======================================================
-    function carregarTimeline(sk, label) {
-
-        input.value = label;
-        timeline.innerHTML = "";
-        loading.style.display = "block";
+// ======================================================
+//  🔎 AUTOCOMPLETE
+// ======================================================
+input.addEventListener("input", () => {
+    const q = input.value.trim();
+    autocompleteBox.innerHTML = "";
+    if (q.length < 2) {
         autocompleteBox.style.display = "none";
+        return;
+    }
 
-        fetch(`/movimentacao/historico/${sk}`)
-            .then(r => r.json())
-            .then(data => {
-
-                eventosGlobais = data; // Guarda para filtros
-
-                loading.style.display = "none";
-                renderTimeline(data);
+    fetch(`/movimentacao/buscar?q=${q}`)
+        .then(r => r.json())
+        .then(data => {
+            autocompleteBox.innerHTML = "";
+            data.forEach(chip => {
+                const item = document.createElement("div");
+                item.classList.add("autocomplete-item");
+                item.innerHTML = `${chip.numero} — ${chip.operadora}`;
+                item.onclick = () => carregarTimeline(chip.sk_chip, chip.numero);
+                autocompleteBox.appendChild(item);
             });
-    }
-
-
-    // ======================================================
-    //  🎨 RENDERIZA TIMELINE
-    // ======================================================
-    function renderTimeline(lista) {
-
-        timeline.innerHTML = "";
-
-        if (!lista.length) {
-            timeline.innerHTML = `
-                <div class="timeline-item">
-                    <div class="timeline-icon"><i class="fas fa-info"></i></div>
-                    <div class="timeline-card">
-                        <div class="timeline-title">Nenhum dado encontrado</div>
-                        <div class="timeline-desc">Este chip ainda não possui histórico registrado.</div>
-                    </div>
-                </div>`;
-            return;
-        }
-
-        lista.forEach(ev => {
-
-            const icone =
-                ev.categoria === "APARELHO" ? "fa-mobile-screen" :
-                ev.categoria === "MOVIMENTO" ? "fa-exchange-alt" :
-                "fa-bolt";
-
-            const badge =
-                ev.categoria === "APARELHO" ? "b-aparelho" :
-                ev.categoria === "MOVIMENTO" ? "b-movimento" :
-                "b-evento";
-
-            timeline.innerHTML += `
-                <div class="timeline-item" data-cat="${ev.categoria}">
-                    <div class="timeline-icon"><i class="fas ${icone}"></i></div>
-
-                    <div class="timeline-card">
-                        <div class="badges"><span class="badge ${badge}">${ev.categoria}</span></div>
-                        <div class="timeline-title">${ev.tipo_evento}</div>
-                        <div class="timeline-date">${ev.data_fmt}</div>
-
-                        <div class="timeline-desc">
-                            ${ev.valor_antigo ? `<b>Antes:</b> ${ev.valor_antigo}<br>` : ""}
-                            ${ev.valor_novo ? `<b>Depois:</b> ${ev.valor_novo}<br>` : ""}
-                            ${ev.origem ? `<b>Origem:</b> ${ev.origem}<br>` : ""}
-                            ${ev.observacao ? `<b>Obs:</b> ${ev.observacao}` : ""}
-                        </div>
-                    </div>
-                </div>`;
+            autocompleteBox.style.display = "block";
         });
+});
+
+// ======================================================
+//  📌 CARREGAR TIMELINE
+// ======================================================
+function carregarTimeline(sk, label) {
+
+    input.value = label;
+    timeline.innerHTML = "";
+    loading.style.display = "block";
+    autocompleteBox.style.display = "none";
+
+    fetch(`/movimentacao/historico/${sk}`)
+        .then(r => r.json())
+        .then(data => {
+
+            eventosGlobais = data;
+
+            loading.style.display = "none";
+            renderTimeline(data);
+        });
+}
+
+// ======================================================
+//  🎨 RENDERIZA TIMELINE
+// ======================================================
+function renderTimeline(lista) {
+
+    timeline.innerHTML = "";
+
+    if (!lista.length) {
+        timeline.innerHTML = `
+            <div class="timeline-item">
+                <div class="timeline-icon"><i class="fas fa-info"></i></div>
+                <div class="timeline-card">
+                    <div class="timeline-title">Nenhum dado encontrado</div>
+                    <div class="timeline-desc">Este chip ainda não possui histórico registrado.</div>
+                </div>
+            </div>`;
+        return;
     }
 
+    lista.forEach(ev => {
 
-    // ======================================================
-    //  🔘 FILTROS
-    // ======================================================
-    document.querySelectorAll(".filter-btn").forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll(".filter-btn").forEach(x => x.classList.remove("active"));
-            btn.classList.add("active");
+        const icone =
+            ev.categoria === "APARELHO" ? "fa-mobile-screen" :
+            ev.categoria === "MOVIMENTO" ? "fa-exchange-alt" :
+            "fa-bolt";
 
-            const filtro = btn.getAttribute("data-filter");
+        const badge =
+            ev.categoria === "APARELHO" ? "b-aparelho" :
+            ev.categoria === "MOVIMENTO" ? "b-movimento" :
+            "b-evento";
 
-            if (filtro === "ALL") renderTimeline(eventosGlobais);
-            else renderTimeline(eventosGlobais.filter(ev => ev.categoria === filtro));
-        };
+        timeline.innerHTML += `
+            <div class="timeline-item" data-cat="${ev.categoria}">
+                <div class="timeline-icon"><i class="fas ${icone}"></i></div>
+
+                <div class="timeline-card">
+                    <div class="badges"><span class="badge ${badge}">${ev.categoria}</span></div>
+                    <div class="timeline-title">${ev.tipo_evento || "Sem descrição"}</div>
+                    <div class="timeline-date">${ev.data_fmt || ""}</div>
+
+                    <div class="timeline-desc">
+                        ${ev.valor_antigo ? `<b>Antes:</b> ${ev.valor_antigo}<br>` : ""}
+                        ${ev.valor_novo ? `<b>Depois:</b> ${ev.valor_novo}<br>` : ""}
+                        ${ev.origem ? `<b>Origem:</b> ${ev.origem}<br>` : ""}
+                        ${ev.observacao ? `<b>Obs:</b> ${ev.observacao}` : ""}
+                    </div>
+                </div>
+            </div>`;
     });
+}
+
+// ======================================================
+//  🔘 FILTROS
+// ======================================================
+document.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll(".filter-btn").forEach(x => x.classList.remove("active"));
+        btn.classList.add("active");
+
+        const filtro = btn.getAttribute("data-filter");
+
+        if (filtro === "ALL") renderTimeline(eventosGlobais);
+        else renderTimeline(eventosGlobais.filter(ev => ev.categoria === filtro));
+    };
+});
 
 </script>
 

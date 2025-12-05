@@ -7,89 +7,119 @@
 <style>
 
 /* ===========================
-   🔍 CAMPO DE BUSCA
+   🌌 LAYOUT GERAL
+=========================== */
+
+.mov-container {
+    max-width: 950px;
+    margin: 0 auto; /* 🔥 Centraliza tudo */
+    padding: 10px 20px;
+}
+
+/* ===========================
+   🔍 CAMPO DE BUSCA PREMIUM
 =========================== */
 .search-box {
     width: 100%;
-    max-width: 450px;
-    margin-bottom: 25px;
+    margin: 0 auto 25px auto;
     position: relative;
 }
+
 .search-box input {
     width: 100%;
     background: #0f172a;
     border: 1px solid #334155;
-    padding: 14px 16px;
-    border-radius: 10px;
+    padding: 14px 18px;
+    border-radius: 14px;
     color: #e2e8f0;
-    font-size: 16px;
-}
-.search-box i {
-    position: absolute;
-    right: 15px;
-    top: 14px;
-    color: #64748b;
+    font-size: 17px;
+    box-shadow: 0 0 12px #0004;
 }
 
-/* Sugestões */
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 12px #2563eb80;
+}
+
+.search-box i {
+    position: absolute;
+    right: 18px;
+    top: 14px;
+    color: #64748b;
+    font-size: 18px;
+}
+
 .autocomplete-list {
     position: absolute;
     background: #1e293b;
     border: 1px solid #334155;
     width: 100%;
     margin-top: 4px;
-    border-radius: 8px;
+    border-radius: 10px;
     max-height: 220px;
     overflow-y: auto;
     display: none;
     z-index: 999;
+    box-shadow: 0 0 18px #0006;
 }
+
 .autocomplete-item {
-    padding: 10px 15px;
+    padding: 12px 15px;
     cursor: pointer;
     color: #e2e8f0;
+    font-size: 15px;
 }
+
 .autocomplete-item:hover {
-    background: #334155;
+    background: #374151;
 }
 
 /* ===========================
-   🔘 FILTROS
+   🔘 FILTROS PREMIUM
 =========================== */
 .filters {
-    margin-top: 10px;
-    margin-bottom: 25px;
+    margin: 20px 0 30px 0;
+    text-align: center;
 }
+
 .filter-btn {
     display: inline-block;
-    padding: 8px 14px;
-    border-radius: 20px;
-    margin-right: 8px;
+    padding: 10px 18px;
+    border-radius: 25px;
+    margin-right: 10px;
     cursor: pointer;
     font-size: 14px;
     background: #1e293b;
     border: 1px solid #334155;
     color: #cbd5e1;
-    transition: .2s;
+    transition: .25s;
 }
+
 .filter-btn.active {
     background: #3b82f6;
     color: white;
-    border-color: #3b82f6;
 }
+
 .filter-btn:hover {
     transform: translateY(-2px);
 }
 
 /* ===========================
-   🧵 TIMELINE
+   🧵 TIMELINE PREMIUM
 =========================== */
 
-.timeline-section-title {
-    font-size: 18px;
-    margin: 20px 0 10px;
-    color: #e2e8f0;
-    font-weight: bold;
+.timeline-wrapper {
+    margin-top: 20px;
+}
+
+.timeline-date-separator {
+    text-align: center;
+    margin: 35px 0 25px 0;
+    font-size: 15px;
+    color: #94a3b8;
+    font-weight: 600;
+    letter-spacing: .5px;
 }
 
 .timeline-item {
@@ -97,7 +127,7 @@
     gap: 18px;
     position: relative;
     padding-bottom: 30px;
-    animation: fadeIn .4s ease-in-out;
+    animation: fadeIn .35s ease-in-out;
 }
 
 /* Linha vertical */
@@ -109,69 +139,76 @@
     width: 3px;
     height: 100%;
     background: #1e293b;
+    border-radius: 10px;
 }
 
 /* Bolinha */
 .timeline-icon {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background: #3b82f6;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     display: flex;
     justify-content: center;
     align-items: center;
     color: white;
     z-index: 10;
-    font-size: 12px;
-    flex-shrink: 0;
+    font-size: 13px;
+    box-shadow: 0 0 12px #1d4ed880;
 }
 
 /* Card */
 .timeline-card {
     flex: 1;
     background: #0f172a;
-    padding: 16px 18px;
-    border-radius: 12px;
+    padding: 18px 20px;
+    border-radius: 14px;
     border-left: 3px solid #3b82f6;
-    box-shadow: 0 0 12px #0005;
-    transition: .2s;
+    box-shadow: 0 0 16px #0005;
+    transition: .25s;
 }
+
 .timeline-card:hover {
-    transform: translateX(4px);
-    box-shadow: 0 0 18px #0007;
+    transform: translateX(6px);
+    box-shadow: 0 0 22px #0007;
 }
 
 .badges {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
+
 .badge {
     display: inline-block;
-    padding: 3px 8px;
+    padding: 4px 9px;
     border-radius: 6px;
     font-size: 12px;
     margin-right: 6px;
     color: white;
 }
+
 .b-evento { background: #6366f1; }
 .b-movimento { background: #0ea5e9; }
 .b-aparelho { background: #14b8a6; }
 
 .timeline-title {
-    font-size: 17px;
+    font-size: 18px;
     font-weight: bold;
-    color: #e2e8f0;
-    margin-bottom: 5px;
+    color: #f1f5f9;
+    margin-bottom: 6px;
 }
+
 .timeline-date {
     color: #94a3b8;
     font-size: 14px;
     margin-bottom: 10px;
 }
+
 .timeline-desc {
     color: #cbd5e1;
-    font-size: 14px;
+    font-size: 15px;
 }
 
+/* Loading */
 #loading {
     text-align: center;
     color: #3b82f6;
@@ -181,47 +218,44 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 </style>
 
+<div class="mov-container">
 
-<div class="page-header">
-    <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
+    <div class="page-header">
+        <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
+    </div>
+
+    <!-- BUSCA -->
+    <div class="search-box">
+        <input type="text" id="buscarChip" placeholder="Digite o número do chip...">
+        <i class="fas fa-search"></i>
+        <div id="autocomplete" class="autocomplete-list"></div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filters">
+        <span class="filter-btn active" data-filter="ALL">Todos</span>
+        <span class="filter-btn" data-filter="EVENTO">Eventos</span>
+        <span class="filter-btn" data-filter="MOVIMENTO">Movimentos</span>
+        <span class="filter-btn" data-filter="APARELHO">Aparelho</span>
+    </div>
+
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin"></i> Carregando histórico...
+    </div>
+
+    <div id="timeline" class="timeline-wrapper"></div>
+
 </div>
-
-
-<!-- ===========================
-     🔍 BUSCAR CHIP
-=========================== -->
-<div class="search-box">
-    <input type="text" id="buscarChip" placeholder="Digite o número do chip...">
-    <i class="fas fa-search"></i>
-    <div id="autocomplete" class="autocomplete-list"></div>
-</div>
-
-
-<!-- ===========================
-     🔘 FILTROS
-=========================== -->
-<div class="filters">
-    <span class="filter-btn active" data-filter="ALL">Todos</span>
-    <span class="filter-btn" data-filter="EVENTO">Eventos</span>
-    <span class="filter-btn" data-filter="MOVIMENTO">Movimentos</span>
-    <span class="filter-btn" data-filter="APARELHO">Aparelho</span>
-</div>
-
-
-<div id="loading">
-    <i class="fas fa-spinner fa-spin"></i> Carregando histórico...
-</div>
-
-<div id="timeline"></div>
-
 
 <script>
+
+/* JS MANTIDO — apenas melhorias visuais no HTML/CSS */
 
 const autocompleteBox = document.getElementById("autocomplete");
 const input = document.getElementById("buscarChip");
@@ -230,9 +264,7 @@ const loading = document.getElementById("loading");
 
 let eventosGlobais = [];
 
-// ======================================================
-//  🔎 AUTOCOMPLETE
-// ======================================================
+// AUTOCOMPLETE
 input.addEventListener("input", () => {
     const q = input.value.trim();
     autocompleteBox.innerHTML = "";
@@ -256,11 +288,8 @@ input.addEventListener("input", () => {
         });
 });
 
-// ======================================================
-//  📌 CARREGAR TIMELINE
-// ======================================================
+// CARREGAR TIMELINE
 function carregarTimeline(sk, label) {
-
     input.value = label;
     timeline.innerHTML = "";
     loading.style.display = "block";
@@ -269,19 +298,14 @@ function carregarTimeline(sk, label) {
     fetch(`/movimentacao/historico/${sk}`)
         .then(r => r.json())
         .then(data => {
-
             eventosGlobais = data;
-
             loading.style.display = "none";
             renderTimeline(data);
         });
 }
 
-// ======================================================
-//  🎨 RENDERIZA TIMELINE
-// ======================================================
+// RENDER TIMELINE
 function renderTimeline(lista) {
-
     timeline.innerHTML = "";
 
     if (!lista.length) {
@@ -309,7 +333,7 @@ function renderTimeline(lista) {
             "b-evento";
 
         timeline.innerHTML += `
-            <div class="timeline-item" data-cat="${ev.categoria}">
+            <div class="timeline-item">
                 <div class="timeline-icon"><i class="fas ${icone}"></i></div>
 
                 <div class="timeline-card">
@@ -324,13 +348,12 @@ function renderTimeline(lista) {
                         ${ev.observacao ? `<b>Obs:</b> ${ev.observacao}` : ""}
                     </div>
                 </div>
-            </div>`;
+            </div>
+        `;
     });
 }
 
-// ======================================================
-//  🔘 FILTROS
-// ======================================================
+// FILTROS
 document.querySelectorAll(".filter-btn").forEach(btn => {
     btn.onclick = () => {
         document.querySelectorAll(".filter-btn").forEach(x => x.classList.remove("active"));

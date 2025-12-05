@@ -72,7 +72,7 @@ def chips_get_by_sk(sk_chip):
         LIMIT 1
     """
 
-    df = bq.execute_query(query)
+    df = bq._run(query)
 
     if df.empty:
         return jsonify({"error": "Chip não encontrado"}), 404

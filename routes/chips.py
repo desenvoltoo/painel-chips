@@ -8,10 +8,31 @@ from utils.sanitizer import sanitize_df
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
+# ============================================================
+# HELPERS
+# ============================================================
+
+def q_str(v):
+    """Strings → 'valor' ou NULL"""
+    return f"'{v}'" if v and v != "NULL" else "NULL"
+
+
+def q_date(v):
+    """Datas → DATE('yyyy-mm-dd') ou NULL"""
+    if not v:
+        return "NULL"
+    return f"DATE('{v}')"
+
+
+def q_num(v):
+    """Números → número ou NULL"""
+    return str(v) if v not in (None, "", "NULL") else "NULL"
+
 
 # ============================================================
 # LISTAR CHIPS
 # ============================================================
+
 @chips_bp.route("/chips")
 def chips_list():
     chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
@@ -27,31 +48,32 @@ def chips_list():
 # ============================================================
 # CADASTRAR NOVO CHIP
 # ============================================================
+
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
-    dados = request.form.to_dict()
-
-    def q(v):  # helper para string ou NULL
-        return f"'{v}'" if v else "NULL"
+    d = request.form.to_dict()
 
     query = f"""
         INSERT INTO `painel-universidade.marts.dim_chip`
-        (id_chip, numero, operadora, operador, status, plano, dt_inicio,
-         ultima_recarga_valor, ultima_recarga_data, total_gasto, 
-         sk_aparelho_atual, observacao)
+        (
+            id_chip, numero, operadora, operador,
+            status, plano,
+            dt_inicio, ultima_recarga_valor, ultima_recarga_data,
+            total_gasto, sk_aparelho_atual, observacao
+        )
         VALUES (
-            {q(dados.get("id_chip"))},
-            {q(dados.get("numero"))},
-            {q(dados.get("operadora"))},
-            {q(dados.get("operador"))},
-            {q(dados.get("status"))},
-            {q(dados.get("plano"))},
-            {q(dados.get("dt_inicio"))},
-            {dados.get("ultima_recarga_valor") or "NULL"},
-            {q(dados.get("ultima_recarga_data"))},
-            {dados.get("total_gasto") or "NULL"},
-            {dados.get("sk_aparelho_atual") or "NULL"},
-            {q(dados.get("observacao"))}
+            {q_str(d.get("id_chip"))},
+            {q_str(d.get("numero"))},
+            {q_str(d.get("operadora"))},
+            {q_str(d.get("operador"))},
+            {q_str(d.get("status"))},
+            {q_str(d.get("plano"))},
+            {q_date(d.get("dt_inicio"))},
+            {q_num(d.get("ultima_recarga_valor"))},
+            {q_date(d.get("ultima_recarga_data"))},
+            {q_num(d.get("total_gasto"))},
+            {q_num(d.get("sk_aparelho_atual"))},
+            {q_str(d.get("observacao"))}
         )
     """
 
@@ -60,11 +82,11 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA EDIÇÃO — AGORA USA SK_CORRETAMENTE
+# BUSCAR CHIP POR SK (EDIÇÃO)
 # ============================================================
+
 @chips_bp.route("/chips/sk/<sk_chip>")
 def chips_get_by_sk(sk_chip):
-
     query = f"""
         SELECT *
         FROM `painel-universidade.marts.vw_chips_painel`
@@ -83,28 +105,26 @@ def chips_get_by_sk(sk_chip):
 # ============================================================
 # ATUALIZAR CHIP (SALVAR DO MODAL)
 # ============================================================
+
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
-    data = request.json
-
-    def q(v):  # helper para strings
-        return f"'{v}'" if v else "NULL"
+    d = request.json
 
     query = f"""
         UPDATE `painel-universidade.marts.dim_chip`
         SET
-            numero = {q(data.get("numero"))},
-            operadora = {q(data.get("operadora"))},
-            operador = {q(data.get("operador"))},
-            status = {q(data.get("status"))},
-            plano = {q(data.get("plano"))},
-            dt_inicio = {q(data.get("dt_inicio"))},
-            ultima_recarga_data = {q(data.get("ultima_recarga_data"))},
-            ultima_recarga_valor = {data.get("ultima_recarga_valor") or "NULL"},
-            total_gasto = {data.get("total_gasto") or "NULL"},
-            sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
-            observacao = {q(data.get("observacao"))}
-        WHERE sk_chip = {data.get("sk_chip")}
+            numero = {q_str(d.get("numero"))},
+            operadora = {q_str(d.get("operadora"))},
+            operador = {q_str(d.get("operador"))},
+            status = {q_str(d.get("status"))},
+            plano = {q_str(d.get("plano"))},
+            dt_inicio = {q_date(d.get("dt_inicio"))},
+            ultima_recarga_data = {q_date(d.get("ultima_recarga_data"))},
+            ultima_recarga_valor = {q_num(d.get("ultima_recarga_valor"))},
+            total_gasto = {q_num(d.get("total_gasto"))},
+            sk_aparelho_atual = {q_num(d.get("sk_aparelho_atual"))},
+            observacao = {q_str(d.get("observacao"))}
+        WHERE sk_chip = {q_num(d.get("sk_chip"))}
     """
 
     bq.execute_query(query)

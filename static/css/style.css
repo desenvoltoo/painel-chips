@@ -17,25 +17,26 @@ body {
 }
 
 /* ============================================================
-   CONTAINERS GLOBAIS
+   LAYOUT PADRÃO PARA TODAS AS PÁGINAS
 ============================================================ */
-.container,
-.content,
-.chip-container {
-    width: 100%;
+[data-layout="page"] {
     padding: 1.6rem;
-    transition: margin-left .25s ease, max-width .25s ease;
-    overflow-x: hidden;
+    margin-left: 115px; /* sidebar recolhida = 75 + 40px */
+    transition: margin-left .25s ease;
+}
+
+.sidebar.open ~ [data-layout="page"] {
+    margin-left: 280px; /* sidebar aberta = 240 + 40px */
 }
 
 /* ============================================================
-   SIDEBAR PREMIUM — ABERTA & FECHADA
+   SIDEBAR PREMIUM
 ============================================================ */
 .sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    width: 75px;                 /* recolhida */
+    width: 75px;
     height: 100vh;
     background: #0d1320;
     border-right: 1px solid #1e3a8a66;
@@ -43,11 +44,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    transition: width .25s ease-in-out;
     z-index: 9999;
+    transition: width .25s ease-in-out;
 }
 
-/* Aberta */
 .sidebar.open {
     width: 240px;
 }
@@ -57,10 +57,9 @@ body {
     font-size: 1.25rem;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 20px;
     color: #cbd5e1;
+    margin-bottom: 20px;
 }
-
 .sidebar:not(.open) .side-title {
     display: none;
 }
@@ -72,59 +71,40 @@ body {
     gap: 14px;
     padding: 12px;
     text-decoration: none;
-    color: #cbd5e1;
     border-radius: 8px;
+    color: #cbd5e1;
     transition: .25s ease-in-out;
 }
-
 .sidebar a:hover {
     background: #1e3a8a;
-    color: white;
+    color: #fff;
 }
-
 .sidebar:not(.open) a span {
     display: none;
 }
 
-/* Toggle */
+/* Botão Toggle */
 .sidebar-toggle {
     position: fixed;
-    top: 18px;
-    left: 110px; /* Sidebar 75px + 35px respiro */
+    top: 16px;
+    left: calc(75px + 16px);
     width: 38px;
     height: 38px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     background: #1e3a8a;
     color: white;
+    z-index: 10000;
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: .25s ease;
-    z-index: 10000;
+    transition: left .25s ease;
 }
 
 .sidebar.open + .sidebar-toggle {
-    left: 265px; /* Sidebar 240px + 25px respiro */
-}
-
-/* ============================================================
-   DISTÂNCIA ENTRE SIDEBAR E CONTEÚDO — 3cm (~40px)
-============================================================ */
-.content,
-.container,
-.chip-container {
-    margin-left: 115px !important;     /* 75px + 40px */
-    max-width: calc(100% - 130px);     /* evita cortar conteúdo */
-}
-
-.sidebar.open ~ .content,
-.sidebar.open ~ .container,
-.sidebar.open ~ .chip-container {
-    margin-left: 280px !important;     /* 240px + 40px */
-    max-width: calc(100% - 300px);
+    left: calc(240px + 16px);
 }
 
 /* ============================================================
@@ -133,8 +113,9 @@ body {
 .chip-header {
     background: #0d1320;
     border-bottom: 1px solid #1e3a8a55;
-    padding: 1.3rem 0;
-    margin-bottom: 1rem;
+    padding: 1.3rem 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
 }
 
 .chip-header-content {
@@ -144,40 +125,33 @@ body {
 }
 
 .icon-wrapper {
-    background: rgba(37, 99, 235, 0.2);
-    padding: 0.8rem;
-    border-radius: 0.8rem;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    background: rgba(37,99,235,.2);
+    padding: .8rem;
+    border-radius: .8rem;
 }
-
 .icon-wrapper i {
     font-size: 1.7rem;
     color: #60a5fa;
 }
 
 .chip-title {
-    font-size: 1.9rem;
+    font-size: 1.8rem;
     font-weight: 700;
 }
 
-.chip-subtitle {
-    opacity: .7;
-}
-
 /* ============================================================
-   CARDS PREMIUM
+   CARDS
 ============================================================ */
 .chip-card {
     background: #111827;
+    padding: 1.4rem;
     border-radius: 14px;
     border: 1px solid #1e3a8a55;
-    padding: 1.5rem;
-    margin-bottom: 1.8rem;
-    transition: .3s;
+    margin-bottom: 2rem;
+    transition: .3s ease;
 }
-
 .chip-card:hover {
-    box-shadow: 0 4px 22px rgba(37,99,235,.25);
+    box-shadow: 0 0 20px rgba(37,99,235,.25);
 }
 
 /* ============================================================
@@ -185,16 +159,14 @@ body {
 ============================================================ */
 .form-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.2rem;
+    grid-template-columns: repeat(3,1fr);
+    gap: 1rem;
 }
-
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
-
 .form-group.full {
     grid-column: span 3;
 }
@@ -208,7 +180,6 @@ body {
     padding: .75rem;
     color: #e2e8f0;
 }
-
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -218,66 +189,56 @@ body {
 
 /* Botões */
 .chip-btn {
-    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    background: linear-gradient(135deg,#1e3a8a,#2563eb);
     color: white;
-    padding: .9rem 1.4rem;
+    padding: .85rem 1.4rem;
     border-radius: 8px;
-    cursor: pointer;
     border: none;
+    cursor: pointer;
     margin-top: 1rem;
     font-weight: 600;
     transition: .25s;
 }
-
 .chip-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 14px rgba(37,99,235,.55);
+    box-shadow: 0 0 15px rgba(37,99,235,.55);
 }
 
 /* ============================================================
    TABELA
 ============================================================ */
-.chip-table-wrapper {
-    overflow-x: auto;
-    border-radius: 12px;
-}
-
 .chip-table {
     width: 100%;
     border-collapse: collapse;
 }
-
 .chip-table th {
     background: #0d1320;
-    padding: .85rem;
     color: #60a5fa;
+    padding: .8rem;
     border-bottom: 1px solid #1e3a8a55;
 }
-
 .chip-table td {
     padding: .9rem;
     border-bottom: 1px solid #1f2a3c;
 }
-
 .chip-table tbody tr:hover {
     background: #1a2238;
 }
 
 /* ============================================================
-   STATUS BADGES (CORES ORIGINAIS)
+   STATUS BADGES (ORIGINAIS)
 ============================================================ */
-.status-badge { padding:.35rem .75rem;border-radius:999px;font-size:.75rem;font-weight:600 }
-
+.status-badge { padding:.35rem .75rem;border-radius:999px;font-weight:600 }
 .status-disponivel { background:#065f46;color:#d1fae5 }
 .status-maturando { background:#78350f;color:#fde68a }
 .status-maturado { background:#1e3a8a;color:#bfdbfe }
-.status-descanso_1,.status-descanso_2 { background:#6d28d9;color:#f3e8ff }
-.status-pronto_para_maturar { background:#0f766e;color:#99f6e4 }
-.status-disparando { background:#3730a3;color:#c7d2fe }
-.status-banido { background:#7f1d1d;color:#fecaca }
-.status-restringido { background:#9a3412;color:#fed7aa }
-.status-ativo { background:#047857;color:#d1fae5 }
-.status-bloqueado { background:#7f1d1d;color:#fee2e2 }
+.status-descanso_1,.status-descanso_2{background:#6d28d9;color:#f3e8ff}
+.status-pronto_para_maturar{background:#0f766e;color:#99f6e4}
+.status-disparando{background:#3730a3;color:#c7d2fe}
+.status-banido{background:#7f1d1d;color:#fecaca}
+.status-restringido{background:#9a3412;color:#fed7aa}
+.status-ativo{background:#047857;color:#d1fae5}
+.status-bloqueado{background:#7f1d1d;color:#fee2e2}
 
 /* ============================================================
    MODAL PREMIUM
@@ -291,45 +252,35 @@ body {
     align-items:center;
     z-index:99999;
 }
-
 .modal-content {
     background:#0f172a;
     width:90%;
     max-width:520px;
-    max-height:88vh;
-    overflow-y:auto;
-    border-radius:14px;
     padding:1.5rem;
+    border-radius:14px;
     border:1px solid #1e3a8a66;
-    box-shadow:0 0 25px rgba(30,58,138,.35);
+    max-height:90vh;
+    overflow-y:auto;
 }
-
 .modal-grid {
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:1rem;
 }
-
-.modal-grid .full { grid-column:span 2; }
-
-.modal-actions { display:flex;gap:1rem;grid-column:span 2; }
-
-.chip-btn.cancel { background:#3b3b3b; }
+.modal-grid .full {
+    grid-column:span 2;
+}
 
 /* ============================================================
-   RESPONSIVIDADE
+   RESPONSIVO
 ============================================================ */
 @media(max-width:900px) {
     .sidebar { display:none; }
-    .sidebar-toggle { left:20px !important; }
-    .content, .chip-container, .container {
-        margin-left:0 !important;
-        max-width:100% !important;
-    }
+    .sidebar-toggle { left: 20px !important; }
+    [data-layout="page"] { margin-left: 0 !important; }
 }
 
 @media(max-width:600px) {
     .form-row { grid-template-columns:1fr; }
     .modal-grid { grid-template-columns:1fr; }
-    .container, .chip-container { padding:1rem; }
 }

@@ -366,13 +366,13 @@ body.sidebar-open .chip-container {
 }
 
 /* ============================================================
-   CARDS PREMIUM
+   CARDS PREMIUM – CORRIGIDO COM ESPAÇAMENTO ENTRE CARDS
 ============================================================ */
 .chip-card {
     background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(15, 23, 42, 0.95));
     border-radius: 20px;
     border: 1px solid rgba(30, 58, 138, 0.4);
-    box-shadow: 
+    box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.25),
         0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     animation: fadeUp .6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -381,8 +381,12 @@ body.sidebar-open .chip-container {
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(20px);
+
+    /* 🔥 O ESPAÇAMENTO QUE FALTAVA */
+    margin-bottom: 48px;  /* Espaço entre um card e outro */
 }
 
+/* Glow superior */
 .chip-card::before {
     content: '';
     position: absolute;
@@ -393,19 +397,22 @@ body.sidebar-open .chip-container {
     background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), transparent);
 }
 
+/* Delays sofisticados */
 .chip-card:nth-child(1) { animation-delay: 0.1s; }
 .chip-card:nth-child(2) { animation-delay: 0.2s; }
 .chip-card:nth-child(3) { animation-delay: 0.3s; }
 
+/* Hover premium */
 .chip-card:hover {
     transform: translateY(-4px);
-    box-shadow: 
+    box-shadow:
         0 16px 48px rgba(0, 0, 0, 0.35),
         0 0 0 1px rgba(59, 130, 246, 0.3) inset,
         0 0 60px rgba(37, 99, 235, 0.1);
     border-color: rgba(59, 130, 246, 0.5);
 }
 
+/* Header */
 .chip-card-header {
     background: linear-gradient(135deg, rgba(13, 19, 32, 0.8), rgba(15, 23, 42, 0.8));
     padding: 1.5rem 2rem;
@@ -415,6 +422,7 @@ body.sidebar-open .chip-container {
     gap: 1rem;
 }
 
+/* Ícone */
 .card-icon {
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(59, 130, 246, 0.1));
     padding: 0.75rem;
@@ -430,15 +438,18 @@ body.sidebar-open .chip-container {
     font-size: 1.2rem;
 }
 
+/* Título */
 .card-title {
     font-size: 1.3rem;
     font-weight: 700;
     color: #f1f5f9;
 }
 
+/* Conteúdo */
 .card-content {
     padding: 2rem;
 }
+
 
 /* ============================================================
    FORMS

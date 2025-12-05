@@ -1,53 +1,17 @@
 # routes/chips.py
 # -*- coding: utf-8 -*-
 
-from flask import Blueprint, render_template, request, redirect, jsonify
+from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-from datetime import datetime
 
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# ======================================================================
-# NORMALIZADOR DE DATAS
-# ======================================================================
-def format_date(value):
-    if not value:
-        return None
-
-    if isinstance(value, datetime):
-        return value.strftime("%Y-%m-%d")
-
-    value = str(value)
-
-    # ISO com T
-    if "T" in value:
-        return value.split("T")[0]
-
-    # DD/MM/YYYY
-    if "/" in value:
-        try:
-            d, m, y = value.split("/")
-            return f"{y}-{m.zfill(2)}-{d.zfill(2)}"
-        except Exception:
-            pass
-
-    # YYYY-MM-DD
-    if len(value) >= 10 and value[4] == "-" and value[7] == "-":
-        return value[:10]
-
-    # Fallback
-    try:
-        return datetime.fromisoformat(value.replace("Z", "")).strftime("%Y-%m-%d")
-    except Exception:
-        return None
-
-
-# ======================================================================
-# LISTAR PÁGINA PRINCIPAL
-# ======================================================================
+# =============================================================================
+# 📌 LISTAR CHIPS – PÁGINA PRINCIPAL
+# =============================================================================
 @chips_bp.route("/chips")
 def chips_list():
     try:
@@ -59,141 +23,104 @@ def chips_list():
             chips=chips_df.to_dict(orient="records"),
             aparelhos=aparelhos_df.to_dict(orient="records")
         )
+
     except Exception as e:
         print("🚨 Erro ao carregar /chips:", e)
         return "Erro ao carregar chips", 500
 
 
-# ======================================================================
-# ADICIONAR CHIP
-# ======================================================================
+# =============================================================================
+# ➕ ADICIONAR NOVO CHIP
+# =============================================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
         dados = request.form.to_dict()
-        bq.upsert_chip(dados)
-        return redirect("/chips")
+
+        query = f"""
+            INSERT INTO `painel-universidade.marts.dim_chip` 
+            (id_chip, numero, operadora, operador, status, plano, dt_inicio,
+             ultima_recarga_valor, ultima_recarga_data, total_gasto, sk_aparelho_atual, observacao)
+            VALUES (
+                '{dados.get("id_chip")}',
+                '{dados.get("numero")}',
+                '{dados.get("operadora")}',
+                '{dados.get("operador")}',
+                '{dados.get("status")}',
+                '{dados.get("plano")}',
+                '{dados.get("dt_inicio")}',
+                {dados.get("ultima_recarga_valor") or "NULL"},
+                '{dados.get("ultima_recarga_data")}',
+                {dados.get("total_gasto") or "NULL"},
+                {dados.get("sk_aparelho_atual") or "NULL"},
+                '{dados.get("observacao")}'
+            )
+        """
+
+        bq.execute_query(query)
+
+        return "<script>alert('Chip cadastrado!'); window.location.href='/chips';</script>"
+
     except Exception as e:
         print("🚨 Erro ao adicionar chip:", e)
-        return "Erro ao adicionar chip", 500
+        return "Erro ao inserir chip", 500
 
 
-# ======================================================================
-# BUSCAR CHIP PARA EDIÇÃO — POR id_chip (ALINHADO À VIEW)
-# ======================================================================
+# =============================================================================
+# 🔎 BUSCAR CHIP INDIVIDUAL PARA EDIÇÃO (JSON)
+# =============================================================================
 @chips_bp.route("/chips/<id_chip>")
-def get_chip(id_chip):
+def chips_get(id_chip):
     try:
-        df = sanitize_df(bq.get_view("vw_chips_painel"))
-        resultado = df[df["id_chip"].astype(str) == str(id_chip)]
+        query = f"""
+            SELECT *
+            FROM `painel-universidade.marts.vw_chips_painel`
+            WHERE id_chip = '{id_chip}'
+            LIMIT 1
+        """
 
-        if resultado.empty:
-            return jsonify({"erro": "Chip não encontrado"}), 404
+        df = bq.execute_query(query)
 
-        chip = resultado.to_dict(orient="records")[0]
+        if df.empty:
+            return jsonify({"error": "Chip não encontrado"}), 404
 
-        # Normalizar datas antes de mandar pro front
-        chip["dt_inicio"] = format_date(chip.get("dt_inicio"))
-        chip["ultima_recarga_data"] = format_date(chip.get("ultima_recarga_data"))
-
-        return jsonify(chip)
+        return jsonify(df.to_dict(orient="records")[0])
 
     except Exception as e:
         print("🚨 Erro ao buscar chip:", e)
-        return jsonify({"erro": "Erro interno"}), 500
+        return jsonify({"error": "Erro interno"}), 500
 
 
-# ======================================================================
-# UPDATE VIA CARD DE EDIÇÃO — EVENTOS + MOVIMENTAÇÃO
-# ======================================================================
+# =============================================================================
+# ✏️ ATUALIZAR CHIP VIA JSON (MODAL)
+# =============================================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
-        dados = request.json or {}
+        data = request.json
+        print("🔧 Atualizando:", data)
 
-        # Agora validamos por id_chip (que vem do form)
-        if "id_chip" not in dados or not dados["id_chip"]:
-            return jsonify({"success": False, "erro": "id_chip ausente"}), 400
+        query = f"""
+            UPDATE `painel-universidade.marts.dim_chip`
+            SET
+                numero = '{data.get("numero")}',
+                operadora = '{data.get("operadora")}',
+                operador = '{data.get("operador")}',
+                status = '{data.get("status")}',
+                plano = '{data.get("plano")}',
+                dt_inicio = '{data.get("dt_inicio")}',
+                ultima_recarga_data = '{data.get("ultima_recarga_data")}',
+                ultima_recarga_valor = {data.get("ultima_recarga_valor") or "NULL"},
+                total_gasto = {data.get("total_gasto") or "NULL"},
+                sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
+                observacao = '{data.get("observacao")}'
+            WHERE id_chip = '{data.get("id_chip")}'
+        """
 
-        df = sanitize_df(bq.get_view("vw_chips_painel"))
-        atual = df[df["id_chip"].astype(str) == str(dados["id_chip"])]
-
-        if atual.empty:
-            return jsonify({"success": False, "erro": "Chip não encontrado"}), 404
-
-        atual = atual.iloc[0]
-
-        # Tenta pegar sk_chip da view (se existir)
-        sk_chip_view = atual.get("sk_chip", None)
-
-        # Campos monitorados para eventos
-        campos_evento = [
-            ("numero", "NÚMERO"),
-            ("operadora", "OPERADORA"),
-            ("operador", "OPERADOR"),
-            ("plano", "PLANO"),
-            ("status", "STATUS"),
-            ("observacao", "OBSERVAÇÃO"),
-            ("dt_inicio", "DATA_INICIO"),
-            ("ultima_recarga_valor", "VALOR_RECARGA"),
-            ("ultima_recarga_data", "DATA_RECARGA"),
-            ("total_gasto", "TOTAL_GASTO"),
-        ]
-
-        # Se tiver sk_chip disponível, registra eventos
-        if sk_chip_view is not None:
-            for campo, label in campos_evento:
-                old = str(atual.get(campo) or "")
-                new = str(dados.get(campo) or "")
-                if old != new:
-                    bq.registrar_evento_chip(
-                        sk_chip=int(sk_chip_view),
-                        tipo_evento=label,
-                        valor_antigo=old,
-                        valor_novo=new,
-                        origem="Painel",
-                        obs="Alteração via editor"
-                    )
-
-            # Troca de aparelho
-            if str(atual.get("sk_aparelho_atual")) != str(dados.get("sk_aparelho_atual")):
-                if dados.get("sk_aparelho_atual"):
-                    bq.registrar_movimento_chip(
-                        sk_chip=int(sk_chip_view),
-                        sk_aparelho=int(dados["sk_aparelho_atual"]),
-                        tipo="TROCA_APARELHO",
-                        origem="Painel",
-                        observacao="Alteração via editor"
-                    )
-
-        # Atualização final via upsert (usa id_chip e demais campos enviados)
-        bq.upsert_chip(dados)
+        bq.execute_query(query)
 
         return jsonify({"success": True})
 
     except Exception as e:
-        print("🚨 Erro update-json:", e)
-        return jsonify({"success": False, "erro": str(e)}), 500
-
-
-# ======================================================================
-# REGISTRO MANUAL DE MOVIMENTAÇÃO
-# ======================================================================
-@chips_bp.route("/chips/movimento", methods=["POST"])
-def chips_movimento():
-    try:
-        dados = request.json or {}
-
-        ok = bq.registrar_movimento_chip(
-            sk_chip=dados.get("sk_chip"),
-            sk_aparelho=dados.get("sk_aparelho"),
-            tipo=dados.get("tipo"),
-            origem=dados.get("origem", "Painel"),
-            observacao=dados.get("observacao", "")
-        )
-
-        return jsonify({"success": ok})
-
-    except Exception as e:
-        print("🚨 Erro movimento chip:", e)
-        return jsonify({"success": False, "erro": str(e)}), 500
+        print("🚨 Erro ao atualizar chip:", e)
+        return jsonify({"success": False})

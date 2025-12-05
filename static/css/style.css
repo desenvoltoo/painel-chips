@@ -251,18 +251,18 @@ body.sidebar-open .sidebar-toggle {
 .chip-container {
     margin-left: 110px;
     padding: 2rem;
-    padding-top: 2.5rem;
+    padding-top: 3.5rem;
     transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar.collapsed ~ .content,
 .sidebar.collapsed ~ .chip-container {
-    margin-left: 110px !important;
+    margin-left: 285px !important;
 }
 
 body.sidebar-open .content,
 body.sidebar-open .chip-container {
-    margin-left: 285px;
+    margin-left: 110px;
 }
 
 .chip-container {

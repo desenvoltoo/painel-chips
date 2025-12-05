@@ -22,7 +22,9 @@
 
 <main class="container chip-container">
 
-    <!-- CARD NOVO CHIP -->
+    <!-- ============================
+         CARD NOVO CHIP
+    ============================= -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -140,7 +142,10 @@
         </div>
     </section>
 
-    <!-- CARD TABELA -->
+
+    <!-- ============================
+         CARD TABELA
+    ============================= -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -174,9 +179,8 @@
                         </tr>
                     </thead>
 
-                    <tbody id="tableBody">
-                        <!-- preenchido via JS -->
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
+
                 </table>
             </div>
         </div>
@@ -184,26 +188,29 @@
 
 </main>
 
-<!-- MODAL PREMIUM ORGANIZADO -->
-<div id="editModal" class="modal-overlay">
-    <div class="modal-content modal-chip">
+<!-- ============================
+     CARD DE EDIÇÃO PREMIUM
+============================= -->
+<div id="editCardOverlay" class="edit-overlay">
+    <div class="edit-card">
 
-        <h2>Editar Chip</h2>
+        <div class="edit-header">
+            <h2><i class="fas fa-pen-to-square"></i> Editar Chip</h2>
+            <button class="close-card-btn" id="editCloseBtn">×</button>
+        </div>
 
-        <form id="modalForm" class="modal-grid">
+        <form id="editForm" class="edit-form-grid">
 
-            <input type="hidden" name="id_chip" id="modal_id_chip">
+            <input type="hidden" name="id_chip" id="edit_id_chip">
 
-            <!-- Campo Número -->
             <div class="form-group">
                 <label>Número</label>
-                <input type="text" name="numero" id="modal_numero">
+                <input type="text" id="edit_numero" name="numero">
             </div>
 
-            <!-- Operadora -->
             <div class="form-group">
                 <label>Operadora</label>
-                <select name="operadora" id="modal_operadora">
+                <select id="edit_operadora" name="operadora">
                     <option value="VIVO">VIVO</option>
                     <option value="TIM">TIM</option>
                     <option value="CLARO">CLARO</option>
@@ -212,16 +219,14 @@
                 </select>
             </div>
 
-            <!-- Operador -->
             <div class="form-group">
                 <label>Operador</label>
-                <input type="text" name="operador" id="modal_operador">
+                <input type="text" id="edit_operador" name="operador">
             </div>
 
-            <!-- Status -->
             <div class="form-group">
                 <label>Status</label>
-                <select name="status" id="modal_status">
+                <select id="edit_status" name="status">
                     <option>DISPONIVEL</option>
                     <option>MATURANDO</option>
                     <option>MATURADO</option>
@@ -236,157 +241,106 @@
                 </select>
             </div>
 
-            <!-- Plano -->
-            <div class="form-group">
-                <label>Plano</label>
-                <input type="text" name="plano" id="modal_plano">
-            </div>
-
-            <!-- Data Início -->
             <div class="form-group">
                 <label>Data Início</label>
-                <input type="date" name="dt_inicio" id="modal_dt_inicio">
+                <input type="date" id="edit_dt_inicio" name="dt_inicio">
             </div>
 
-            <!-- Data Última Recarga -->
             <div class="form-group">
                 <label>Data Última Recarga</label>
-                <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
+                <input type="date" id="edit_ultima_recarga_data" name="ultima_recarga_data">
             </div>
 
-            <!-- Valor Última Recarga -->
             <div class="form-group">
-                <label>Valor Última Recarga (R$)</label>
-                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+                <label>Valor Última Recarga</label>
+                <input type="number" step="0.01" id="edit_ultima_recarga_valor" name="ultima_recarga_valor">
             </div>
 
-            <!-- Total Gasto -->
             <div class="form-group">
-                <label>Total Gasto (R$)</label>
-                <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
+                <label>Total Gasto</label>
+                <input type="number" step="0.01" id="edit_total_gasto" name="total_gasto">
             </div>
 
-            <!-- Aparelho vinculado -->
-            <div class="form-group full">
+            <div class="form-group">
                 <label>Aparelho Vinculado</label>
-                <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
+                <select id="edit_sk_aparelho_atual" name="sk_aparelho_atual">
                     <option value="">— Nenhum —</option>
                     {% for ap in aparelhos %}
-                        <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
+                    <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <!-- Observação -->
             <div class="form-group full">
                 <label>Observação</label>
-                <textarea name="observacao" id="modal_observacao" style="height: 70px;"></textarea>
+                <textarea id="edit_observacao" name="observacao"></textarea>
             </div>
 
-            <!-- Botões -->
-            <div class="modal-actions full">
-                <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
-                <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
-            </div>
+            <button type="button" id="editSaveBtn" class="save-btn">Salvar Alterações</button>
 
         </form>
-
     </div>
 </div>
 
 
+<!-- ============================
+     JAVASCRIPT DO CARD
+============================= -->
+
 <script>
 let chipsData = {{ chips | tojson | safe }};
 
-// ======================================================================
-// 🔧 FUNÇÃO QUE CORRIGE QUALQUER FORMATO DE DATA → YYYY-MM-DD
-// ======================================================================
+// ----------------------
+// Formatador de datas
+// ----------------------
 function formatDate(dateStr) {
     if (!dateStr) return "";
-
     try {
-        // Se já estiver no formato correto
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            return dateStr;
-        }
-
-        // Se vier no formato "2025-01-01T00:00:00Z"
-        if (dateStr.includes("T")) {
-            return dateStr.split("T")[0];
-        }
-
-        // Se vier como "01/01/2025"
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-            const [d, m, y] = dateStr.split("/");
-            return `${y}-${m}-${d}`;
-        }
-
-        // Se vier como GMT ou Date
-        const dt = new Date(dateStr);
-        if (!isNaN(dt.getTime())) {
-            const yyyy = dt.getFullYear();
-            const mm = String(dt.getMonth() + 1).padStart(2, "0");
-            const dd = String(dt.getDate()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        return "";
-    } catch (e) {
+        if (dateStr.includes("T")) return dateStr.split("T")[0];
+        return dateStr;
+    } catch {
         return "";
     }
 }
 
-// ===============================
-// Renderização da tabela
-// ===============================
+// ----------------------
+// Render Tabela
+// ----------------------
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
-    if (!lista || !lista.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
-            </tr>`;
-        return;
-    }
-
     lista.forEach(c => {
         tbody.innerHTML += `
             <tr>
-                <td>${c.id_chip || "-"}</td>
-                <td>${c.numero || "-"}</td>
-                <td>${c.operadora || "-"}</td>
+                <td>${c.id_chip}</td>
+                <td>${c.numero}</td>
+                <td>${c.operadora}</td>
                 <td>${c.operador || "-"}</td>
-                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status || "-"}</span></td>
+                <td>${c.status}</td>
                 <td>${c.plano || "-"}</td>
                 <td>${formatDate(c.ultima_recarga_data) || "-"}</td>
                 <td>${c.ultima_recarga_valor || "-"}</td>
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${formatDate(c.dt_inicio) || "-"}</td>
-                <td>
-                    ${c.observacao ?
-                        `<span class="obs-tooltip" data-tooltip="${c.observacao}">
-                            <i class="fa fa-comment-dots"></i>
-                        </span>` :
-                        "-"
-                    }
-                </td>
+                <td>${c.observacao || "-"}</td>
+
                 <td>
                     <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">
                         Editar
                     </button>
                 </td>
-            </tr>`;
+            </tr>
+        `;
     });
 
     bindEditButtons();
 }
 
-// ===============================
-// Bind dos botões de edição
-// ===============================
+// ----------------------
+// Clique em EDITAR
+// ----------------------
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
@@ -394,61 +348,37 @@ function bindEditButtons() {
             const res = await fetch(`/chips/${id}`);
             const chip = await res.json();
 
-            // Abre modal
-            document.getElementById("editModal").style.display = "flex";
+            document.getElementById("editCardOverlay").style.display = "flex";
 
-            // Preenche campos do modal
-            document.getElementById("modal_id_chip").value = chip.id_chip || "";
-            document.getElementById("modal_numero").value = chip.numero || "";
-            document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
-            document.getElementById("modal_operador").value = chip.operador || "";
-            document.getElementById("modal_status").value = chip.status || "DISPONIVEL";
-            document.getElementById("modal_plano").value = chip.plano || "";
+            document.getElementById("edit_id_chip").value = chip.id_chip;
+            document.getElementById("edit_numero").value = chip.numero;
+            document.getElementById("edit_operadora").value = chip.operadora;
+            document.getElementById("edit_operador").value = chip.operador || "";
+            document.getElementById("edit_status").value = chip.status;
 
-            // Datas formatadas
-            document.getElementById("modal_dt_inicio").value = formatDate(chip.dt_inicio);
-            document.getElementById("modal_ultima_recarga_data").value = formatDate(chip.ultima_recarga_data);
+            document.getElementById("edit_dt_inicio").value = formatDate(chip.dt_inicio);
+            document.getElementById("edit_ultima_recarga_data").value = formatDate(chip.ultima_recarga_data);
+            document.getElementById("edit_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
+            document.getElementById("edit_total_gasto").value = chip.total_gasto || "";
 
-            // Números
-            document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
-            document.getElementById("modal_total_gasto").value = chip.total_gasto || "";
-
-            // Select do aparelho
-            document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
-
-            // Observação
-            document.getElementById("modal_observacao").value = chip.observacao || "";
+            document.getElementById("edit_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
+            document.getElementById("edit_observacao").value = chip.observacao || "";
         };
     });
 }
 
-// ===============================
-// Busca dinâmica
-// ===============================
-document.getElementById("searchInput").addEventListener("input", e => {
-    const termo = e.target.value.toLowerCase();
+// ----------------------
+// FECHAR CARD
+// ----------------------
+document.getElementById("editCloseBtn").onclick = () => {
+    document.getElementById("editCardOverlay").style.display = "none";
+};
 
-    const filtrados = chipsData.filter(chip =>
-        Object.values(chip).some(val =>
-            String(val || "").toLowerCase().includes(termo)
-        )
-    );
-
-    renderRows(filtrados);
-});
-
-// ===============================
-// Fechar modal
-// ===============================
-document.getElementById("modalCloseBtn").addEventListener("click", () => {
-    document.getElementById("editModal").style.display = "none";
-});
-
-// ===============================
-// Salvar edição
-// ===============================
-document.getElementById("modalSaveBtn").addEventListener("click", async () => {
-    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
+// ----------------------
+// SALVAR ALTERAÇÕES
+// ----------------------
+document.getElementById("editSaveBtn").onclick = async () => {
+    const data = Object.fromEntries(new FormData(document.getElementById("editForm")));
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
@@ -456,17 +386,14 @@ document.getElementById("modalSaveBtn").addEventListener("click", async () => {
         body: JSON.stringify(data)
     });
 
-    const r = await res.json();
-    if (r.success) {
-        location.reload();
-    } else {
-        alert("Erro ao salvar!");
-    }
-});
+    const out = await res.json();
+    if (out.success) location.reload();
+    else alert("Erro ao salvar.");
+};
 
-// ===============================
+// ----------------------
 // Render inicial
-// ===============================
+// ----------------------
 renderRows(chipsData);
 </script>
 

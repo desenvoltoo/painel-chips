@@ -46,38 +46,51 @@ def chips_list():
 
 
 # ============================================================
-# CADASTRAR NOVO CHIP
+# CADASTRAR NOVO CHIP — AGORA GERANDO SK_AUTOMÁTICO
 # ============================================================
-
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
-    d = request.form.to_dict()
+    dados = request.form.to_dict()
 
+    def q(v):
+        return f"'{v}'" if v else "NULL"
+
+    # 1️⃣ Buscar o próximo SK
+    get_sk = """
+        SELECT COALESCE(MAX(sk_chip), 0) + 1 AS next_sk
+        FROM `painel-universidade.marts.dim_chip`
+    """
+    df_sk = bq._run(get_sk)
+    next_sk = int(df_sk.iloc[0]["next_sk"])
+
+    # 2️⃣ Executar o INSERT com o novo SK
     query = f"""
         INSERT INTO `painel-universidade.marts.dim_chip`
-        (
-            id_chip, numero, operadora, operador,
-            status, plano,
-            dt_inicio, ultima_recarga_valor, ultima_recarga_data,
-            total_gasto, sk_aparelho_atual, observacao
-        )
+        (sk_chip, id_chip, numero, operadora, operador, status, plano, dt_inicio,
+         ultima_recarga_valor, ultima_recarga_data, total_gasto, 
+         sk_aparelho_atual, observacao, ativo, created_at, updated_at)
         VALUES (
-            {q_str(d.get("id_chip"))},
-            {q_str(d.get("numero"))},
-            {q_str(d.get("operadora"))},
-            {q_str(d.get("operador"))},
-            {q_str(d.get("status"))},
-            {q_str(d.get("plano"))},
-            {q_date(d.get("dt_inicio"))},
-            {q_num(d.get("ultima_recarga_valor"))},
-            {q_date(d.get("ultima_recarga_data"))},
-            {q_num(d.get("total_gasto"))},
-            {q_num(d.get("sk_aparelho_atual"))},
-            {q_str(d.get("observacao"))}
+            {next_sk},
+            {q(dados.get("id_chip"))},
+            {q(dados.get("numero"))},
+            {q(dados.get("operadora"))},
+            {q(dados.get("operador"))},
+            {q(dados.get("status"))},
+            {q(dados.get("plano"))},
+            {q(dados.get("dt_inicio"))},
+            {dados.get("ultima_recarga_valor") or "NULL"},
+            {q(dados.get("ultima_recarga_data"))},
+            {dados.get("total_gasto") or "NULL"},
+            {dados.get("sk_aparelho_atual") or "NULL"},
+            {q(dados.get("observacao"))},
+            TRUE,
+            CURRENT_TIMESTAMP(),
+            CURRENT_TIMESTAMP()
         )
     """
 
     bq.execute_query(query)
+
     return "<script>alert('Chip cadastrado com sucesso!'); window.location.href='/chips';</script>"
 
 

@@ -1,131 +1,219 @@
 {% extends "base.html" %}
 {% block title %}Movimentação{% endblock %}
-
 {% block content %}
 
-<div class="page-header">
-    <h1><i class="fas fa-random"></i> Movimentação / Histórico</h1>
-</div>
-
-<div class="card form-card">
-    <h2 class="card-title"><i class="fas fa-search"></i> Buscar Chip</h2>
-
-    <input type="text" id="campoBusca" class="form-control" placeholder="Digite o número do chip...">
-
-    <div id="resultadoBusca" class="dropdown-list"></div>
-</div>
-
-<div class="card table-card">
-    <h2 class="card-title"><i class="fas fa-stream"></i> Linha do Tempo</h2>
-
-    <div id="timelineBox">
-        <p>Busque um chip para visualizar o histórico.</p>
-    </div>
-</div>
-
-<script>
-// ===============================
-// 🔍 AUTOCOMPLETE AO DIGITAR
-// ===============================
-document.getElementById("campoBusca").addEventListener("input", async function () {
-
-    const termo = this.value.trim();
-    const box = document.getElementById("resultadoBusca");
-
-    if (!termo) {
-        box.innerHTML = "";
-        return;
-    }
-
-    const resp = await fetch(`/movimentacao/buscar?q=${termo}`);
-    const lista = await resp.json();
-
-    box.innerHTML = "";
-
-    lista.forEach(item => {
-        box.innerHTML += `
-            <div class="drop-item" data-sk="${item.sk_chip}">
-                ${item.numero} • ${item.operadora}
-            </div>
-        `;
-    });
-});
-
-// ===============================
-// 🖱️ CLIQUE EM UMA OPÇÃO
-// ===============================
-document.addEventListener("click", async function (e) {
-
-    if (!e.target.classList.contains("drop-item")) return;
-
-    const sk = e.target.dataset.sk;
-    const box = document.getElementById("timelineBox");
-
-    document.getElementById("campoBusca").value = e.target.innerText;
-    document.getElementById("resultadoBusca").innerHTML = "";
-
-    box.innerHTML = "<p>Carregando...</p>";
-
-    const resp = await fetch(`/movimentacao/historico/${sk}`);
-    const eventos = await resp.json();
-
-    if (!eventos.length) {
-        box.innerHTML = "<p class='empty'>Nenhum registro encontrado.</p>";
-        return;
-    }
-
-    box.innerHTML = "";
-
-    eventos.forEach(ev => {
-        box.innerHTML += `
-            <div class="mov-card">
-                <div class="mov-date">${ev.data_fmt}</div>
-                <div class="mov-type">${ev.categoria} • ${ev.tipo_evento}</div>
-
-                <div class="mov-body">
-                    <b>Antes:</b> ${ev.valor_antigo || "—"}<br>
-                    <b>Depois:</b> ${ev.valor_novo || "—"}<br>
-                    <b>Origem:</b> ${ev.origem}<br>
-                    <b>Obs:</b> ${ev.observacao || ""}
-                </div>
-            </div>
-        `;
-    });
-});
-</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
-.dropdown-list {
-    background: #1e2533;
-    border: 1px solid #334155;
-    padding: 5px;
-    margin-top: 5px;
-    border-radius: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-.drop-item {
-    padding: 8px;
-    cursor: pointer;
-}
-.drop-item:hover {
-    background: #334155;
-}
-.mov-card {
-    background: #1b1f2a;
-    padding: 12px;
-    border-left: 4px solid #3b82f6;
-    margin: 10px 0;
-    border-radius: 6px;
-}
-.mov-type {
-    font-size: 15px;
-    font-weight: bold;
-}
-.mov-date {
-    font-size: 13px;
-    opacity: 0.7;
-}
+
+    /* ===========================
+       🔍 CAMPO DE BUSCA
+    ============================ */
+    .search-box {
+        width: 100%;
+        max-width: 450px;
+        margin-bottom: 25px;
+        position: relative;
+    }
+    .search-box input {
+        width: 100%;
+        background: #0f172a;
+        border: 1px solid #334155;
+        padding: 14px 16px;
+        border-radius: 10px;
+        color: #e2e8f0;
+        font-size: 16px;
+    }
+    .search-box i {
+        position: absolute;
+        right: 15px;
+        top: 14px;
+        color: #64748b;
+    }
+
+    /* Sugestões da busca */
+    .autocomplete-list {
+        position: absolute;
+        background: #1e293b;
+        border: 1px solid #334155;
+        width: 100%;
+        margin-top: 4px;
+        border-radius: 8px;
+        max-height: 220px;
+        overflow-y: auto;
+        display: none;
+        z-index: 999;
+    }
+    .autocomplete-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        color: #e2e8f0;
+    }
+    .autocomplete-item:hover {
+        background: #334155;
+    }
+
+    /* ===========================
+       🧵 TIMELINE
+    ============================ */
+    .timeline-container {
+        margin-top: 30px;
+    }
+
+    .timeline-card {
+        background: #0f172a;
+        padding: 18px 20px;
+        border-radius: 12px;
+        border-left: 4px solid #3b82f6;
+        margin-bottom: 16px;
+        transition: .2s;
+        box-shadow: 0 0 10px #0004;
+    }
+    .timeline-card:hover {
+        transform: translateX(3px);
+        box-shadow: 0 0 15px #0006;
+    }
+
+    .timeline-header {
+        font-size: 15px;
+        display: flex;
+        justify-content: space-between;
+        color: #94a3b8;
+        margin-bottom: 6px;
+    }
+    .timeline-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #e2e8f0;
+        margin-bottom: 6px;
+    }
+    .timeline-desc {
+        font-size: 15px;
+        color: #cbd5e1;
+    }
+
+    /* Loading */
+    #loading {
+        text-align: center;
+        color: #3b82f6;
+        font-size: 16px;
+        margin-top: 20px;
+        display: none;
+    }
 </style>
+
+
+<div class="page-header">
+    <h1><i class="fas fa-random"></i> Movimentação de Chips</h1>
+</div>
+
+
+<!-- ===========================
+     🔍 BUSCAR CHIP
+=========================== -->
+<div class="search-box">
+    <input type="text" id="buscarChip" placeholder="Digite o número do chip...">
+    <i class="fas fa-search"></i>
+
+    <div id="autocomplete" class="autocomplete-list"></div>
+</div>
+
+
+<!-- LOADING -->
+<div id="loading">
+    <i class="fas fa-spinner fa-spin"></i> Carregando histórico...
+</div>
+
+
+<!-- ===========================
+     🧵 TIMELINE
+=========================== -->
+<div id="timeline" class="timeline-container"></div>
+
+
+<script>
+    const autocompleteBox = document.getElementById("autocomplete");
+    const input = document.getElementById("buscarChip");
+    const timeline = document.getElementById("timeline");
+    const loading = document.getElementById("loading");
+
+    let timeout = null;
+
+    // ======================================================
+    //  🔎 AUTOCOMPLETE
+    // ======================================================
+    input.addEventListener("input", () => {
+        const q = input.value.trim();
+        autocompleteBox.innerHTML = "";
+        if (q.length < 2) {
+            autocompleteBox.style.display = "none";
+            return;
+        }
+
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            fetch(`/movimentacao/buscar?q=${q}`)
+                .then(r => r.json())
+                .then(data => {
+                    autocompleteBox.innerHTML = "";
+                    data.forEach(chip => {
+                        const item = document.createElement("div");
+                        item.classList.add("autocomplete-item");
+                        item.innerHTML = `${chip.numero} — ${chip.operadora}`;
+                        item.onclick = () => carregarTimeline(chip.sk_chip, chip.numero);
+                        autocompleteBox.appendChild(item);
+                    });
+                    autocompleteBox.style.display = "block";
+                });
+        }, 300);
+    });
+
+
+    // ======================================================
+    //  📌 CARREGAR TIMELINE DO CHIP
+    // ======================================================
+    function carregarTimeline(sk, label) {
+        timeline.innerHTML = "";
+        loading.style.display = "block";
+        autocompleteBox.style.display = "none";
+        input.value = label;
+
+        fetch(`/movimentacao/historico/${sk}`)
+            .then(r => r.json())
+            .then(data => {
+                timeline.innerHTML = "";
+                loading.style.display = "none";
+
+                if (!data.length) {
+                    timeline.innerHTML = `
+                        <div class="timeline-card">
+                            <div class="timeline-title">Nenhum evento registrado</div>
+                            <div class="timeline-desc">Este chip ainda não possui histórico.</div>
+                        </div>`;
+                    return;
+                }
+
+                data.forEach(ev => {
+                    timeline.innerHTML += `
+                        <div class="timeline-card">
+                            <div class="timeline-header">
+                                <span>${ev.data_fmt || ''}</span>
+                                <span>${ev.categoria || ''}</span>
+                            </div>
+                            <div class="timeline-title">
+                                ${ev.tipo_evento || 'EVENTO'}
+                            </div>
+                            <div class="timeline-desc">
+                                ${ev.valor_antigo ? `<b>Antes:</b> ${ev.valor_antigo}<br>` : ""}
+                                ${ev.valor_novo ? `<b>Depois:</b> ${ev.valor_novo}<br>` : ""}
+                                ${ev.origem ? `<b>Origem:</b> ${ev.origem}<br>` : ""}
+                                ${ev.observacao ? `<b>Obs:</b> ${ev.observacao}` : ""}
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+    }
+</script>
 
 {% endblock %}

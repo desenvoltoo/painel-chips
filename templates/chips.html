@@ -282,31 +282,25 @@
 </div>
 
 <script>
-    // Dados vindos do backend (vw_chips_painel)
     let chipsData = {{ chips | tojson | safe }} || [];
 
-    // ----------------------------
-    // Formatar datas
-    // ----------------------------
     function formatDate(v) {
         if (!v) return "";
-        if (typeof v !== "string") return "";
+        v = String(v);
         if (v.includes("T")) return v.split("T")[0];
         return v;
     }
 
-    // ----------------------------
-    // Renderizar tabela
-    // ----------------------------
+    // ----------------------------------------------------------
+    // RENDER TABELA
+    // ----------------------------------------------------------
     function renderRows(lista) {
         const tbody = document.getElementById("tableBody");
         tbody.innerHTML = "";
 
         if (!lista || lista.length === 0) {
             tbody.innerHTML = `
-                <tr>
-                    <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
-                </tr>`;
+                <tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
             return;
         }
 
@@ -340,9 +334,9 @@
         bindEditButtons();
     }
 
-    // ----------------------------
-    // Botão Editar
-    // ----------------------------
+    // ----------------------------------------------------------
+    // BOTÃO EDITAR — usa SK_CHIP corretamente
+    // ----------------------------------------------------------
     function bindEditButtons() {
         document.querySelectorAll(".edit-btn").forEach(btn => {
             btn.onclick = async () => {
@@ -351,7 +345,7 @@
                 try {
                     const res = await fetch(`/chips/sk/${sk}`);
                     if (!res.ok) {
-                        alert("Erro ao buscar dados");
+                        alert("Erro ao buscar chip");
                         return;
                     }
 
@@ -374,50 +368,40 @@
 
                     document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual ?? "";
                     document.getElementById("modal_observacao").value = chip.observacao ?? "";
-
-                } catch (e) {
+                }
+                catch (e) {
                     console.error(e);
-                    alert("Erro ao carregar chip");
+                    alert("Erro inesperado ao carregar chip.");
                 }
             };
         });
     }
 
-    // ----------------------------
-    // Salvar edição
-    // ----------------------------
+    // ----------------------------------------------------------
+    // SALVAR DO MODAL
+    // ----------------------------------------------------------
     document.getElementById("modalSaveBtn").onclick = async () => {
-        const form = document.getElementById("modalForm");
-        const data = Object.fromEntries(new FormData(form));
+        const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
-        try {
-            const res = await fetch("/chips/update-json", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(data)
-            });
+        const res = await fetch("/chips/update-json", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(data)
+        });
 
-            const out = await res.json();
-            if (out.success) location.reload();
-            else alert("Erro ao salvar.");
-        } catch (e) {
-            alert("Erro inesperado.");
-            console.error(e);
-        }
+        const r = await res.json();
+        if (r.success) location.reload();
+        else alert("Erro ao salvar.");
     };
 
-    // ----------------------------
-    // Fechar modal
-    // ----------------------------
     document.getElementById("modalCloseBtn").onclick = () => {
         document.getElementById("editModal").style.display = "none";
     };
 
-    // ----------------------------
-    // Busca dinâmica segura
-    // ----------------------------
-    const searchInput = document.getElementById("searchInput");
-    searchInput.addEventListener("input", e => {
+    // ----------------------------------------------------------
+    // BUSCA DINÂMICA TOTALMENTE SEGURA
+    // ----------------------------------------------------------
+    document.getElementById("searchInput").addEventListener("input", e => {
         const termo = e.target.value.toLowerCase();
 
         const filtrados = chipsData.filter(chip =>

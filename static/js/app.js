@@ -1,6 +1,6 @@
 /* ============================================================
    FORCE SIDEBAR CLOSED ON LOAD
-============================================================ */ 
+============================================================ */
 document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     const toggle = document.getElementById("sidebarToggle");
@@ -17,13 +17,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================================================
-   RECEBE DADOS DO BACKEND — NÃO MODIFICAR
+   RECEBE DADOS DO BACKEND
 ============================================================ */
-let chipsData = window.chipsData || [];
-let aparelhosData = window.aparelhosData || [];
+const chipsData = window.chipsData || [];
+const aparelhosData = window.aparelhosData || [];
 
 /* ============================================================
-   LISTA DE STATUS – PADRÃO DO SISTEMA
+   LISTA PADRÃO DE STATUS
 ============================================================ */
 const STATUS_LIST = [
     "DISPONIVEL",
@@ -40,23 +40,53 @@ const STATUS_LIST = [
 ];
 
 /* ============================================================
-   FUNÇÃO: FORMATAR DATA
+   FORMATAR DATA
 ============================================================ */
-function formatDate(v) {
-    if (!v) return "";
-    v = String(v);
-    return v.includes("T") ? v.split("T")[0] : v;
+function formatDate(value) {
+    if (!value) return "";
+    value = String(value);
+    return value.includes("T") ? value.split("T")[0] : value;
 }
 
 /* ============================================================
-   RENDER TABELA DE CHIPS
+   SETTER UNIVERSAL
+============================================================ */
+function setValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? "";
+}
+
+/* ============================================================
+   PREENCHE SELECT DE STATUS
+============================================================ */
+function preencherStatus(valorAtual) {
+    const select = document.getElementById("modal_status");
+    if (!select) return;
+
+    select.innerHTML = "";
+    STATUS_LIST.forEach(status => {
+        const opt = document.createElement("option");
+        opt.value = status;
+        opt.textContent = status;
+        if (status === valorAtual) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+/* ============================================================
+   RENDERIZA TABELA DE CHIPS
 ============================================================ */
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
-    if (!lista || lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
+    if (!lista?.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
+            </tr>`;
         return;
     }
 
@@ -87,116 +117,108 @@ function renderRows(lista) {
                         Editar
                     </button>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     });
 
     bindEditButtons();
 }
 
 /* ============================================================
-   FUNÇÃO AJUDA: SETAR VALOR
-============================================================ */
-function setValue(id, v) {
-    const el = document.getElementById(id);
-    if (el) el.value = v ?? "";
-}
-
-/* ============================================================
-   PREENCHE SELECT STATUS
-============================================================ */
-function preencherStatus(valorAtual) {
-    const select = document.getElementById("modal_status");
-    select.innerHTML = ""; 
-    
-    STATUS_LIST.forEach(s => {
-        const opt = document.createElement("option");
-        opt.value = s;
-        opt.textContent = s;
-        if (s === valorAtual) opt.selected = true;
-        select.appendChild(opt);
-    });
-}
-
-/* ============================================================
-   BOTÃO EDITAR — ABRE MODAL E PREENCHE DADOS
+   VINCULA AÇÕES DO BOTÃO EDITAR
 ============================================================ */
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
-
             const sk = btn.dataset.sk;
+            if (!sk) return alert("Erro interno: SK inválido.");
 
             const res = await fetch(`/chips/sk/${sk}`);
+            if (!res.ok) return alert("Erro ao carregar o chip.");
+
             const chip = await res.json();
-
-            document.getElementById("editModal").style.display = "flex";
-
-            // CAMPOS SIMPLES
-            setValue("modal_sk_chip", chip.sk_chip);
-            setValue("modal_numero", chip.numero);
-            setValue("modal_operadora", chip.operadora);
-            setValue("modal_operador", chip.operador);
-            setValue("modal_plano", chip.plano);
-            setValue("modal_observacao", chip.observacao);
-
-            // STATUS
-            preencherStatus(chip.status);
-
-            // DATAS
-            setValue("modal_dt_inicio", formatDate(chip.dt_inicio));
-            setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
-
-            // NÚMEROS
-            setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
-            setValue("modal_total_gasto", chip.total_gasto);
-
-            // SELECT DE APARELHOS
-            const select = document.getElementById("modal_sk_aparelho_atual");
-            select.innerHTML = `<option value="">— Nenhum —</option>`;
-
-            aparelhosData.forEach(ap => {
-                const opt = document.createElement("option");
-                opt.value = ap.sk_aparelho;
-                opt.textContent = `${ap.modelo} (${ap.marca})`;
-                if (chip.sk_aparelho_atual == ap.sk_aparelho) opt.selected = true;
-                select.appendChild(opt);
-            });
-
+            abrirModalEdicao(chip);
         });
+    });
+}
+
+/* ============================================================
+   ABRE MODAL + CARREGA DADOS
+============================================================ */
+function abrirModalEdicao(chip) {
+    const modal = document.getElementById("editModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+
+    // BASIC
+    setValue("modal_sk_chip", chip.sk_chip);
+    setValue("modal_numero", chip.numero);
+    setValue("modal_operadora", chip.operadora);
+    setValue("modal_operador", chip.operador);
+    setValue("modal_plano", chip.plano);
+    setValue("modal_observacao", chip.observacao);
+
+    // STATUS
+    preencherStatus(chip.status);
+
+    // DATAS
+    setValue("modal_dt_inicio", formatDate(chip.dt_inicio));
+    setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
+
+    // NÚMEROS
+    setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
+    setValue("modal_total_gasto", chip.total_gasto);
+
+    // APARELHOS
+    preencherSelectAparelhos(chip.sk_aparelho_atual);
+}
+
+/* ============================================================
+   PREENCHE SELECT DE APARELHOS
+============================================================ */
+function preencherSelectAparelhos(selecionado) {
+    const select = document.getElementById("modal_sk_aparelho_atual");
+    if (!select) return;
+
+    select.innerHTML = `<option value="">— Nenhum —</option>`;
+
+    aparelhosData.forEach(ap => {
+        const opt = document.createElement("option");
+        opt.value = ap.sk_aparelho;
+        opt.textContent = `${ap.modelo} (${ap.marca})`;
+
+        if (selecionado == ap.sk_aparelho) opt.selected = true;
+        select.appendChild(opt);
     });
 }
 
 /* ============================================================
    FECHAR MODAL
 ============================================================ */
-document.getElementById("modalCloseBtn").addEventListener("click", () => {
+document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
 });
 
 /* ============================================================
    SALVAR ALTERAÇÕES
 ============================================================ */
-document.getElementById("modalSaveBtn").addEventListener("click", async () => {
-
-    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
+document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
+    const formData = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
+        body: JSON.stringify(formData)
     });
 
     const r = await res.json();
-
     if (r.success) location.reload();
-    else alert("Erro ao salvar.");
+    else alert(r.error || "Erro ao salvar.");
 });
 
 /* ============================================================
    BUSCA DINÂMICA
 ============================================================ */
-document.getElementById("searchInput").addEventListener("input", e => {
+document.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase();
 
     const filtrados = chipsData.filter(chip =>

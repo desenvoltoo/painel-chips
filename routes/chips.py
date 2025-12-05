@@ -9,9 +9,9 @@ chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# =============================================================================
-# 📌 LISTAR CHIPS – PÁGINA PRINCIPAL
-# =============================================================================
+# ============================================================
+# 📌 LISTAR CHIPS (Página principal)
+# ============================================================
 @chips_bp.route("/chips")
 def chips_list():
     try:
@@ -25,22 +25,24 @@ def chips_list():
         )
 
     except Exception as e:
-        print("🚨 Erro ao carregar /chips:", e)
+        print("❌ Erro ao carregar /chips:", e)
         return "Erro ao carregar chips", 500
 
 
-# =============================================================================
-# ➕ ADICIONAR NOVO CHIP
-# =============================================================================
+
+# ============================================================
+# ➕ CADASTRAR NOVO CHIP
+# ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
         dados = request.form.to_dict()
 
         query = f"""
-            INSERT INTO `painel-universidade.marts.dim_chip` 
+            INSERT INTO `painel-universidade.marts.dim_chip`
             (id_chip, numero, operadora, operador, status, plano, dt_inicio,
-             ultima_recarga_valor, ultima_recarga_data, total_gasto, sk_aparelho_atual, observacao)
+             ultima_recarga_valor, ultima_recarga_data, total_gasto, 
+             sk_aparelho_atual, observacao)
             VALUES (
                 '{dados.get("id_chip")}',
                 '{dados.get("numero")}',
@@ -48,9 +50,9 @@ def chips_add():
                 '{dados.get("operador")}',
                 '{dados.get("status")}',
                 '{dados.get("plano")}',
-                '{dados.get("dt_inicio")}',
+                '{dados.get("dt_inicio") or None}',
                 {dados.get("ultima_recarga_valor") or "NULL"},
-                '{dados.get("ultima_recarga_data")}',
+                '{dados.get("ultima_recarga_data") or None}',
                 {dados.get("total_gasto") or "NULL"},
                 {dados.get("sk_aparelho_atual") or "NULL"},
                 '{dados.get("observacao")}'
@@ -59,23 +61,24 @@ def chips_add():
 
         bq.execute_query(query)
 
-        return "<script>alert('Chip cadastrado!'); window.location.href='/chips';</script>"
+        return "<script>alert('Chip cadastrado com sucesso!'); window.location.href='/chips';</script>"
 
     except Exception as e:
-        print("🚨 Erro ao adicionar chip:", e)
+        print("❌ Erro ao cadastrar chip:", e)
         return "Erro ao inserir chip", 500
 
 
-# =============================================================================
-# 🔎 BUSCAR CHIP INDIVIDUAL PARA EDIÇÃO (JSON)
-# =============================================================================
-@chips_bp.route("/chips/<id_chip>")
-def chips_get(id_chip):
+
+# ============================================================
+# 🔍 BUSCAR CHIP PELO SK (Usado pelo modal)
+# ============================================================
+@chips_bp.route("/chips/sk/<sk_chip>")
+def chips_get_by_sk(sk_chip):
     try:
         query = f"""
             SELECT *
             FROM `painel-universidade.marts.vw_chips_painel`
-            WHERE id_chip = '{id_chip}'
+            WHERE sk_chip = {sk_chip}
             LIMIT 1
         """
 
@@ -87,18 +90,18 @@ def chips_get(id_chip):
         return jsonify(df.to_dict(orient="records")[0])
 
     except Exception as e:
-        print("🚨 Erro ao buscar chip:", e)
+        print("❌ Erro ao buscar chip por SK:", e)
         return jsonify({"error": "Erro interno"}), 500
 
 
-# =============================================================================
-# ✏️ ATUALIZAR CHIP VIA JSON (MODAL)
-# =============================================================================
+
+# ============================================================
+# ✏️ ATUALIZAR CHIP (modal salva via JSON)
+# ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
         data = request.json
-        print("🔧 Atualizando:", data)
 
         query = f"""
             UPDATE `painel-universidade.marts.dim_chip`
@@ -114,7 +117,7 @@ def chips_update_json():
                 total_gasto = {data.get("total_gasto") or "NULL"},
                 sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
                 observacao = '{data.get("observacao")}'
-            WHERE id_chip = '{data.get("id_chip")}'
+            WHERE sk_chip = {data.get("sk_chip")}
         """
 
         bq.execute_query(query)
@@ -122,5 +125,5 @@ def chips_update_json():
         return jsonify({"success": True})
 
     except Exception as e:
-        print("🚨 Erro ao atualizar chip:", e)
+        print("❌ Erro ao atualizar chip:", e)
         return jsonify({"success": False})

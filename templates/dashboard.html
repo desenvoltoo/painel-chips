@@ -1,9 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div class="dashboard-container">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
+
+    /* ===================== AJUSTE DO CONTAINER PARA A SIDEBAR ===================== */
+    .dashboard-container {
+        margin-left: 78px;          /* Sidebar recolhida */
+        padding: 30px;
+        transition: all .30s ease;
+    }
+
+    /* Quando sidebar abre */
+    .sidebar.open ~ .dashboard-container {
+        margin-left: 260px;
+    }
 
     /* ===================== ESTILO GLOBAL ===================== */
     body { color: white !important; }
@@ -343,5 +357,7 @@
     });
 
 </script>
+
+</div> <!-- fecha dashboard-container -->
 
 {% endblock %}

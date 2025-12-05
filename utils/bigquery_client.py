@@ -16,37 +16,30 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 
 # Sanitizador simples para strings SQL
 def q(value: str):
-    if value in (None, "", "None"):
-        return ""
+    if value is None or value == "" or str(value).lower() == "none":
+        return "NULL"
     return str(value).replace("'", "''")
 
 
 # ------------------------------
-# 🔧 Normalizar datas
+# Normalizar datas
 # ------------------------------
 def normalize_date(value):
-    """
-    Converte datas vindas do frontend para formato padrão BigQuery → DATE('YYYY-MM-DD').
-    """
     if not value:
         return "NULL"
 
     try:
-        # Se já vier no formato certo
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
 
-        # DD/MM/YYYY → YYYY-MM-DD
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
 
-        # Timestamps → pega só a data
         if "T" in value:
             date_part = value.split("T")[0]
             return f"DATE('{date_part}')"
 
-        # Tentativa genérica
         dt = datetime.fromisoformat(value)
         return f"DATE('{dt.strftime('%Y-%m-%d')}')"
 
@@ -55,15 +48,14 @@ def normalize_date(value):
 
 
 # ------------------------------
-# 🔧 Normalizar números
+# Normalizar números
 # ------------------------------
 def normalize_number(value):
     if not value:
         return "NULL"
 
     try:
-        value = str(value).replace(",", ".")
-        return str(float(value))
+        return str(float(str(value).replace(",", ".")))
     except:
         return "NULL"
 
@@ -76,7 +68,7 @@ class BigQueryClient:
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
     # ============================================================
-    # EXECUTA SQL E RETORNA DATAFRAME
+    # EXECUTA SQL
     # ============================================================
     def _run(self, sql: str):
 
@@ -129,14 +121,14 @@ class BigQueryClient:
 
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
-            USING (SELECT '{id_aparelho}' AS id_aparelho) S
+            USING (SELECT {id_aparelho} AS id_aparelho) S
             ON T.id_aparelho = S.id_aparelho
 
             WHEN MATCHED THEN UPDATE SET
-                modelo = '{modelo}',
-                marca = '{marca}',
-                imei = '{imei}',
-                status = '{status}',
+                modelo = {modelo},
+                marca = {marca},
+                imei = {imei},
+                status = {status},
                 updated_at = CURRENT_TIMESTAMP()
 
             WHEN NOT MATCHED THEN INSERT (
@@ -144,7 +136,7 @@ class BigQueryClient:
                 ativo, created_at, updated_at
             )
             VALUES (
-                {next_sk}, '{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}',
+                {next_sk}, {id_aparelho}, {modelo}, {marca}, {imei}, {status},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
             )
         """
@@ -152,32 +144,31 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # 📡 CHIPS — UPSERT COMPLETO + EVENTOS
+    # UPSERT CHIP + EVENTOS
     # ============================================================
     def upsert_chip(self, form):
 
-        # 1) Identificação do chip
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
-        # 2) Buscar estado anterior
+        # Buscar estado antigo
         sql_busca = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE id_chip = '{id_chip_sql}'
+            WHERE id_chip = {id_chip_sql}
             LIMIT 1
         """
 
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-        # 3) Coleta de valores novos
+        # Novos valores
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador = q(form.get("operador"))
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
-        observacao = q(form.get("observacao") or "")
+        observacao = q(form.get("observacao"))
 
         dt_inicio = normalize_date(form.get("dt_inicio"))
         dt_recarga = normalize_date(form.get("ultima_recarga_data"))
@@ -188,7 +179,7 @@ class BigQueryClient:
         sk_ap = form.get("sk_aparelho_atual")
         aparelho_sql = sk_ap if sk_ap else "NULL"
 
-        # 4) Detectar eventos
+        # Registrar eventos de mudança
         if antigo:
             campos = {
                 "numero": numero,
@@ -196,7 +187,7 @@ class BigQueryClient:
                 "operador": operador,
                 "plano": plano,
                 "status": status,
-                "sk_aparelho_atual": sk_ap,
+                "sk_aparelho_atual": aparelho_sql,
             }
 
             for campo, novo_valor in campos.items():
@@ -213,19 +204,19 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # 5) Merge final
+        # MERGE final
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
-            USING (SELECT '{id_chip_sql}' AS id_chip) S
+            USING (SELECT {id_chip_sql} AS id_chip) S
             ON T.id_chip = S.id_chip
 
             WHEN MATCHED THEN UPDATE SET
-                numero = '{numero}',
-                operadora = '{operadora}',
-                operador = '{operador}',
-                plano = '{plano}',
-                status = '{status}',
-                observacao = '{observacao}',
+                numero = {numero},
+                operadora = {operadora},
+                operador = {operador},
+                plano = {plano},
+                status = {status},
+                observacao = {observacao},
                 dt_inicio = {dt_inicio},
                 ultima_recarga_valor = {val_recarga},
                 ultima_recarga_data = {dt_recarga},
@@ -241,8 +232,8 @@ class BigQueryClient:
                 ativo, created_at, updated_at
             )
             VALUES (
-                '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
-                '{observacao}',
+                {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
+                {observacao},
                 {dt_inicio}, {val_recarga}, {dt_recarga},
                 {total_gasto}, {aparelho_sql},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
@@ -282,17 +273,17 @@ class BigQueryClient:
 
         query = f"""
             CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
-                @sk_chip, @tipo_evento, @valor_old, @valor_new, @origem, @obs
+                @sk, @tipo, @old, @new, @orig, @obs
             )
         """
 
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("tipo_evento", "STRING", tipo_evento),
-                bigquery.ScalarQueryParameter("valor_old", "STRING", valor_antigo),
-                bigquery.ScalarQueryParameter("valor_new", "STRING", valor_novo),
-                bigquery.ScalarQueryParameter("origem", "STRING", origem),
+                bigquery.ScalarQueryParameter("sk", "INT64", sk_chip),
+                bigquery.ScalarQueryParameter("tipo", "STRING", tipo_evento),
+                bigquery.ScalarQueryParameter("old", "STRING", valor_antigo),
+                bigquery.ScalarQueryParameter("new", "STRING", valor_novo),
+                bigquery.ScalarQueryParameter("orig", "STRING", origem),
                 bigquery.ScalarQueryParameter("obs", "STRING", obs),
             ]
         )

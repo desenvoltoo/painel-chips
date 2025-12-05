@@ -5,12 +5,10 @@
     <title>{% block title %}Painel SaaS{% endblock %}</title>
 
     <!-- Ícones -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <!-- DataTables -->
-    <link rel="stylesheet"
-          href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
     <!-- CSS Geral -->
     <link rel="stylesheet" href="/static/css/style.css">
@@ -22,63 +20,70 @@
 
 <body>
 
-<!-- ===============================================================
-     SIDEBAR PREMIUM — Neon Moderado
-=============================================================== -->
+<!-- ============================================================
+     SIDEBAR FIXA PREMIUM — FLUENTE E SUAVE
+============================================================ -->
 <aside class="sidebar" id="sidebar">
 
+    <!-- TÍTULO -->
     <h2 class="side-title">Painel SaaS</h2>
 
-    <a href="/dashboard">
-        <i class="fas fa-chart-line"></i>
-        <span>Dashboard</span>
-    </a>
+    <!-- LINKS -->
+    <nav class="menu">
+        <a href="/dashboard">
+            <i class="fas fa-chart-line"></i>
+            <span>Dashboard</span>
+        </a>
 
-    <a href="/chips">
-        <i class="fas fa-sim-card"></i>
-        <span>Chips</span>
-    </a>
+        <a href="/chips">
+            <i class="fas fa-sim-card"></i>
+            <span>Chips</span>
+        </a>
 
-    <a href="/aparelhos">
-        <i class="fas fa-mobile-alt"></i>
-        <span>Aparelhos</span>
-    </a>
+        <a href="/aparelhos">
+            <i class="fas fa-mobile-alt"></i>
+            <span>Aparelhos</span>
+        </a>
 
-    <a href="/movimentacao">
-        <i class="fas fa-random"></i>
-        <span>Movimentação</span>
-    </a>
+        <a href="/movimentacao">
+            <i class="fas fa-random"></i>
+            <span>Movimentação</span>
+        </a>
 
-    <a href="/relacionamentos">
-        <i class="fas fa-link"></i>
-        <span>Relacionamentos</span>
-    </a>
+        <a href="/relacionamentos">
+            <i class="fas fa-link"></i>
+            <span>Relacionamentos</span>
+        </a>
+    </nav>
 
 </aside>
 
-<!-- BOTÃO FIXO DE ABRIR/FECHAR -->
+<!-- BOTÃO DE ABERTURA/FECHAMENTO -->
 <button class="sidebar-toggle" id="sidebarToggle">
     <i class="fas fa-bars"></i>
 </button>
 
-<!-- ===============================================================
-     ÁREA PRINCIPAL DE CONTEÚDO (unificada)
-=============================================================== -->
-<div data-layout="page">
+
+<!-- ============================================================
+     ÁREA PRINCIPAL DO SISTEMA
+============================================================ -->
+<main class="content" data-layout="page">
     {% block content %}
     {% endblock %}
-</div>
+</main>
 
 
-<!-- ===============================================================
-     SCRIPT DA SIDEBAR
-=============================================================== -->
+<!-- ============================================================
+     JS DA SIDEBAR (SIMPLIFICADO E EFICIENTE)
+============================================================ -->
 <script>
     const sidebar = document.getElementById("sidebar");
     const toggle  = document.getElementById("sidebarToggle");
+    const body    = document.body;
 
     toggle.addEventListener("click", () => {
         sidebar.classList.toggle("open");
+        body.classList.toggle("sidebar-open");
         toggle.classList.toggle("open");
     });
 </script>

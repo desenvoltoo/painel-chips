@@ -250,7 +250,7 @@ body.sidebar-open .sidebar-toggle {
 /* Conteúdo quando sidebar está FECHADA */
 .content,
 .chip-container {
-    margin-left: 78px; /* mesma largura da sidebar collapsada */
+    margin-left: 5px; /* mesma largura da sidebar collapsada */
     padding: 2rem;
     padding-top: 3.5rem;
     transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);
@@ -259,13 +259,13 @@ body.sidebar-open .sidebar-toggle {
 /* Conteúdo quando sidebar está ABERTA */
 .sidebar.open ~ .content,
 .sidebar.open ~ .chip-container {
-    margin-left: 260px; /* mesma largura da sidebar aberta */
+    margin-left: 150px; /* mesma largura da sidebar aberta */
 }
 
 /* Caso seu JS use body.sidebar-open */
 body.sidebar-open .content,
 body.sidebar-open .chip-container {
-    margin-left: 260px;
+    margin-left: 150px;
 }
 
 .chip-container {

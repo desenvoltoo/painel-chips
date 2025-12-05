@@ -6,6 +6,41 @@
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<!-- SIDEBAR PREMIUM -->
+<aside class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <h2 class="side-title">Dashboard</h2>
+
+    <a href="/chips">
+        <i class="fas fa-sim-card"></i>
+        <span>Chips</span>
+    </a>
+
+    <a href="/aparelhos">
+        <i class="fas fa-mobile-alt"></i>
+        <span>Aparelhos</span>
+    </a>
+
+    <a href="/movimentacao">
+        <i class="fas fa-random"></i>
+        <span>Movimentação</span>
+    </a>
+
+    <a href="/relatorios">
+        <i class="fas fa-chart-line"></i>
+        <span>Relatórios</span>
+    </a>
+
+    <a href="/config">
+        <i class="fas fa-cog"></i>
+        <span>Configurações</span>
+    </a>
+</aside>
+
+<!-- HEADER -->
 <header class="chip-header">
     <div class="container">
         <div class="chip-header-content">
@@ -20,9 +55,10 @@
     </div>
 </header>
 
+<!-- CONTEÚDO PRINCIPAL -->
 <main class="container chip-container">
 
-    <!-- CARD NOVO CHIP -->
+    <!-- CARD CADASTRO DE NOVO CHIP -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -32,7 +68,6 @@
         <div class="card-content">
             <form action="/chips/add" method="POST" class="chip-form">
 
-                <!-- LINHA 1 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>ID do Chip *</label>
@@ -56,7 +91,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 2 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Operador</label>
@@ -86,7 +120,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 3 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Data Status</label>
@@ -104,7 +137,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 4 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Total Gasto</label>
@@ -124,7 +156,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 5 -->
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
@@ -133,7 +164,7 @@
                 </div>
 
                 <button type="submit" class="chip-btn">
-                    <i class="fas fa-plus"></i> Cadastrar Chip
+                    <i class="fas fa-save"></i> Cadastrar Chip
                 </button>
 
             </form>
@@ -179,12 +210,13 @@
                     </tbody>
                 </table>
             </div>
+
         </div>
     </section>
 
 </main>
 
-<!-- MODAL PREMIUM ORGANIZADO -->
+<!-- MODAL EDITAR CHIP -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
 
@@ -194,13 +226,11 @@
 
             <input type="hidden" name="id_chip" id="modal_id_chip">
 
-            <!-- Campo Número -->
             <div class="form-group">
                 <label>Número</label>
                 <input type="text" name="numero" id="modal_numero">
             </div>
 
-            <!-- Operadora -->
             <div class="form-group">
                 <label>Operadora</label>
                 <select name="operadora" id="modal_operadora">
@@ -212,13 +242,11 @@
                 </select>
             </div>
 
-            <!-- Operador -->
             <div class="form-group">
                 <label>Operador</label>
                 <input type="text" name="operador" id="modal_operador">
             </div>
 
-            <!-- Status -->
             <div class="form-group">
                 <label>Status</label>
                 <select name="status" id="modal_status">
@@ -236,37 +264,31 @@
                 </select>
             </div>
 
-            <!-- Plano -->
             <div class="form-group">
                 <label>Plano</label>
                 <input type="text" name="plano" id="modal_plano">
             </div>
 
-            <!-- Data Status -->
             <div class="form-group">
                 <label>Data Status</label>
                 <input type="date" name="dt_inicio" id="modal_dt_inicio">
             </div>
 
-            <!-- Data Última Recarga -->
             <div class="form-group">
                 <label>Data Última Recarga</label>
                 <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
             </div>
 
-            <!-- Valor Última Recarga -->
             <div class="form-group">
                 <label>Valor Última Recarga (R$)</label>
                 <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
             </div>
 
-            <!-- Total Gasto -->
             <div class="form-group">
                 <label>Total Gasto (R$)</label>
                 <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
             </div>
 
-            <!-- Aparelho vinculado -->
             <div class="form-group full">
                 <label>Aparelho Vinculado</label>
                 <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
@@ -277,13 +299,11 @@
                 </select>
             </div>
 
-            <!-- Observação -->
             <div class="form-group full">
                 <label>Observação</label>
-                <textarea name="observacao" id="modal_observacao" style="height: 70px;"></textarea>
+                <textarea name="observacao" id="modal_observacao"></textarea>
             </div>
 
-            <!-- Botões -->
             <div class="modal-actions full">
                 <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
                 <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
@@ -294,20 +314,22 @@
     </div>
 </div>
 
-
 <script>
+/* Desenvolvido especialmente para manter tudo funcionando */
+function toggleSidebar(){
+    const sb = document.getElementById("sidebar");
+    sb.classList.toggle("collapsed");
+}
+
 let chipsData = {{ chips | tojson | safe }};
 
-// Renderização da tabela
+// RENDERIZAÇÃO DA TABELA
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
-    if (!lista || !lista.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
-            </tr>`;
+    if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
         return;
     }
 
@@ -325,24 +347,17 @@ function renderRows(lista) {
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>
-                    ${c.observacao ?
-                        `<span class="obs-tooltip" data-tooltip="${c.observacao}"><i class="fa fa-comment-dots"></i></span>` :
-                        "-"
-                    }
-                </td>
-                <td>
-                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button>
-                </td>
+                <td>${c.observacao ? `<span class='obs-tooltip'><i class="fas fa-comment-dots"></i></span>` : "-"}</td>
+                <td><button class="chip-btn" style="padding:5px 10px;" data-id="${c.id_chip}">Editar</button></td>
             </tr>`;
     });
 
     bindEditButtons();
 }
 
-// Bind dos botões de edição
 function bindEditButtons() {
-    document.querySelectorAll(".edit-btn").forEach(btn => {
+    document.querySelectorAll("button[data-id]").forEach(btn => {
+
         btn.onclick = async () => {
             const id = btn.dataset.id;
             const res = await fetch(`/chips/${id}`);
@@ -350,7 +365,7 @@ function bindEditButtons() {
 
             document.getElementById("editModal").style.display = "flex";
 
-            document.getElementById("modal_id_chip").value = chip.id_chip;
+            document.getElementById("modal_id_chip").value = chip.id_chip || "";
             document.getElementById("modal_numero").value = chip.numero || "";
             document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
             document.getElementById("modal_operador").value = chip.operador || "";
@@ -366,40 +381,31 @@ function bindEditButtons() {
     });
 }
 
-// Busca dinâmica
-document.getElementById("searchInput").addEventListener("input", e => {
-    const termo = e.target.value.toLowerCase();
-
-    const filtrados = chipsData.filter(chip =>
-        Object.values(chip).some(val =>
-            String(val || "").toLowerCase().includes(termo)
-        )
-    );
-
-    renderRows(filtrados);
-});
-
-// Fechar modal
-document.getElementById("modalCloseBtn").addEventListener("click", () => {
+document.getElementById("modalCloseBtn").onclick = () =>
     document.getElementById("editModal").style.display = "none";
-});
 
-// Salvar edição
-document.getElementById("modalSaveBtn").addEventListener("click", async () => {
+document.getElementById("modalSaveBtn").onclick = async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
     });
 
     const r = await res.json();
     if (r.success) location.reload();
-    else alert("Erro ao salvar!");
+    else alert("Erro ao salvar.");
+};
+
+document.getElementById("searchInput").addEventListener("input", e => {
+    const termo = e.target.value.toLowerCase();
+    const filtrados = chipsData.filter(chip =>
+        Object.values(chip).some(val => String(val || "").toLowerCase().includes(termo))
+    );
+    renderRows(filtrados);
 });
 
-// Render inicial
 renderRows(chipsData);
 </script>
 

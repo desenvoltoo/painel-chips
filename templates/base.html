@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Painel Chips{% endblock %}</title>
+    <title>{% block title %}Painel SaaS{% endblock %}</title>
 
     <!-- Ícones -->
     <link rel="stylesheet"
@@ -22,20 +22,13 @@
 
 <body>
 
-<!-- ====================================================================
+<!-- ===============================================================
      SIDEBAR PREMIUM — Neon Moderado
-==================================================================== -->
-<div class="sidebar collapsed" id="sidebar">
+=============================================================== -->
+<aside class="sidebar" id="sidebar">
 
-    <!-- Botão Toggle -->
-    <button class="sidebar-toggle" id="sidebarToggle">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <!-- Título do menu -->
     <h2 class="side-title">Painel SaaS</h2>
 
-    <!-- LINKS DO MENU -->
     <a href="/dashboard">
         <i class="fas fa-chart-line"></i>
         <span>Dashboard</span>
@@ -61,27 +54,32 @@
         <span>Relacionamentos</span>
     </a>
 
-</div>
+</aside>
 
+<!-- BOTÃO FIXO DE ABRIR/FECHAR -->
+<button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+</button>
 
-<!-- ====================================================================
-     ÁREA PRINCIPAL DE CONTEÚDO
-==================================================================== -->
-<div class="content" id="content">
+<!-- ===============================================================
+     ÁREA PRINCIPAL DE CONTEÚDO (unificada)
+=============================================================== -->
+<div data-layout="page">
     {% block content %}
     {% endblock %}
 </div>
 
 
-<!-- ====================================================================
-     SCRIPT DA SIDEBAR PREMIUM
-==================================================================== -->
+<!-- ===============================================================
+     SCRIPT DA SIDEBAR
+=============================================================== -->
 <script>
     const sidebar = document.getElementById("sidebar");
-    const toggle = document.getElementById("sidebarToggle");
+    const toggle  = document.getElementById("sidebarToggle");
 
     toggle.addEventListener("click", () => {
         sidebar.classList.toggle("open");
+        toggle.classList.toggle("open");
     });
 </script>
 

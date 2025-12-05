@@ -121,24 +121,41 @@ def chips_get_by_sk(sk_chip):
 
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
-    d = request.json
+    data = request.json
+
+    def q(v):
+        return f"'{v}'" if v else "NULL"
+
+    def qdate(v):
+        from utils.bigquery_client import normalize_date
+        return normalize_date(v)
+
+    def qnum(v):
+        from utils.bigquery_client import normalize_number
+        return normalize_number(v)
 
     query = f"""
-        UPDATE `painel-universidade.marts.dim_chip`
+        UPDATE `{PROJECT}.{DATASET}.dim_chip`
         SET
-            numero = {q_str(d.get("numero"))},
-            operadora = {q_str(d.get("operadora"))},
-            operador = {q_str(d.get("operador"))},
-            status = {q_str(d.get("status"))},
-            plano = {q_str(d.get("plano"))},
-            dt_inicio = {q_date(d.get("dt_inicio"))},
-            ultima_recarga_data = {q_date(d.get("ultima_recarga_data"))},
-            ultima_recarga_valor = {q_num(d.get("ultima_recarga_valor"))},
-            total_gasto = {q_num(d.get("total_gasto"))},
-            sk_aparelho_atual = {q_num(d.get("sk_aparelho_atual"))},
-            observacao = {q_str(d.get("observacao"))}
-        WHERE sk_chip = {q_num(d.get("sk_chip"))}
+            numero = {q(data.get("numero"))},
+            operadora = {q(data.get("operadora"))},
+            operador = {q(data.get("operador"))},
+            plano = {q(data.get("plano"))},
+            status = {q(data.get("status"))},
+            observacao = {q(data.get("observacao"))},
+            dt_inicio = {qdate(data.get("dt_inicio"))},
+            ultima_recarga_valor = {qnum(data.get("ultima_recarga_valor"))},
+            ultima_recarga_data = {qdate(data.get("ultima_recarga_data"))},
+            total_gasto = {qnum(data.get("total_gasto"))},
+            sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {data.get("sk_chip")}
     """
 
-    bq.execute_query(query)
+    print("\n🔵 UPDATE VIA JSON:\n", query)
+
+    # AQUI ESTAVA O ERRO — EXECUTA COM _run()
+    bq._run(query)
+
     return jsonify({"success": True})
+

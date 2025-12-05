@@ -4,7 +4,8 @@
 {% block content %}
 
 <link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <header class="chip-header">
     <div class="container">
@@ -22,7 +23,9 @@
 
 <main class="container chip-container">
 
-    <!-- CARD NOVO CHIP -->
+    <!-- --------------------------------------------------------
+         CARD NOVO CHIP
+    -------------------------------------------------------- -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -32,7 +35,6 @@
         <div class="card-content">
             <form action="/chips/add" method="POST" class="chip-form">
 
-                <!-- LINHA 1 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>ID do Chip *</label>
@@ -56,7 +58,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 2 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Operador</label>
@@ -86,7 +87,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 3 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Data Status</label>
@@ -104,7 +104,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 4 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Total Gasto</label>
@@ -124,7 +123,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 5 -->
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
@@ -140,7 +138,9 @@
         </div>
     </section>
 
-    <!-- CARD TABELA -->
+    <!-- --------------------------------------------------------
+         TABELA
+    -------------------------------------------------------- -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -151,7 +151,8 @@
 
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
+                <input type="text" id="searchInput" class="search-input"
+                       placeholder="Buscar chips...">
             </div>
 
             <div class="chip-table-wrapper">
@@ -179,17 +180,17 @@
             </div>
         </div>
     </section>
-
 </main>
 
-<!-- MODAL -->
+<!-- --------------------------------------------------------
+     MODAL
+-------------------------------------------------------- -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
         <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
 
-            <!-- AGORA É sk_chip -->
             <input type="hidden" name="sk_chip" id="modal_sk_chip">
 
             <div class="form-group">
@@ -247,7 +248,8 @@
 
             <div class="form-group">
                 <label>Valor Última Recarga</label>
-                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+                <input type="number" step="0.01"
+                       name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
             </div>
 
             <div class="form-group">
@@ -282,9 +284,9 @@
 <script>
 let chipsData = {{ chips | tojson | safe }};
 
-// ---------------------
-// Renderização
-// ---------------------
+// ------------------------------------------------------------
+// Renderizar tabela
+// ------------------------------------------------------------
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
@@ -305,7 +307,6 @@ function renderRows(lista) {
                 <td>${c.dt_inicio || "-"}</td>
                 <td>${c.observacao || "-"}</td>
 
-                <!-- AGORA O BOTÃO PASSA sk_chip -->
                 <td>
                     <button class="btn btn-primary btn-sm edit-btn"
                         data-sk="${c.sk_chip}">
@@ -319,12 +320,13 @@ function renderRows(lista) {
     bindEditButtons();
 }
 
-// ---------------------
+// ------------------------------------------------------------
 // Botão Editar
-// ---------------------
+// ------------------------------------------------------------
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
+
             const sk = btn.dataset.sk;
 
             const res = await fetch(`/chips/sk/${sk}`);
@@ -332,12 +334,11 @@ function bindEditButtons() {
 
             document.getElementById("editModal").style.display = "flex";
 
-            // preenche modal
             document.getElementById("modal_sk_chip").value = chip.sk_chip;
             document.getElementById("modal_numero").value = chip.numero || "";
-            document.getElementById("modal_operadora").value = chip.operadora || "";
+            document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
             document.getElementById("modal_operador").value = chip.operador || "";
-            document.getElementById("modal_status").value = chip.status || "";
+            document.getElementById("modal_status").value = chip.status || "DISPONIVEL";
             document.getElementById("modal_plano").value = chip.plano || "";
             document.getElementById("modal_dt_inicio").value = chip.dt_inicio || "";
             document.getElementById("modal_ultima_recarga_data").value = chip.ultima_recarga_data || "";
@@ -349,9 +350,9 @@ function bindEditButtons() {
     });
 }
 
-// ---------------------
-// Salvar
-// ---------------------
+// ------------------------------------------------------------
+// Salvar alterações
+// ------------------------------------------------------------
 document.getElementById("modalSaveBtn").onclick = async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
@@ -366,7 +367,7 @@ document.getElementById("modalSaveBtn").onclick = async () => {
     else alert("Erro ao salvar.");
 };
 
-// ---------------------
+// ------------------------------------------------------------
 document.getElementById("modalCloseBtn").onclick = () => {
     document.getElementById("editModal").style.display = "none";
 };

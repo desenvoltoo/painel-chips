@@ -22,7 +22,9 @@
 
 <main class="container chip-container">
 
-    <!-- NOVO CHIP -->
+    <!-- ============================================================
+         CARD: NOVO CHIP
+    ============================================================ -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -135,7 +137,9 @@
         </div>
     </section>
 
-    <!-- TABELA -->
+    <!-- ============================================================
+         TABELA DE CHIPS
+    ============================================================ -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -177,14 +181,14 @@
 
 </main>
 
-
-<!-- MODAL -->
+<!-- ============================================================
+     MODAL DE EDIÇÃO
+============================================================ -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
         <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
-
             <input type="hidden" name="sk_chip" id="modal_sk_chip">
 
             <div class="form-group">
@@ -252,20 +256,18 @@
                 <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
                 <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
             </div>
-
         </form>
     </div>
 </div>
 
-<!-- ========================================================= -->
-<!--  PASSAMOS OS DADOS PARA O APP.JS -->
-<!-- ========================================================= -->
+<!-- ============================================================
+     DADOS PARA O JS
+============================================================ -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
     window.aparelhosData = {{ aparelhos | tojson | safe }};
 </script>
 
-<!-- JS PRINCIPAL -->
 <script src="/static/js/app.js"></script>
 
 {% endblock %}

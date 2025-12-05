@@ -13,7 +13,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# SANITIZADOR DE STRINGS PARA SQL
+# Sanitizador simples para strings SQL
 def q(value: str):
     if value in (None, "", "None"):
         return ""
@@ -25,14 +25,10 @@ class BigQueryClient:
     def __init__(self):
         self.project = PROJECT
         self.dataset = DATASET
-
-        self.client = bigquery.Client(
-            project=PROJECT,
-            location=LOCATION
-        )
+        self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
     # ============================================================
-    # EXECUTA SQL E RETORNA DATAFRAME
+    # 🔥 EXECUTA SQL E RETORNA DATAFRAME
     # ============================================================
     def _run(self, sql: str):
 
@@ -41,9 +37,7 @@ class BigQueryClient:
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
-
             df = df.astype(object).where(pd.notnull(df), None)
-
             return df
 
         except Exception as e:
@@ -51,7 +45,7 @@ class BigQueryClient:
             raise e
 
     # ============================================================
-    # GET VIEW
+    # 🔍 GET VIEW
     # ============================================================
     def get_view(self, view_name: str):
         sql = f"""
@@ -61,19 +55,12 @@ class BigQueryClient:
         return self._run(sql)
 
     # ============================================================
-    # APARELHOS
+    # 📱 APARELHOS
     # ============================================================
     def get_aparelhos(self):
         sql = f"""
-            SELECT 
-                sk_aparelho,
-                id_aparelho,
-                modelo,
-                marca,
-                imei,
-                status,
-                ativo
-            FROM `{PROJECT}.{DATASET}.dim_aparelho`
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.vw_aparelhos`
             ORDER BY modelo
         """
         return self._run(sql)
@@ -87,7 +74,7 @@ class BigQueryClient:
         status = q(form.get("status") or "ATIVO")
 
         sql_next = f"""
-            SELECT COALESCE(MAX(sk_aparelho), 0) + 1 AS next_sk
+            SELECT COALESCE(MAX(sk_aparelho),0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`
         """
         next_sk = int(self._run(sql_next).iloc[0]["next_sk"])
@@ -105,54 +92,59 @@ class BigQueryClient:
                 updated_at = CURRENT_TIMESTAMP()
 
             WHEN NOT MATCHED THEN INSERT (
-                sk_aparelho, id_aparelho, modelo,
-                marca, imei, status, ativo, created_at, updated_at
+                sk_aparelho, id_aparelho, modelo, marca, imei, status,
+                ativo, created_at, updated_at
             )
             VALUES (
-                {next_sk}, '{id_aparelho}', '{modelo}',
-                '{marca}', '{imei}', '{status}', TRUE,
-                CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+                {next_sk}, '{id_aparelho}', '{modelo}', '{marca}', '{imei}', '{status}',
+                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
             )
         """
 
         self._run(sql)
 
     # ============================================================
-    # CHIPS
+    # 📡 CHIPS — CADASTRO + DETECÇÃO DE EVENTOS
     # ============================================================
-    def get_chips(self):
-        return self.get_view("vw_chips_painel")
-
     def upsert_chip(self, form):
         """
-        Aceita dados de formulário normal ou JSON (modal).
+        Atualiza chip e registra eventos automaticamente quando houver alterações.
         """
 
-        # ID do chip
+        # ------------------------------------------------------------
+        # 1) Buscar estado atual
+        # ------------------------------------------------------------
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
-        # Strings
+        sql_busca = f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE id_chip = '{id_chip_sql}'
+            LIMIT 1
+        """
+
+        atual_df = self._run(sql_busca)
+        antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
+
+        # ------------------------------------------------------------
+        # 2) Novos valores
+        # ------------------------------------------------------------
         numero = q(form.get("numero"))
         operadora = q(form.get("operadora"))
-        operador = q(form.get("operador"))  # ⚠ Campo pode não existir na tabela
+        operador = q(form.get("operador"))
         plano = q(form.get("plano"))
         status = q(form.get("status") or "DISPONIVEL")
+        observacao = q(form.get("observacao") or "")
 
-        # Observação
-        obs_raw = form.get("observacao")
-        observacao_sql = f"'{q(obs_raw)}'" if obs_raw and str(obs_raw).strip() else "NULL"
-
-        # Datas
         def sql_date(x):
-            return f"DATE('{x}')" if x and x not in ("None", "") else "NULL"
+            return f"DATE('{x}')" if x else "NULL"
 
         dt_inicio = sql_date(form.get("dt_inicio"))
         dt_recarga = sql_date(form.get("ultima_recarga_data"))
 
-        # Números
         def sql_num(x):
-            if x in (None, "", "None"):
+            if not x:
                 return "NULL"
             try:
                 return str(float(str(x).replace(",", ".")))
@@ -162,10 +154,39 @@ class BigQueryClient:
         val_recarga = sql_num(form.get("ultima_recarga_valor"))
         total_gasto = sql_num(form.get("total_gasto"))
 
-        # FK aparelho
         sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_ap if sk_ap not in (None, "", "None") else "NULL"
+        aparelho_sql = sk_ap if sk_ap else "NULL"
 
+        # ------------------------------------------------------------
+        # 3) Detectar e registrar eventos automaticamente
+        # ------------------------------------------------------------
+        if antigo:
+            campos = {
+                "numero": numero,
+                "operadora": operadora,
+                "operador": operador,
+                "plano": plano,
+                "status": status,
+                "sk_aparelho_atual": sk_ap,
+            }
+
+            for campo, novo_valor in campos.items():
+                old = str(antigo.get(campo) or "")
+                new = str(novo_valor or "")
+
+                if old != new:
+                    self.registrar_evento_chip(
+                        sk_chip=antigo["sk_chip"],
+                        tipo_evento=campo.upper(),
+                        valor_antigo=old,
+                        valor_novo=new,
+                        origem="Painel",
+                        obs="Alteração via painel"
+                    )
+
+        # ------------------------------------------------------------
+        # 4) MERGE final para salvar o chip
+        # ------------------------------------------------------------
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT '{id_chip_sql}' AS id_chip) S
@@ -177,7 +198,7 @@ class BigQueryClient:
                 operador = '{operador}',
                 plano = '{plano}',
                 status = '{status}',
-                observacao = {observacao_sql},
+                observacao = '{observacao}',
                 dt_inicio = {dt_inicio},
                 ultima_recarga_valor = {val_recarga},
                 ultima_recarga_data = {dt_recarga},
@@ -194,7 +215,7 @@ class BigQueryClient:
             )
             VALUES (
                 '{id_chip_sql}', '{numero}', '{operadora}', '{operador}', '{plano}', '{status}',
-                {observacao_sql},
+                '{observacao}',
                 {dt_inicio}, {val_recarga}, {dt_recarga},
                 {total_gasto}, {aparelho_sql},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
@@ -204,7 +225,7 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # MOVIMENTAÇÃO (TROCA DE APARELHO)
+    # 🔄 MOVIMENTAÇÃO (TROCA DE APARELHO)
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -228,7 +249,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS (TROCA DE STATUS, OPERADORA, PLANO ETC)
+    # 🧾 EVENTOS (DETALHES)
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -253,23 +274,12 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # LISTAGEM DE EVENTOS (NÃO APAGUEI O SEU)
-    # ============================================================
-    def get_eventos(self):
-        sql = f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.f_chip_aparelho`
-            ORDER BY data_movimento DESC
-        """
-        return self._run(sql)
-
-    # ============================================================
-    # EVENTOS CORRETOS POR CHIP (NOVO)
+    # TIMELINE (HISTÓRICO COMPLETO)
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""
             SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_chip_historico_completo`
+            FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
             WHERE sk_chip = {sk_chip}
             ORDER BY data_evento DESC
         """

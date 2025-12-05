@@ -282,98 +282,158 @@
 </div>
 
 <script>
-let chipsData = {{ chips | tojson | safe }};
+    // Dados vindos do backend (vw_chips_painel)
+    let chipsData = {{ chips | tojson | safe }} || [];
 
-// ------------------------------------------------------------
-// Renderizar tabela
-// ------------------------------------------------------------
-function renderRows(lista) {
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
+    // Helper simples pra data: se vier "2025-12-01T00:00:00" → "2025-12-01"
+    function formatDate(dateStr) {
+        if (!dateStr) return "";
+        if (typeof dateStr !== "string") return "";
+        if (dateStr.includes("T")) return dateStr.split("T")[0];
+        return dateStr;
+    }
 
-    lista.forEach(c => {
-        tbody.innerHTML += `
-            <tr>
-                <td>${c.id_chip}</td>
-                <td>${c.numero || "-"}</td>
-                <td>${c.operadora || "-"}</td>
-                <td>${c.operador || "-"}</td>
-                <td>${c.status || "-"}</td>
-                <td>${c.plano || "-"}</td>
-                <td>${c.ultima_recarga_data || "-"}</td>
-                <td>${c.ultima_recarga_valor || "-"}</td>
-                <td>${c.total_gasto || "-"}</td>
-                <td>${c.modelo_aparelho || "-"}</td>
-                <td>${c.dt_inicio || "-"}</td>
-                <td>${c.observacao || "-"}</td>
+    // ------------------------------------------------------------
+    // Renderizar tabela
+    // ------------------------------------------------------------
+    function renderRows(lista) {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
 
-                <td>
-                    <button class="btn btn-primary btn-sm edit-btn"
-                        data-sk="${c.sk_chip}">
-                        Editar
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
+        if (!lista || !lista.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
+                </tr>
+            `;
+            return;
+        }
 
-    bindEditButtons();
-}
+        lista.forEach(c => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${c.id_chip || "-"}</td>
+                    <td>${c.numero || "-"}</td>
+                    <td>${c.operadora || "-"}</td>
+                    <td>${c.operador || "-"}</td>
+                    <td>${c.status || "-"}</td>
+                    <td>${c.plano || "-"}</td>
+                    <td>${formatDate(c.ultima_recarga_data) || "-"}</td>
+                    <td>${c.ultima_recarga_valor ?? "-"}</td>
+                    <td>${c.total_gasto ?? "-"}</td>
+                    <td>${c.modelo_aparelho || "-"}</td>
+                    <td>${formatDate(c.dt_inicio) || "-"}</td>
+                    <td>${c.observacao || "-"}</td>
 
-// ------------------------------------------------------------
-// Botão Editar
-// ------------------------------------------------------------
-function bindEditButtons() {
-    document.querySelectorAll(".edit-btn").forEach(btn => {
-        btn.onclick = async () => {
+                    <td>
+                        <button 
+                            class="btn btn-primary btn-sm edit-btn"
+                            data-sk="${c.sk_chip}">
+                            Editar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
 
-            const sk = btn.dataset.sk;
+        bindEditButtons();
+    }
 
-            const res = await fetch(`/chips/sk/${sk}`);
-            const chip = await res.json();
+    // ------------------------------------------------------------
+    // Botão Editar  (usa SK_CHIP no back, ID só pra exibir)
+    // ------------------------------------------------------------
+    function bindEditButtons() {
+        document.querySelectorAll(".edit-btn").forEach(btn => {
+            btn.onclick = async () => {
+                const sk = btn.dataset.sk;
+                if (!sk) {
+                    console.error("Botão sem sk_chip no data-sk");
+                    return;
+                }
 
-            document.getElementById("editModal").style.display = "flex";
+                try {
+                    const res = await fetch(`/chips/sk/${sk}`);
+                    if (!res.ok) {
+                        alert("Erro ao buscar dados do chip.");
+                        return;
+                    }
+                    const chip = await res.json();
 
-            document.getElementById("modal_sk_chip").value = chip.sk_chip;
-            document.getElementById("modal_numero").value = chip.numero || "";
-            document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
-            document.getElementById("modal_operador").value = chip.operador || "";
-            document.getElementById("modal_status").value = chip.status || "DISPONIVEL";
-            document.getElementById("modal_plano").value = chip.plano || "";
-            document.getElementById("modal_dt_inicio").value = chip.dt_inicio || "";
-            document.getElementById("modal_ultima_recarga_data").value = chip.ultima_recarga_data || "";
-            document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
-            document.getElementById("modal_total_gasto").value = chip.total_gasto || "";
-            document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
-            document.getElementById("modal_observacao").value = chip.observacao || "";
-        };
-    });
-}
+                    document.getElementById("editModal").style.display = "flex";
 
-// ------------------------------------------------------------
-// Salvar alterações
-// ------------------------------------------------------------
-document.getElementById("modalSaveBtn").onclick = async () => {
-    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
+                    document.getElementById("modal_sk_chip").value = chip.sk_chip;
+                    document.getElementById("modal_numero").value = chip.numero || "";
+                    document.getElementById("modal_operadora").value = chip.operadora || "VIVO";
+                    document.getElementById("modal_operador").value = chip.operador || "";
+                    document.getElementById("modal_status").value = chip.status || "DISPONIVEL";
+                    document.getElementById("modal_plano").value = chip.plano || "";
+                    document.getElementById("modal_dt_inicio").value = formatDate(chip.dt_inicio) || "";
+                    document.getElementById("modal_ultima_recarga_data").value = formatDate(chip.ultima_recarga_data) || "";
+                    document.getElementById("modal_ultima_recarga_valor").value = chip.ultima_recarga_valor ?? "";
+                    document.getElementById("modal_total_gasto").value = chip.total_gasto ?? "";
+                    document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
+                    document.getElementById("modal_observacao").value = chip.observacao || "";
+                } catch (e) {
+                    console.error("Erro no fetch /chips/sk:", e);
+                    alert("Erro ao carregar dados do chip.");
+                }
+            };
+        });
+    }
 
-    const res = await fetch("/chips/update-json", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-    });
+    // ------------------------------------------------------------
+    // Salvar alterações do modal
+    // ------------------------------------------------------------
+    document.getElementById("modalSaveBtn").onclick = async () => {
+        const formEl = document.getElementById("modalForm");
+        const data = Object.fromEntries(new FormData(formEl));
 
-    const r = await res.json();
-    if (r.success) location.reload();
-    else alert("Erro ao salvar.");
-};
+        try {
+            const res = await fetch("/chips/update-json", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(data)
+            });
 
-// ------------------------------------------------------------
-document.getElementById("modalCloseBtn").onclick = () => {
-    document.getElementById("editModal").style.display = "none";
-};
+            const r = await res.json();
+            if (r.success) {
+                location.reload();
+            } else {
+                alert("Erro ao salvar.");
+            }
+        } catch (e) {
+            console.error("Erro ao salvar /chips/update-json:", e);
+            alert("Erro ao salvar.");
+        }
+    };
 
-// Render inicial
-renderRows(chipsData);
+    // ------------------------------------------------------------
+    // Fechar modal
+    // ------------------------------------------------------------
+    document.getElementById("modalCloseBtn").onclick = () => {
+        document.getElementById("editModal").style.display = "none";
+    };
+
+    // ------------------------------------------------------------
+    // Busca dinâmica
+    // ------------------------------------------------------------
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+        searchInput.addEventListener("input", e => {
+            const termo = e.target.value.toLowerCase();
+
+            const filtrados = chipsData.filter(chip =>
+                Object.values(chip).some(val =>
+                    String(val ?? "").toLowerCase().includes(termo)
+                )
+            );
+
+            renderRows(filtrados);
+        });
+    }
+
+    // Render inicial
+    renderRows(chipsData);
 </script>
 
 {% endblock %}

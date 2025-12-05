@@ -3,64 +3,25 @@
 
 {% block content %}
 
-<link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- SIDEBAR PREMIUM (FECHADA POR PADRÃO) -->
-<aside class="sidebar" id="sidebar">
-
-    <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <h2 class="side-title">Dashboard</h2>
-
-    <a href="/chips">
-        <i class="fas fa-sim-card"></i>
-        <span>Chips</span>
-    </a>
-
-    <a href="/aparelhos">
-        <i class="fas fa-mobile-alt"></i>
-        <span>Aparelhos</span>
-    </a>
-
-    <a href="/movimentacao">
-        <i class="fas fa-random"></i>
-        <span>Movimentação</span>
-    </a>
-
-    <a href="/relatorios">
-        <i class="fas fa-chart-line"></i>
-        <span>Relatórios</span>
-    </a>
-
-    <a href="/config">
-        <i class="fas fa-cog"></i>
-        <span>Configurações</span>
-    </a>
-
-</aside>
-
-<!-- HEADER -->
+<!-- HEADER PREMIUM -->
 <header class="chip-header">
-    <div class="container">
-        <div class="chip-header-content">
-            <div class="icon-wrapper">
-                <i class="fas fa-sim-card"></i>
-            </div>
-            <div class="header-text">
-                <h1 class="chip-title">Gestão de Chips</h1>
-                <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
-            </div>
+    <div class="chip-header-content">
+        <div class="icon-wrapper">
+            <i class="fas fa-sim-card"></i>
+        </div>
+
+        <div>
+            <h1 class="chip-title">Gestão de Chips</h1>
+            <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
         </div>
     </div>
 </header>
 
-<!-- CONTEÚDO PRINCIPAL -->
 <main class="chip-container">
 
-    <!-- CARD: NOVO CHIP -->
+    <!-- =============================
+         CARD — NOVO CHIP
+    ============================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -85,11 +46,11 @@
                     <div class="form-group">
                         <label>Operadora</label>
                         <select name="operadora">
-                            <option value="VIVO">VIVO</option>
-                            <option value="TIM">TIM</option>
-                            <option value="CLARO">CLARO</option>
-                            <option value="OI">OI</option>
-                            <option value="OUTRA">OUTRA</option>
+                            <option>VIVO</option>
+                            <option>TIM</option>
+                            <option>CLARO</option>
+                            <option>OI</option>
+                            <option>OUTRA</option>
                         </select>
                     </div>
                 </div>
@@ -103,7 +64,7 @@
                     <div class="form-group">
                         <label>Status</label>
                         <select name="status">
-                            <option>DISPONIVEL</option>
+                            <option>DISPPONIVEL</option>
                             <option>MATURANDO</option>
                             <option>MATURADO</option>
                             <option>DESCANSO_1</option>
@@ -151,21 +112,21 @@
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
                             {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
+                                <option value="{{ ap.sk_aparelho }}">
+                                    {{ ap.modelo }} ({{ ap.marca }})
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group full">
-                        <label>Observação</label>
-                        <textarea name="observacao"></textarea>
-                    </div>
+                <div class="form-group full">
+                    <label>Observação</label>
+                    <textarea name="observacao"></textarea>
                 </div>
 
                 <button type="submit" class="chip-btn">
-                    <i class="fas fa-save"></i> Cadastrar Chip
+                    <i class="fas fa-save"></i> Cadastrar
                 </button>
 
             </form>
@@ -173,8 +134,9 @@
         </div>
     </section>
 
-
-    <!-- CARD: TABELA -->
+    <!-- =============================
+         CARD — TABELA DE CHIPS
+    ============================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -183,6 +145,7 @@
 
         <div class="card-content">
 
+            <!-- Buscar -->
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
                 <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
@@ -208,10 +171,7 @@
                         </tr>
                     </thead>
 
-                    <tbody id="tableBody">
-                        <!-- POPULADO PELO JS -->
-                    </tbody>
-
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
 
@@ -220,12 +180,13 @@
 
 </main>
 
-
-<!-- MODAL EDITAR CHIP -->
+<!-- =============================
+     MODAL — EDITAR CHIP
+============================== -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
 
-        <h2 style="margin-bottom:1rem;">Editar Chip</h2>
+        <h2 class="modal-title">Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
 
@@ -239,11 +200,11 @@
             <div class="form-group">
                 <label>Operadora</label>
                 <select name="operadora" id="modal_operadora">
-                    <option value="VIVO">VIVO</option>
-                    <option value="TIM">TIM</option>
-                    <option value="CLARO">CLARO</option>
-                    <option value="OI">OI</option>
-                    <option value="OUTRA">OUTRA</option>
+                    <option>VIVO</option>
+                    <option>TIM</option>
+                    <option>CLARO</option>
+                    <option>OI</option>
+                    <option>OUTRA</option>
                 </select>
             </div>
 
@@ -280,17 +241,17 @@
             </div>
 
             <div class="form-group">
-                <label>Data Última Recarga</label>
+                <label>Última Recarga</label>
                 <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
             </div>
 
             <div class="form-group">
-                <label>Valor Última Recarga (R$)</label>
+                <label>Valor Última Recarga</label>
                 <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
             </div>
 
             <div class="form-group">
-                <label>Total Gasto (R$)</label>
+                <label>Total Gasto</label>
                 <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
             </div>
 
@@ -319,19 +280,10 @@
     </div>
 </div>
 
-
 <script>
-/* ========================
-    ABRIR / FECHAR SIDEBAR
-===========================*/
-function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("open");
-}
-
-
-/* ========================
+/* =============================
     RENDERIZAÇÃO DA TABELA
-===========================*/
+============================= */
 let chipsData = {{ chips | tojson | safe }};
 
 function renderRows(lista) {
@@ -350,14 +302,14 @@ function renderRows(lista) {
                 <td>${c.numero || "-"}</td>
                 <td>${c.operadora || "-"}</td>
                 <td>${c.operador || "-"}</td>
-                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status || "-"}</span></td>
+                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status}</span></td>
                 <td>${c.plano || "-"}</td>
                 <td>${c.ultima_recarga_data || "-"}</td>
                 <td>${c.ultima_recarga_valor || "-"}</td>
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>${c.observacao ? `<i class='fas fa-comment-dots'></i>` : "-"}</td>
+                <td>${c.observacao ? "<i class='fas fa-comment'></i>" : "-"}</td>
                 <td><button class="chip-btn" data-id="${c.id_chip}">Editar</button></td>
             </tr>
         `;
@@ -366,13 +318,11 @@ function renderRows(lista) {
     bindEditButtons();
 }
 
-
-/* ========================
-    BOTÕES DE EDITAR
-===========================*/
+/* =============================
+    EDITAR
+============================= */
 function bindEditButtons() {
     document.querySelectorAll("button[data-id]").forEach(btn => {
-
         btn.onclick = async () => {
             const id = btn.dataset.id;
             const res = await fetch(`/chips/${id}`);
@@ -396,46 +346,45 @@ function bindEditButtons() {
     });
 }
 
-
-/* ========================
-    SALVAR NO MODAL
-===========================*/
+/* =============================
+    SALVAR DO MODAL
+============================= */
 document.getElementById("modalSaveBtn").onclick = async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify(data),
     });
 
     const r = await res.json();
     if (r.success) location.reload();
-    else alert("Erro ao salvar.");
 };
 
+/* =============================
+    FECHAR MODAL
+============================= */
 document.getElementById("modalCloseBtn").onclick = () => {
     document.getElementById("editModal").style.display = "none";
 };
 
-
-/* ========================
+/* =============================
     BUSCA DINÂMICA
-===========================*/
+============================= */
 document.getElementById("searchInput").addEventListener("input", e => {
-    const term = e.target.value.toLowerCase();
+    const t = e.target.value.toLowerCase();
 
-    const filtrados = chipsData.filter(chip =>
-        Object.values(chip).some(val =>
-            String(val || "").toLowerCase().includes(term)
+    renderRows(
+        chipsData.filter(c =>
+            Object.values(c).some(v =>
+                String(v || "").toLowerCase().includes(t)
+            )
         )
     );
-
-    renderRows(filtrados);
 });
 
-
-/* CARREGAMENTO INICIAL */
+/* INICIALIZA */
 renderRows(chipsData);
 </script>
 

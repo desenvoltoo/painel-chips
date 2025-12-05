@@ -282,13 +282,14 @@
 </div>
 
 <script>
-    let chipsData = {{ chips | tojson | safe }} || [];
+    // Garante que chipsData sempre será array
+    let chipsData = {{ chips | tojson | safe }};
+    if (!Array.isArray(chipsData)) chipsData = [];
 
     function formatDate(v) {
         if (!v) return "";
         v = String(v);
-        if (v.includes("T")) return v.split("T")[0];
-        return v;
+        return v.includes("T") ? v.split("T")[0] : v;
     }
 
     // ----------------------------------------------------------
@@ -305,6 +306,9 @@
         }
 
         lista.forEach(c => {
+            // segurança caso a view não tenha sk_chip
+            const sk = c.sk_chip ?? "";
+
             tbody.innerHTML += `
                 <tr>
                     <td>${c.id_chip ?? "-"}</td>
@@ -323,7 +327,7 @@
                     <td>
                         <button 
                             class="btn btn-primary btn-sm edit-btn"
-                            data-sk="${c.sk_chip}">
+                            data-sk="${sk}">
                             Editar
                         </button>
                     </td>
@@ -335,24 +339,34 @@
     }
 
     // ----------------------------------------------------------
-    // BOTÃO EDITAR — usa SK_CHIP corretamente
+    // BOTÃO EDITAR
     // ----------------------------------------------------------
     function bindEditButtons() {
         document.querySelectorAll(".edit-btn").forEach(btn => {
+
             btn.onclick = async () => {
                 const sk = btn.dataset.sk;
 
+                if (!sk) {
+                    alert("Erro: sk_chip ausente na view.");
+                    console.error("Linha sem sk_chip:", btn);
+                    return;
+                }
+
                 try {
                     const res = await fetch(`/chips/sk/${sk}`);
+
                     if (!res.ok) {
-                        alert("Erro ao buscar chip");
+                        alert("Erro ao buscar chip.");
                         return;
                     }
 
                     const chip = await res.json();
 
+                    // Abrir modal
                     document.getElementById("editModal").style.display = "flex";
 
+                    // Preenchimento modal
                     document.getElementById("modal_sk_chip").value = chip.sk_chip;
                     document.getElementById("modal_numero").value = chip.numero ?? "";
                     document.getElementById("modal_operadora").value = chip.operadora ?? "";
@@ -368,9 +382,9 @@
 
                     document.getElementById("modal_sk_aparelho_atual").value = chip.sk_aparelho_atual ?? "";
                     document.getElementById("modal_observacao").value = chip.observacao ?? "";
-                }
-                catch (e) {
-                    console.error(e);
+
+                } catch (e) {
+                    console.error("Erro no editar:", e);
                     alert("Erro inesperado ao carregar chip.");
                 }
             };
@@ -399,7 +413,7 @@
     };
 
     // ----------------------------------------------------------
-    // BUSCA DINÂMICA TOTALMENTE SEGURA
+    // BUSCA DINÂMICA (agora infalível)
     // ----------------------------------------------------------
     document.getElementById("searchInput").addEventListener("input", e => {
         const termo = e.target.value.toLowerCase();
@@ -413,7 +427,7 @@
         renderRows(filtrados);
     });
 
-    // Render inicial
+    // Carrega tabela ao iniciar
     renderRows(chipsData);
 </script>
 

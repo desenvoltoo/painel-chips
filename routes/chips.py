@@ -50,9 +50,9 @@ def chips_add():
                 '{dados.get("operador")}',
                 '{dados.get("status")}',
                 '{dados.get("plano")}',
-                '{dados.get("dt_inicio") or None}',
+                {'NULL' if not dados.get("dt_inicio") else f"'{dados.get('dt_inicio')}'"},
                 {dados.get("ultima_recarga_valor") or "NULL"},
-                '{dados.get("ultima_recarga_data") or None}',
+                {'NULL' if not dados.get("ultima_recarga_data") else f"'{dados.get('ultima_recarga_data')}'"},
                 {dados.get("total_gasto") or "NULL"},
                 {dados.get("sk_aparelho_atual") or "NULL"},
                 '{dados.get("observacao")}'
@@ -70,15 +70,15 @@ def chips_add():
 
 
 # ============================================================
-# 🔍 BUSCAR CHIP PELO SK (Usado pelo modal)
+# 🔍 BUSCAR CHIP PELO **ID_CHIP** (CORRETO PARA O SEU FRONT)
 # ============================================================
-@chips_bp.route("/chips/sk/<sk_chip>")
-def chips_get_by_sk(sk_chip):
+@chips_bp.route("/chips/<id_chip>")
+def chips_get(id_chip):
     try:
         query = f"""
             SELECT *
             FROM `painel-universidade.marts.vw_chips_painel`
-            WHERE sk_chip = {sk_chip}
+            WHERE id_chip = '{id_chip}'
             LIMIT 1
         """
 
@@ -90,13 +90,13 @@ def chips_get_by_sk(sk_chip):
         return jsonify(df.to_dict(orient="records")[0])
 
     except Exception as e:
-        print("❌ Erro ao buscar chip por SK:", e)
+        print("❌ Erro ao buscar chip:", e)
         return jsonify({"error": "Erro interno"}), 500
 
 
 
 # ============================================================
-# ✏️ ATUALIZAR CHIP (modal salva via JSON)
+# ✏️ ATUALIZAR CHIP (modal → JSON)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -111,13 +111,13 @@ def chips_update_json():
                 operador = '{data.get("operador")}',
                 status = '{data.get("status")}',
                 plano = '{data.get("plano")}',
-                dt_inicio = '{data.get("dt_inicio")}',
-                ultima_recarga_data = '{data.get("ultima_recarga_data")}',
+                dt_inicio = {'NULL' if not data.get("dt_inicio") else f"'{data.get('dt_inicio')}'"},
+                ultima_recarga_data = {'NULL' if not data.get("ultima_recarga_data") else f"'{data.get('ultima_recarga_data')}'"},
                 ultima_recarga_valor = {data.get("ultima_recarga_valor") or "NULL"},
                 total_gasto = {data.get("total_gasto") or "NULL"},
                 sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
                 observacao = '{data.get("observacao")}'
-            WHERE sk_chip = {data.get("sk_chip")}
+            WHERE id_chip = '{data.get("id_chip")}'
         """
 
         bq.execute_query(query)

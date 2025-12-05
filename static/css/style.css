@@ -250,7 +250,7 @@ body.sidebar-open .sidebar-toggle {
 /* Conteúdo quando sidebar está FECHADA */
 .content,
 .chip-container {
-    margin-left: 10px; /* mesma largura da sidebar collapsada */
+    margin-left: 15px; /* mesma largura da sidebar collapsada */
     padding: 2rem;
     padding-top: 3.5rem;
     transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);

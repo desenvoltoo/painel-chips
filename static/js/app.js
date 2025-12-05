@@ -23,7 +23,24 @@ let chipsData = window.chipsData || [];
 let aparelhosData = window.aparelhosData || [];
 
 /* ============================================================
-   FORMATAR DATA
+   LISTA DE STATUS – PADRÃO DO SISTEMA
+============================================================ */
+const STATUS_LIST = [
+    "DISPONIVEL",
+    "MATURANDO",
+    "MATURADO",
+    "DESCANSO_1",
+    "DESCANSO_2",
+    "PRONTO_PARA_MATURAR",
+    "DISPARANDO",
+    "BANIDO",
+    "RESTRINGIDO",
+    "ATIVO",
+    "BLOQUEADO"
+];
+
+/* ============================================================
+   FUNÇÃO: FORMATAR DATA
 ============================================================ */
 function formatDate(v) {
     if (!v) return "";
@@ -32,7 +49,7 @@ function formatDate(v) {
 }
 
 /* ============================================================
-   RENDER TABELA
+   RENDER TABELA DE CHIPS
 ============================================================ */
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
@@ -51,9 +68,11 @@ function renderRows(lista) {
                 <td>${c.operadora ?? "-"}</td>
                 <td>${c.operador ?? "-"}</td>
 
-                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">
-                    ${c.status ?? "-"}
-                </span></td>
+                <td>
+                    <span class="status-badge status-${(c.status || "").toLowerCase()}">
+                        ${c.status ?? "-"}
+                    </span>
+                </td>
 
                 <td>${c.plano ?? "-"}</td>
                 <td>${formatDate(c.ultima_recarga_data) || "-"}</td>
@@ -68,14 +87,15 @@ function renderRows(lista) {
                         Editar
                     </button>
                 </td>
-            </tr>`;
+            </tr>
+        `;
     });
 
     bindEditButtons();
 }
 
 /* ============================================================
-   FUNÇÃO PARA SETAR INPUTS
+   FUNÇÃO AJUDA: SETAR VALOR
 ============================================================ */
 function setValue(id, v) {
     const el = document.getElementById(id);
@@ -83,11 +103,28 @@ function setValue(id, v) {
 }
 
 /* ============================================================
-   BOTÃO EDITAR
+   PREENCHE SELECT STATUS
+============================================================ */
+function preencherStatus(valorAtual) {
+    const select = document.getElementById("modal_status");
+    select.innerHTML = ""; 
+    
+    STATUS_LIST.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        if (s === valorAtual) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+/* ============================================================
+   BOTÃO EDITAR — ABRE MODAL E PREENCHE DADOS
 ============================================================ */
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.addEventListener("click", async () => {
+
             const sk = btn.dataset.sk;
 
             const res = await fetch(`/chips/sk/${sk}`);
@@ -95,21 +132,26 @@ function bindEditButtons() {
 
             document.getElementById("editModal").style.display = "flex";
 
+            // CAMPOS SIMPLES
             setValue("modal_sk_chip", chip.sk_chip);
             setValue("modal_numero", chip.numero);
             setValue("modal_operadora", chip.operadora);
             setValue("modal_operador", chip.operador);
-            setValue("modal_status", chip.status);
             setValue("modal_plano", chip.plano);
+            setValue("modal_observacao", chip.observacao);
 
+            // STATUS
+            preencherStatus(chip.status);
+
+            // DATAS
             setValue("modal_dt_inicio", formatDate(chip.dt_inicio));
             setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
 
+            // NÚMEROS
             setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
             setValue("modal_total_gasto", chip.total_gasto);
-            setValue("modal_observacao", chip.observacao);
 
-            // aparelhos
+            // SELECT DE APARELHOS
             const select = document.getElementById("modal_sk_aparelho_atual");
             select.innerHTML = `<option value="">— Nenhum —</option>`;
 
@@ -117,11 +159,7 @@ function bindEditButtons() {
                 const opt = document.createElement("option");
                 opt.value = ap.sk_aparelho;
                 opt.textContent = `${ap.modelo} (${ap.marca})`;
-
-                if (chip.sk_aparelho_atual == ap.sk_aparelho) {
-                    opt.selected = true;
-                }
-
+                if (chip.sk_aparelho_atual == ap.sk_aparelho) opt.selected = true;
                 select.appendChild(opt);
             });
 
@@ -137,9 +175,10 @@ document.getElementById("modalCloseBtn").addEventListener("click", () => {
 });
 
 /* ============================================================
-   SALVAR
+   SALVAR ALTERAÇÕES
 ============================================================ */
 document.getElementById("modalSaveBtn").addEventListener("click", async () => {
+
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
@@ -170,6 +209,6 @@ document.getElementById("searchInput").addEventListener("input", e => {
 });
 
 /* ============================================================
-   RENDER INICIAL
+   RENDERIZAÇÃO INICIAL
 ============================================================ */
 renderRows(chipsData);

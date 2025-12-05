@@ -11,136 +11,128 @@ body {
     font-family: 'Inter', sans-serif;
     background: #0b0f1a;
     color: #e2e8f0;
+    line-height: 1.6;
     min-height: 100vh;
+}
+
+/* ============================================================
+   CONTAINER GLOBAL
+============================================================ */
+.container,
+.content,
+.chip-container {
+    width: 100%;
+    padding: 1.6rem;
+    transition: 0.25s ease-in-out;
     overflow-x: hidden;
 }
 
-/* Container geral */
-.container {
-    width: 100%;
-    padding: 0 1rem;
-}
-
-
 /* ============================================================
-   SIDEBAR PREMIUM – FECHADA POR PADRÃO (75PX)
+   SIDEBAR PREMIUM – NEON MODERADO
 ============================================================ */
 .sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    width: 75px;                 /* FECHADA FIXO */
+    width: 75px; /* Recolhida por padrão */
     height: 100vh;
     background: #0d1320;
-    border-right: 1px solid #1e3a8a55;
-    padding: 25px 10px;
+    border-right: 1px solid #1e3a8a66;
+    padding: 25px 12px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    transition: width 0.25s ease;
+    gap: 18px;
+    transition: width 0.25s ease-in-out;
     z-index: 9999;
 }
 
-/* ABERTA */
+/* Sidebar aberta */
 .sidebar.open {
     width: 240px;
-    padding: 25px 18px;
 }
 
-/* Títulos */
+/* Título escondido na sidebar recolhida */
 .side-title {
-    color: #fff;
+    font-size: 1.25rem;
     font-weight: 700;
     text-align: center;
-    opacity: 0;
-    transition: 0.25s;
+    margin-bottom: 20px;
 }
 
-.sidebar.open .side-title {
-    opacity: 1;
+.sidebar:not(.open) .side-title {
+    display: none;
 }
 
 /* Links */
 .sidebar a {
     display: flex;
     align-items: center;
-    padding: 12px;
-    border-radius: 8px;
     gap: 14px;
+    padding: 12px;
+    text-decoration: none;
+    border-radius: 8px;
     color: #cbd5e1;
-    transition: 0.25s ease;
-    white-space: nowrap;
-}
-
-.sidebar a i {
-    font-size: 1.25rem;
-}
-
-.sidebar a span {
-    display: none;
-}
-
-.sidebar.open a span {
-    display: inline;
+    transition: 0.25s ease-in-out;
 }
 
 .sidebar a:hover {
     background: #1e3a8a;
-    color: #fff;
+    color: white;
 }
 
-/* Botão hamburguer */
+.sidebar:not(.open) a span {
+    display: none;
+}
+
+/* Botão toggle */
 .sidebar-toggle {
-    position: absolute;
-    top: 15px;
-    right: -18px;
-    width: 36px;
-    height: 36px;
+    position: fixed;
+    top: 18px;
+    left: 110px; /* acompanha os 3cm de distância */
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: #1e3a8a;
     border: none;
     cursor: pointer;
-    box-shadow: 0 0 10px #000;
+    background: #1e3a8a;
+    color: white;
+    font-size: 1.2rem;
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: 0.25s ease-in-out;
     z-index: 999999;
 }
 
-.sidebar-toggle i {
-    color: white;
-    font-size: 1.15rem;
+.sidebar.open + .sidebar-toggle {
+    left: 265px;
 }
-
-.sidebar-toggle:hover {
-    background: #2563eb;
-}
-
 
 /* ============================================================
-   CONTEÚDO PRINCIPAL (sempre alinhado no canto)
+   DISTÂNCIA ENTRE SIDEBAR E CONTEÚDO (3 cm ≈ 40px)
 ============================================================ */
-.chip-container {
-    margin-left: 90px;           /* Sidebar fechada */
-    padding: 2rem 1rem;
-    transition: margin-left .25s ease;
+.chip-container,
+.content,
+.container {
+    margin-left: 115px !important; /* 75px sidebar + 40px respiro */
+    max-width: calc(100% - 130px);
 }
 
-.sidebar.open ~ .chip-container {
-    margin-left: 260px;          /* Sidebar aberta */
+.sidebar.open ~ .chip-container,
+.sidebar.open ~ .content,
+.sidebar.open ~ .container {
+    margin-left: 280px !important; /* 240px sidebar + 40px respiro */
+    max-width: calc(100% - 300px);
 }
-
 
 /* ============================================================
    HEADER
 ============================================================ */
 .chip-header {
     background: #0d1320;
-    border-bottom: 1px solid #1e3a8a44;
+    border-bottom: 1px solid #1e3a8a33;
     padding: 1.3rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    margin-bottom: 1rem;
 }
 
 .chip-header-content {
@@ -150,10 +142,10 @@ body {
 }
 
 .icon-wrapper {
-    background: rgba(37,99,235,.25);
-    padding: .8rem;
-    border-radius: .8rem;
-    box-shadow: 0 0 10px rgba(37,99,235,.3);
+    background: rgba(37, 99, 235, 0.2);
+    padding: 0.8rem;
+    border-radius: 0.8rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .icon-wrapper i {
@@ -162,69 +154,39 @@ body {
 }
 
 .chip-title {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 700;
-    color: #fff;
+    color: #f8fafc;
 }
 
 .chip-subtitle {
-    opacity: .7;
+    font-size: 0.95rem;
+    opacity: 0.75;
 }
 
-
 /* ============================================================
-   CARDS
+   CARDS PREMIUM
 ============================================================ */
 .chip-card {
     background: #111827;
     border-radius: 14px;
-    border: 1px solid #1e3a8a44;
-    margin-top: 1.4rem;
-    box-shadow: 0 4px 12px #0006;
-}
-
-.chip-card-header {
-    display: flex;
-    align-items: center;
-    gap: .8rem;
-    padding: 1.3rem 1.5rem;
-    border-bottom: 1px solid #1e3a8a44;
-}
-
-.card-icon {
-    background: rgba(37,99,235,.25);
-    padding: .5rem;
-    border-radius: 8px;
-}
-
-.card-icon i {
-    font-size: 1.2rem;
-    color: #60a5fa;
-}
-
-.card-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.card-content {
+    border: 1px solid #1e3a8a55;
     padding: 1.5rem;
+    margin-bottom: 1.8rem;
+    transition: 0.2s ease;
 }
 
+.chip-card:hover {
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.28);
+}
 
 /* ============================================================
-   FORMULÁRIO
+   FORMULÁRIOS PREMIUM
 ============================================================ */
-.chip-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.4rem;
-}
-
 .form-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.1rem;
+    gap: 1.2rem;
 }
 
 .form-group {
@@ -237,56 +199,48 @@ body {
     grid-column: span 3;
 }
 
-.form-group label {
-    font-size: .9rem;
-    color: #cbd5e1;
-}
-
 .form-group input,
 .form-group select,
 .form-group textarea {
     background: #0b1120;
     border: 1px solid #1e293b;
-    color: #e2e8f0;
     padding: .75rem;
     border-radius: 8px;
-    transition: .2s;
+    font-size: .95rem;
+    color: #e2e8f0;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     border-color: #2563eb;
-    box-shadow: 0 0 8px rgba(37,99,235,.4);
+    box-shadow: 0 0 6px rgba(37, 99, 235, 0.4);
+    outline: none;
 }
 
-/* Botão */
 .chip-btn {
     background: linear-gradient(135deg, #1e3a8a, #2563eb);
     color: white;
-    padding: .8rem 1.4rem;
+    padding: 0.9rem 1.5rem;
     border-radius: 8px;
-    cursor: pointer;
     border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
+    cursor: pointer;
     font-weight: 600;
-    transition: .25s ease;
+    margin-top: 1rem;
+    transition: 0.25s;
 }
 
 .chip-btn:hover {
-    box-shadow: 0 0 12px rgba(37,99,235,.5);
     transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.6);
 }
 
-
 /* ============================================================
-   TABELA
+   TABELA PREMIUM
 ============================================================ */
 .chip-table-wrapper {
-    width: 100%;
     overflow-x: auto;
+    border-radius: 12px;
 }
 
 .chip-table {
@@ -297,8 +251,9 @@ body {
 
 .chip-table th {
     background: #0d1320;
+    padding: .85rem;
+    text-align: left;
     color: #60a5fa;
-    padding: .9rem;
     border-bottom: 1px solid #1e3a8a55;
 }
 
@@ -307,45 +262,54 @@ body {
     border-bottom: 1px solid #1f2a3c;
 }
 
-.chip-table tr:hover {
+.chip-table tbody tr:hover {
     background: #1a2238;
 }
 
-
 /* ============================================================
-   BADGES
+   BADGES DE STATUS
 ============================================================ */
 .status-badge {
-    padding: .35rem .75rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 999px;
-    font-size: .78rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
 }
 
+.status-disponivel { background:#065f46;color:#d1fae5 }
+.status-maturando { background:#78350f;color:#fde68a }
+.status-maturado { background:#1e3a8a;color:#bfdbfe }
+.status-descanso_1,.status-descanso_2 { background:#6d28d9;color:#f3e8ff }
+.status-pronto_para_maturar { background:#0f766e;color:#99f6e4 }
+.status-disparando { background:#3730a3;color:#c7d2fe }
+.status-banido { background:#7f1d1d;color:#fecaca }
+.status-restringido { background:#9a3412;color:#fed7aa }
+.status-ativo { background:#047857;color:#d1fae5 }
+.status-bloqueado { background:#7f1d1d;color:#fee2e2 }
 
 /* ============================================================
-   MODAL PREMIUM – Editar Chip
+   MODAL PREMIUM – NEON MODERADO
 ============================================================ */
 .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.6);
+    background: rgba(0,0,0,0.65);
     justify-content: center;
     align-items: center;
-    z-index: 999999;
+    z-index: 99999;
 }
 
 .modal-content {
     background: #0f172a;
-    border: 1px solid #1e3a8a55;
+    border: 1px solid #1e3a8a66;
     border-radius: 14px;
     width: 90%;
     max-width: 520px;
     max-height: 88vh;
     overflow-y: auto;
     padding: 1.5rem;
+    box-shadow: 0 0 25px rgba(30,58,138,0.35);
 }
 
 .modal-grid {
@@ -359,30 +323,26 @@ body {
 }
 
 .modal-actions {
+    grid-column: span 2;
     display: flex;
     gap: 1rem;
-    grid-column: span 2;
 }
 
 .chip-btn.cancel {
     background: #3b3b3b;
 }
 
-
 /* ============================================================
    RESPONSIVIDADE
 ============================================================ */
 @media (max-width: 900px) {
-    .sidebar {
-        display: none;
-    }
-    .chip-container {
-        margin-left: 0 !important;
-        padding: 1.3rem;
-    }
+    .sidebar { display: none; }
+    .sidebar-toggle { left: 20px !important; }
+    .chip-container { margin-left: 0 !important; max-width: 100% !important; }
 }
 
-@media (max-width: 650px) {
+@media (max-width: 600px) {
+
     .form-row {
         grid-template-columns: 1fr;
     }
@@ -390,5 +350,8 @@ body {
     .modal-grid {
         grid-template-columns: 1fr;
     }
-}
 
+    .chip-container {
+        padding: 1rem;
+    }
+}

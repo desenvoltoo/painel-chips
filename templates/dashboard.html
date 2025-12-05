@@ -1,253 +1,346 @@
 {% extends "base.html" %}
-{% block title %}Dashboard Geral{% endblock %}
 {% block content %}
 
-<!-- ===========================================================
-     HEADER PREMIUM — PADRÃO DO PAINEL
-=========================================================== -->
-<header class="chip-header">
-    <div class="chip-header-content">
-        <div class="icon-wrapper">
-            <i class="fa-solid fa-chart-pie"></i>
-        </div>
-        <div>
-            <h1 class="chip-title">Dashboard Geral de Chips</h1>
-            <p class="chip-subtitle">Análise operacional, status e desempenho em tempo real</p>
-        </div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+
+    /* ===================== ESTILO GLOBAL ===================== */
+    body { color: white !important; }
+
+    .dash-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* ===================== KPI CARDS ===================== */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+
+    .kpi-card {
+        background: linear-gradient(135deg, #141b2d, #0d1320);
+        border: 1px solid #1e3a8a55;
+        padding: 22px;
+        border-radius: 16px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+        transition: 0.25s ease;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 30px rgba(0,0,0,0.5);
+        border-color: #2563eb55;
+    }
+
+    .kpi-card h3 {
+        margin: 0;
+        font-size: 1rem;
+        opacity: .85;
+    }
+
+    .kpi-value {
+        margin-top: 10px;
+        font-size: 2.3rem;
+        font-weight: 700;
+        color: #60a5fa;
+    }
+
+    /* ===================== FILTROS ===================== */
+    .filter-card {
+        background: #111827;
+        border: 1px solid #1e3a8a55;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 30px;
+    }
+
+    .filter-card select {
+        margin-top: 12px;
+        background: #0f172a;
+        color: white;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    /* ===================== ALERTA ===================== */
+    .alerta-box {
+        background: #1b1b1b;
+        padding: 18px;
+        border-radius: 16px;
+        border-left: 6px solid #ff3333;
+        margin-bottom: 30px;
+        box-shadow: 0 0 15px #0006;
+    }
+
+    .alerta-box h3 {
+        margin-bottom: 12px;
+    }
+
+    .alerta-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: .9rem;
+    }
+
+    .alerta-table th {
+        padding: 10px;
+        background: #111;
+        border-bottom: 1px solid #333;
+        color: #bbb;
+    }
+
+    .alerta-table td {
+        padding: 10px;
+        border-bottom: 1px solid #222;
+        color: #ddd;
+    }
+
+    /* ===================== GRÁFICOS ===================== */
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 20px;
+        margin-top: 25px;
+    }
+
+    .chart-card {
+        background: #111827;
+        border: 1px solid #1e3a8a55;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 0 20px #0005;
+    }
+
+    /* ===================== TABELA ===================== */
+    .table-section-title {
+        margin-top: 45px;
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+    }
+
+    .tabela {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: .9rem;
+    }
+
+    .tabela th {
+        background: #0f172a;
+        padding: 12px;
+        border-bottom: 1px solid #1e3a8a;
+        color: #60a5fa;
+        text-align: left;
+    }
+
+    .tabela td {
+        padding: 12px;
+        border-bottom: 1px solid #1e293b;
+        color: #e2e8f0;
+    }
+
+    .tabela tr:hover {
+        background: #1b2333;
+    }
+
+    .status {
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: white;
+        text-transform: uppercase;
+    }
+
+</style>
+
+
+<h1 class="dash-title">
+    <i class="fa-solid fa-chart-pie"></i> Dashboard Geral de Chips
+</h1>
+
+
+<!-- ===================== KPI CARDS ===================== -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <h3>Total de Chips</h3>
+        <div class="kpi-value">{{ total_chips }}</div>
     </div>
-</header>
 
-<main class="chip-container">
+    <div class="kpi-card">
+        <h3>Chips Ativos</h3>
+        <div class="kpi-value">{{ chips_ativos }}</div>
+    </div>
 
-    <!-- ===========================================================
-         KPI CARDS — VISÃO RÁPIDA
-    ============================================================ -->
-    <section class="chip-card">
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fa-solid fa-gauge-high"></i></div>
-            <h2 class="card-title">Indicadores Gerais</h2>
-        </div>
+    <div class="kpi-card">
+        <h3>Disparando Agora</h3>
+        <div class="kpi-value">{{ disparando }}</div>
+    </div>
 
-        <div class="kpi-grid">
-
-            <div class="kpi-card">
-                <h3><i class="fa-solid fa-database"></i> Total de Chips</h3>
-                <div class="kpi-value">{{ total_chips }}</div>
-            </div>
-
-            <div class="kpi-card">
-                <h3><i class="fa-solid fa-signal"></i> Ativos</h3>
-                <div class="kpi-value">{{ chips_ativos }}</div>
-            </div>
-
-            <div class="kpi-card">
-                <h3><i class="fa-solid fa-bullhorn"></i> Disparando</h3>
-                <div class="kpi-value">{{ disparando }}</div>
-            </div>
-
-            <div class="kpi-card">
-                <h3><i class="fa-solid fa-ban"></i> Banidos</h3>
-                <div class="kpi-value">{{ banidos }}</div>
-            </div>
-
-        </div>
-    </section>
+    <div class="kpi-card">
+        <h3>Banidos</h3>
+        <div class="kpi-value">{{ banidos }}</div>
+    </div>
+</div>
 
 
-    <!-- ===========================================================
-         FILTRO POR STATUS
-    ============================================================ -->
-    <section class="chip-card">
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fa-solid fa-filter"></i></div>
-            <h2 class="card-title">Filtrar por Status</h2>
-        </div>
-
-        <div class="card-content">
-            <select id="filtroStatus" class="chip-select">
-                <option value="">Todos</option>
-                {% for s in lista_status %}
-                <option value="{{ s }}">{{ s }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </section>
+<!-- ===================== FILTRO ===================== -->
+<div class="filter-card">
+    <h3>Filtrar Chips por Status</h3>
+    <select id="filtroStatus">
+        <option value="">Todos</option>
+        {% for s in lista_status %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+    </select>
+</div>
 
 
-    <!-- ===========================================================
-         ALERTAS — RECARGA
-    ============================================================ -->
-    {% if qtd_alerta > 0 %}
-    <section class="chip-card alerta-box">
+<!-- ===================== ALERTAS ===================== -->
+{% if qtd_alerta > 0 %}
+<div class="alerta-box">
+    <h3><i class="fa-solid fa-circle-exclamation"></i> Chips sem recarga há mais de 80 dias: {{ qtd_alerta }}</h3>
 
-        <div class="chip-card-header">
-            <div class="card-icon alert"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <h2 class="card-title">Chips sem recarga há 80+ dias ({{ qtd_alerta }})</h2>
-        </div>
-
-        <table class="alerta-table">
-            <thead>
-                <tr>
-                    <th>Número</th>
-                    <th>Status</th>
-                    <th>Operadora</th>
-                    <th>Última Recarga</th>
-                    <th>Dias</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in alerta_recarga %}
-                <tr>
-                    <td>{{ row.numero }}</td>
-                    <td>
-                        <span class="status status-{{ row.status|lower }}">
-                            {{ row.status }}
-                        </span>
-                    </td>
-                    <td>{{ row.operadora }}</td>
-                    <td>{{ row.ultima_recarga_data }}</td>
-                    <td style="color:#ff7777; font-weight:bold;">{{ row.dias_sem_recarga }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-    </section>
-    {% endif %}
+    <table class="alerta-table">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Status</th>
+                <th>Operadora</th>
+                <th>Última Recarga</th>
+                <th>Dias</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in alerta_recarga %}
+            <tr>
+                <td>{{ row.numero }}</td>
+                <td>{{ row.status }}</td>
+                <td>{{ row.operadora }}</td>
+                <td>{{ row.ultima_recarga_data }}</td>
+                <td style="color:#ff7777; font-weight:bold;">{{ row.dias_sem_recarga }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 
 
-    <!-- ===========================================================
-         GRÁFICOS — STATUS E OPERADORAS
-    ============================================================ -->
-    <section class="chip-card">
+<!-- ===================== GRÁFICOS ===================== -->
+<div class="chart-grid">
+    <div class="chart-card">
+        <h3>Distribuição por Status</h3>
+        <canvas id="chartStatus"></canvas>
+    </div>
 
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fa-solid fa-chart-simple"></i></div>
-            <h2 class="card-title">Distribuições Gerais</h2>
-        </div>
-
-        <div class="chart-grid">
-
-            <div class="chart-card">
-                <h3>Status dos Chips</h3>
-                <canvas id="chartStatus"></canvas>
-            </div>
-
-            <div class="chart-card">
-                <h3>Operadoras</h3>
-                <canvas id="chartOperadora"></canvas>
-            </div>
-
-        </div>
-
-    </section>
+    <div class="chart-card">
+        <h3>Operadoras</h3>
+        <canvas id="chartOperadora"></canvas>
+    </div>
+</div>
 
 
-    <!-- ===========================================================
-         TABELA COMPLETA
-    ============================================================ -->
-    <section class="chip-card">
+<!-- ===================== TABELA COMPLETA ===================== -->
+<h2 class="table-section-title">Lista Completa</h2>
 
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fa-solid fa-table"></i></div>
-            <h2 class="card-title">Lista Completa de Chips</h2>
-        </div>
-
-        <div class="card-content">
-            <table class="chip-table">
-                <thead>
-                    <tr>
-                        <th>Número</th>
-                        <th>Operadora</th>
-                        <th>Plano</th>
-                        <th>Status</th>
-                        <th>Última Recarga</th>
-                        <th>Aparelho Atual</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in tabela %}
-                    <tr>
-                        <td>{{ r.numero }}</td>
-                        <td>{{ r.operadora }}</td>
-                        <td>{{ r.plano }}</td>
-                        <td>
-                            <span class="status-badge status-{{ r.status|lower|replace(' ','_') }}">
-                                {{ r.status }}
-                            </span>
-                        </td>
-                        <td>{{ r.ultima_recarga_data }}</td>
-                        <td>
-                            {% if r.marca_aparelho %}
-                                {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-    </section>
-
-</main>
+<table class="tabela" id="tabelaChips">
+    <thead>
+        <tr>
+            <th>Número</th>
+            <th>Operadora</th>
+            <th>Plano</th>
+            <th>Status</th>
+            <th>Última Recarga</th>
+            <th>Aparelho Atual</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in tabela %}
+        <tr>
+            <td>{{ r.numero }}</td>
+            <td>{{ r.operadora }}</td>
+            <td>{{ r.plano }}</td>
+            <td>
+                <span class="status status-{{ r.status|lower|replace(' ','_') }}">
+                    {{ r.status }}
+                </span>
+            </td>
+            <td>{{ r.ultima_recarga_data }}</td>
+            <td>
+                {% if r.marca_aparelho %}
+                    {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 
-<!-- ===========================================================
-     CHARTS + FILTRO SCRIPT
-=========================================================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+    const tabela = {{ tabela | tojson }};
+    const lista_status = {{ lista_status | tojson }};
+    const lista_operadora = {{ lista_operadora | tojson }};
 
-const tabela = {{ tabela | tojson }};
-const lista_status = {{ lista_status | tojson }};
-const lista_operadora = {{ lista_operadora | tojson }};
-
-
-/* ------------------ GRÁFICO: STATUS ------------------ */
-new Chart(document.getElementById("chartStatus"), {
-    type: "pie",
-    data: {
-        labels: lista_status,
-        datasets: [{
-            data: lista_status.map(s => tabela.filter(r => r.status === s).length),
-            backgroundColor: ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
-        }]
-    }
-});
-
-
-/* ------------------ GRÁFICO: OPERADORAS ------------------ */
-new Chart(document.getElementById("chartOperadora"), {
-    type: "bar",
-    data: {
-        labels: lista_operadora,
-        datasets: [{
-            data: lista_operadora.map(o => tabela.filter(r => r.operadora === o).length),
-            backgroundColor: "#2563eb"
-        }]
-    },
-    options: {
-        scales: {
-            y: { ticks: { color: "#e2e8f0" } },
-            x: { ticks: { color: "#e2e8f0" } }
+    /* ===================== GRÁFICO DE STATUS ===================== */
+    new Chart(document.getElementById("chartStatus"), {
+        type: "pie",
+        data: {
+            labels: lista_status,
+            datasets: [{
+                data: lista_status.map(s =>
+                    tabela.filter(x => (x.status || "").toUpperCase() === s).length
+                ),
+                backgroundColor: ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
+            }]
         }
-    }
-});
-
-
-/* ------------------ FILTRO DA LISTA ------------------ */
-document.getElementById("filtroStatus").addEventListener("change", function() {
-    const filtro = this.value.toUpperCase();
-
-    document.querySelectorAll(".chip-table tbody tr").forEach(l => {
-        const st = l.children[3].innerText.toUpperCase();
-        l.style.display = (!filtro || filtro === st) ? "" : "none";
     });
-});
+
+    /* ===================== GRÁFICO DE OPERADORAS ===================== */
+    new Chart(document.getElementById("chartOperadora"), {
+        type: "bar",
+        data: {
+            labels: lista_operadora,
+            datasets: [{
+                data: lista_operadora.map(o =>
+                    tabela.filter(x => (x.operadora || "") === o).length
+                ),
+                backgroundColor: "#2563eb"
+            }]
+        },
+        options: {
+            scales: {
+                y: { ticks: { color: "#e2e8f0" } },
+                x: { ticks: { color: "#e2e8f0" } }
+            }
+        }
+    });
+
+    /* ===================== FILTRO ===================== */
+    document.getElementById("filtroStatus").addEventListener("change", function() {
+        const filtro = this.value.toUpperCase();
+        const linhas = document.querySelectorAll("#tabelaChips tbody tr");
+
+        linhas.forEach(l => {
+            const status = l.children[3].innerText.toUpperCase();
+            l.style.display = (filtro === "" || filtro === status) ? "" : "none";
+        });
+    });
 
 </script>
 

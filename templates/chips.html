@@ -9,9 +9,7 @@
 <header class="chip-header">
     <div class="container">
         <div class="chip-header-content">
-            <div class="icon-wrapper">
-                <i class="fas fa-sim-card"></i>
-            </div>
+            <div class="icon-wrapper"><i class="fas fa-sim-card"></i></div>
             <div class="header-text">
                 <h1 class="chip-title">Gestão de Chips</h1>
                 <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
@@ -22,9 +20,9 @@
 
 <main class="container chip-container">
 
-    <!-- ============================
-         CARD NOVO CHIP
-    ============================= -->
+    <!-- =====================================
+         CARD: NOVO CHIP
+    ====================================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -34,7 +32,6 @@
         <div class="card-content">
             <form action="/chips/add" method="POST" class="chip-form">
 
-                <!-- LINHA 1 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>ID do Chip *</label>
@@ -58,7 +55,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 2 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Operador</label>
@@ -88,7 +84,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 3 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Data Status</label>
@@ -106,7 +101,6 @@
                     </div>
                 </div>
 
-                <!-- LINHA 4 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label>Total Gasto</label>
@@ -118,15 +112,12 @@
                         <select name="sk_aparelho_atual">
                             <option value="">— Nenhum —</option>
                             {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}">
-                                    {{ ap.modelo }} ({{ ap.marca }})
-                                </option>
+                            <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
-                <!-- LINHA 5 -->
                 <div class="form-row">
                     <div class="form-group full">
                         <label>Observação</label>
@@ -143,9 +134,9 @@
     </section>
 
 
-    <!-- ============================
-         CARD TABELA
-    ============================= -->
+    <!-- =====================================
+         CARD: LISTA DE CHIPS
+    ====================================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-list"></i></div>
@@ -188,9 +179,11 @@
 
 </main>
 
-<!-- ============================
-     CARD DE EDIÇÃO PREMIUM
-============================= -->
+
+
+<!-- ======================================================
+     CARD DE EDIÇÃO (COM SK_CHIP CORRIGIDO)
+====================================================== -->
 <div id="editCardOverlay" class="edit-overlay">
     <div class="edit-card">
 
@@ -201,7 +194,7 @@
 
         <form id="editForm" class="edit-form-grid">
 
-            <input type="hidden" name="id_chip" id="edit_id_chip">
+            <input type="hidden" name="sk_chip" id="edit_sk_chip">
 
             <div class="form-group">
                 <label>Número</label>
@@ -283,29 +276,23 @@
 </div>
 
 
-<!-- ============================
-     JAVASCRIPT DO CARD
-============================= -->
+
+<!-- ======================================================
+     JAVASCRIPT — CORRIGIDO PARA USAR SK_CHIP
+====================================================== -->
 
 <script>
 let chipsData = {{ chips | tojson | safe }};
 
-// ----------------------
-// Formatador de datas
-// ----------------------
 function formatDate(dateStr) {
     if (!dateStr) return "";
-    try {
-        if (dateStr.includes("T")) return dateStr.split("T")[0];
-        return dateStr;
-    } catch {
-        return "";
-    }
+    if (dateStr.includes("T")) return dateStr.split("T")[0];
+    return dateStr;
 }
 
-// ----------------------
-// Render Tabela
-// ----------------------
+// ==========================
+// RENDERIZA TABELA
+// ==========================
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
@@ -327,7 +314,7 @@ function renderRows(lista) {
                 <td>${c.observacao || "-"}</td>
 
                 <td>
-                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">
+                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.sk_chip}">
                         Editar
                     </button>
                 </td>
@@ -338,45 +325,44 @@ function renderRows(lista) {
     bindEditButtons();
 }
 
-// ----------------------
-// Clique em EDITAR
-// ----------------------
+// ==========================
+// BOTÃO EDITAR
+// ==========================
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
-            const id = btn.dataset.id;
-            const res = await fetch(`/chips/${id}`);
+
+            const sk = btn.dataset.id;
+            const res = await fetch(`/chips/sk/${sk}`);
             const chip = await res.json();
 
             document.getElementById("editCardOverlay").style.display = "flex";
 
-            document.getElementById("edit_id_chip").value = chip.id_chip;
+            document.getElementById("edit_sk_chip").value = chip.sk_chip;
             document.getElementById("edit_numero").value = chip.numero;
             document.getElementById("edit_operadora").value = chip.operadora;
             document.getElementById("edit_operador").value = chip.operador || "";
             document.getElementById("edit_status").value = chip.status;
-
             document.getElementById("edit_dt_inicio").value = formatDate(chip.dt_inicio);
             document.getElementById("edit_ultima_recarga_data").value = formatDate(chip.ultima_recarga_data);
             document.getElementById("edit_ultima_recarga_valor").value = chip.ultima_recarga_valor || "";
             document.getElementById("edit_total_gasto").value = chip.total_gasto || "";
-
             document.getElementById("edit_sk_aparelho_atual").value = chip.sk_aparelho_atual || "";
             document.getElementById("edit_observacao").value = chip.observacao || "";
         };
     });
 }
 
-// ----------------------
+// ==========================
 // FECHAR CARD
-// ----------------------
+// ==========================
 document.getElementById("editCloseBtn").onclick = () => {
     document.getElementById("editCardOverlay").style.display = "none";
 };
 
-// ----------------------
-// SALVAR ALTERAÇÕES
-// ----------------------
+// ==========================
+// SALVAR
+// ==========================
 document.getElementById("editSaveBtn").onclick = async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("editForm")));
 
@@ -391,9 +377,6 @@ document.getElementById("editSaveBtn").onclick = async () => {
     else alert("Erro ao salvar.");
 };
 
-// ----------------------
-// Render inicial
-// ----------------------
 renderRows(chipsData);
 </script>
 

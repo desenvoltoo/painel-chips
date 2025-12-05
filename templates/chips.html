@@ -4,8 +4,7 @@
 {% block content %}
 
 <link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <header class="chip-header">
     <div class="container">
@@ -23,7 +22,7 @@
 
 <main class="container chip-container">
 
-    <!-- CARD NOVO CHIP -->
+    <!-- NOVO CHIP -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon"><i class="fas fa-plus"></i></div>
@@ -136,7 +135,6 @@
         </div>
     </section>
 
-
     <!-- TABELA -->
     <section class="chip-card">
         <div class="chip-card-header">
@@ -148,8 +146,7 @@
 
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input"
-                       placeholder="Buscar chips...">
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
             </div>
 
             <div class="chip-table-wrapper">
@@ -187,6 +184,7 @@
         <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
+
             <input type="hidden" name="sk_chip" id="modal_sk_chip">
 
             <div class="form-group">
@@ -212,19 +210,7 @@
 
             <div class="form-group">
                 <label>Status</label>
-                <select name="status" id="modal_status">
-                    <option>DISPONIVEL</option>
-                    <option>MATURANDO</option>
-                    <option>MATURADO</option>
-                    <option>DESCANSO_1</option>
-                    <option>DESCANSO_2</option>
-                    <option>PRONTO_PARA_MATURAR</option>
-                    <option>DISPARANDO</option>
-                    <option>BANIDO</option>
-                    <option>RESTRINGIDO</option>
-                    <option>ATIVO</option>
-                    <option>BLOQUEADO</option>
-                </select>
+                <select name="status" id="modal_status"></select>
             </div>
 
             <div class="form-group">
@@ -244,8 +230,7 @@
 
             <div class="form-group">
                 <label>Valor Última Recarga</label>
-                <input type="number" step="0.01"
-                       name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
             </div>
 
             <div class="form-group">
@@ -255,12 +240,7 @@
 
             <div class="form-group full">
                 <label>Aparelho Vinculado</label>
-                <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
-                    <option value="">— Nenhum —</option>
-                    {% for ap in aparelhos %}
-                        <option value="{{ ap.sk_aparelho }}">{{ ap.modelo }} ({{ ap.marca }})</option>
-                    {% endfor %}
-                </select>
+                <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual"></select>
             </div>
 
             <div class="form-group full">
@@ -277,7 +257,15 @@
     </div>
 </div>
 
-<!-- ARQUIVO JS EXTERNO -->
+<!-- ========================================================= -->
+<!--  PASSAMOS OS DADOS PARA O APP.JS -->
+<!-- ========================================================= -->
+<script>
+    window.chipsData = {{ chips | tojson | safe }};
+    window.aparelhosData = {{ aparelhos | tojson | safe }};
+</script>
+
+<!-- JS PRINCIPAL -->
 <script src="/static/js/app.js"></script>
 
 {% endblock %}

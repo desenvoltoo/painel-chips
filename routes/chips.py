@@ -10,33 +10,27 @@ chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
 
-# =============================================================================
-# 🧩 FUNÇÃO PARA NORMALIZAR DATAS (FRONT-END FRIENDLY)
-# =============================================================================
+# ======================================================================
+# 🔧 NORMALIZADOR DE DATAS
+# ======================================================================
 def format_date(value):
-    """Normaliza datas vindas do BigQuery para o formato YYYY-MM-DD."""
     if not value:
         return None
 
-    # Se for datetime vindo direto do BigQuery
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%d")
 
     value = str(value)
 
-    # Caso já esteja no formato correto
+    # YYYY-MM-DD
     if len(value) >= 10 and value[4] == "-" and value[7] == "-":
         return value[:10]
 
-    # Caso venha com T
+    # ISO 2025-01-01T00:00:00
     if "T" in value:
         return value.split("T")[0]
 
-    # Caso venha com horário separado por espaço
-    if " " in value and "-" in value:
-        return value.split(" ")[0]
-
-    # Caso venha no formato brasileiro DD/MM/YYYY
+    # DD/MM/YYYY
     if "/" in value:
         try:
             d, m, y = value.split("/")
@@ -44,7 +38,7 @@ def format_date(value):
         except:
             pass
 
-    # Tenta parse genérico
+    # Fallback
     try:
         dt = datetime.fromisoformat(value.replace("Z", ""))
         return dt.strftime("%Y-%m-%d")
@@ -52,9 +46,10 @@ def format_date(value):
         return None
 
 
-# =============================================================================
-# 📌 LISTAR CHIPS — PÁGINA PRINCIPAL
-# =============================================================================
+
+# ======================================================================
+# 📌 LISTAR PÁGINA PRINCIPAL DE CHIPS
+# ======================================================================
 @chips_bp.route("/chips")
 def chips_list():
     try:
@@ -72,9 +67,10 @@ def chips_list():
         return "Erro ao carregar chips", 500
 
 
-# =============================================================================
-# ➕ ADICIONAR NOVO CHIP
-# =============================================================================
+
+# ======================================================================
+# ➕ ADICIONAR CHIP NOVO
+# ======================================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
@@ -87,21 +83,31 @@ def chips_add():
         return "Erro ao adicionar chip", 500
 
 
-# =============================================================================
-# 🔍 API — OBTER UM CHIP ESPECÍFICO (JSON) — NORMALIZADO
-# =============================================================================
-@chips_bp.route("/chips/<id_chip>")
-def get_chip(id_chip):
+
+# ======================================================================
+# 🔍 API — OBTER CHIP PARA EDIÇÃO (BUSCA POR sk_chip PRIMEIRO)
+# ======================================================================
+@chips_bp.route("/chips/<value>")
+def get_chip(value):
     try:
         df = sanitize_df(bq.get_view("vw_chips_painel"))
-        df = df[df["id_chip"].astype(str) == str(id_chip)]
 
-        if df.empty:
-            return jsonify({"erro": "Chip não encontrado"}), 404
+        chip = None
 
-        chip = df.to_dict(orient="records")[0]
+        # 1️⃣ Busca por sk_chip
+        if "sk_chip" in df.columns:
+            resultado = df[df["sk_chip"].astype(str) == str(value)]
+            if not resultado.empty:
+                chip = resultado.to_dict(orient="records")[0]
 
-        # Normaliza datas para o modal
+        # 2️⃣ Se não achar, busca por id_chip
+        if chip is None:
+            resultado = df[df["id_chip"].astype(str) == str(value)]
+            if resultado.empty:
+                return jsonify({"erro": "Chip não encontrado"}), 404
+            chip = resultado.to_dict(orient="records")[0]
+
+        # 3️⃣ Normaliza datas antes de enviar ao modal
         chip["dt_inicio"] = format_date(chip.get("dt_inicio"))
         chip["ultima_recarga_data"] = format_date(chip.get("ultima_recarga_data"))
 
@@ -112,9 +118,10 @@ def get_chip(id_chip):
         return jsonify({"erro": "Erro interno"}), 500
 
 
-# =============================================================================
-# 🔥 UPDATE VIA MODAL (AJAX / JSON) — COM REGISTRO DE EVENTOS
-# =============================================================================
+
+# ======================================================================
+# 🔥 ATUALIZAR CHIP VIA MODAL (COM EVENTOS)
+# ======================================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
@@ -123,7 +130,7 @@ def chips_update_json():
         if not dados or "id_chip" not in dados:
             return jsonify({"success": False, "erro": "Dados inválidos"}), 400
 
-        # Buscar dados atuais
+        # Buscar estado atual
         df = sanitize_df(bq.get_view("vw_chips_painel"))
         atual = df[df["id_chip"].astype(str) == str(dados["id_chip"])]
 
@@ -132,7 +139,7 @@ def chips_update_json():
 
         atual = atual.iloc[0]
 
-        # Campos rastreados
+        # Campos monitorados
         campos_evento = [
             ("numero", "NÚMERO"),
             ("operadora", "OPERADORA"),
@@ -175,7 +182,7 @@ def chips_update_json():
                     observacao="Alteração via editor"
                 )
 
-        # Atualiza o chip
+        # Atualizar chip
         bq.upsert_chip(dados)
 
         return jsonify({"success": True})
@@ -185,9 +192,10 @@ def chips_update_json():
         return jsonify({"success": False, "erro": str(e)}), 500
 
 
-# =============================================================================
-# 🔄 REGISTRAR MOVIMENTO MANUAL
-# =============================================================================
+
+# ======================================================================
+# 🔄 REGISTRAR MOVIMENTAÇÃO MANUAL
+# ======================================================================
 @chips_bp.route("/chips/movimento", methods=["POST"])
 def chips_movimento():
     try:

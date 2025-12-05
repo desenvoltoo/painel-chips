@@ -15,7 +15,7 @@ body {
     min-height: 100vh;
 }
 
-/* Container padrão */
+/* Container geral */
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -23,7 +23,7 @@ body {
 }
 
 /* ============================================================
-   SIDEBAR COLAPSÁVEL PREMIUM
+   SIDEBAR PREMIUM – NEON MODERADO
 ============================================================ */
 .sidebar {
     position: fixed;
@@ -32,8 +32,8 @@ body {
     width: 240px;
     height: 100vh;
     background: #0d1320;
-    border-right: 1px solid #1e3a8a;
-    padding: 25px 20px;
+    border-right: 1px solid #1e3a8a66;
+    padding: 25px 18px;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -45,37 +45,32 @@ body {
     width: 75px;
 }
 
-.sidebar .side-title {
-    font-size: 20px;
+/* Logo / título da sidebar */
+.side-title {
+    font-size: 1.25rem;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 20px;
-    transition: 0.25s;
+    margin-bottom: 25px;
 }
 
 .sidebar.collapsed .side-title {
     opacity: 0;
-    pointer-events: none;
 }
 
+/* Links */
 .sidebar a {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 8px;
     text-decoration: none;
+    border-radius: 8px;
     color: #cbd5e1;
-    font-size: 0.95rem;
-    transition: .2s;
+    transition: 0.25s ease;
 }
 
 .sidebar a i {
-    font-size: 1.2rem;
-}
-
-.sidebar.collapsed a span {
-    display: none;
+    font-size: 1.25rem;
 }
 
 .sidebar a:hover {
@@ -83,7 +78,11 @@ body {
     color: white;
 }
 
-/* BOTÃO HAMBURGUER */
+.sidebar.collapsed a span {
+    display: none;
+}
+
+/* Toggle button */
 .sidebar-toggle {
     position: absolute;
     top: 20px;
@@ -91,17 +90,17 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
+    border: none;
+    cursor: pointer;
     background: #1e3a8a;
     color: white;
-    cursor: pointer;
-    border: none;
-    font-size: 18px;
+    font-size: 1.2rem;
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 0 10px #000;
-    transition: 0.2s;
-    z-index: 999999;
+    transition: 0.25s ease;
+    z-index: 9999999;
 }
 
 .sidebar-toggle:hover {
@@ -109,124 +108,99 @@ body {
 }
 
 /* ============================================================
-   AJUSTE DO CONTEÚDO
+   CONTEÚDO PRINCIPAL – AJUSTE COM SIDEBAR
 ============================================================ */
-.content,
 .chip-container {
-    margin-left: 240px;
-    transition: 0.25s ease;
-}
-
-.sidebar.collapsed ~ .content {
-    margin-left: 75px !important;
+    margin-left: 260px;
+    padding: 2rem 1.3rem;
+    transition: margin-left 0.25s ease;
 }
 
 .sidebar.collapsed ~ .chip-container {
-    margin-left: 75px !important;
+    margin-left: 90px;
 }
 
 /* ============================================================
-   HEADER PREMIUM
+   HEADER
 ============================================================ */
 .chip-header {
     background: #0d1320;
-    border-bottom: 1px solid #1e3a8a;
+    border-bottom: 1px solid #1e3a8a33;
+    box-shadow: 0 0 14px rgba(0,0,0,0.3);
     position: sticky;
     top: 0;
-    z-index: 100;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 5;
 }
 
 .chip-header-content {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1.7rem 0;
+    padding: 1.6rem 0;
 }
 
 .icon-wrapper {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
-    padding: 0.9rem;
+    background: rgba(37, 99, 235, 0.2);
+    padding: 0.8rem;
     border-radius: 0.8rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .icon-wrapper i {
-    color: white;
-    font-size: 1.9rem;
+    font-size: 1.7rem;
+    color: #60a5fa;
 }
 
 .chip-title {
-    font-size: 2rem;
+    font-size: 1.9rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #f8fafc;
 }
 
 .chip-subtitle {
     font-size: 0.95rem;
-    color: #94a3b8;
+    opacity: 0.75;
 }
 
 /* ============================================================
-   CONTEÚDO PRINCIPAL
-============================================================ */
-.chip-container {
-    padding: 2.5rem 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-    animation: fadeIn .5s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ============================================================
-   CARDS PREMIUM
+   CARDS
 ============================================================ */
 .chip-card {
     background: #111827;
     border-radius: 14px;
-    border: 1px solid #1e3a8a;
-    box-shadow: 0 4px 18px rgba(0,0,0,.4);
+    border: 1px solid #1e3a8a55;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.45);
     overflow: hidden;
-    transition: .25s;
+    margin-top: 1.5rem;
+    transition: 0.2s ease;
 }
 
 .chip-card:hover {
-    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
-    transform: translateY(-3px);
+    box-shadow: 0 4px 20px rgba(37,99,235,0.25);
 }
 
 .chip-card-header {
     background: #0d1320;
+    border-bottom: 1px solid #1e3a8a44;
     padding: 1.3rem 1.5rem;
-    border-bottom: 1px solid #1e3a8a;
     display: flex;
     align-items: center;
-    gap: .8rem;
+    gap: 0.8rem;
 }
 
 .card-icon {
-    background: rgba(37, 99, 235, .25);
-    padding: .5rem;
-    border-radius: .5rem;
+    background: rgba(37,99,235,0.25);
+    padding: 0.55rem;
+    border-radius: 8px;
 }
 
 .card-icon i {
     color: #60a5fa;
-    font-size: 1.2rem;
 }
 
 .card-title {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     font-weight: 600;
-    color: #fff;
 }
 
 .card-content {
@@ -234,12 +208,12 @@ body {
 }
 
 /* ============================================================
-   FORM GRID PREMIUM
+   FORMULÁRIOS
 ============================================================ */
-.chip-form { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 1.4rem; 
+.chip-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
 }
 
 .form-row {
@@ -248,137 +222,107 @@ body {
     gap: 1.2rem;
 }
 
-.form-group { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 6px; 
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.form-group.full { 
-    grid-column: span 3; 
+.form-group.full {
+    grid-column: span 3;
 }
 
 .form-group label {
     font-size: .9rem;
-    font-weight: 500;
     color: #cbd5e1;
 }
 
+/* Campos */
 .form-group input,
 .form-group select,
 .form-group textarea {
+    background: #0b1120;
+    border: 1px solid #1e293b;
+    color: #e2e8f0;
     padding: .75rem;
     border-radius: 8px;
-    border: 1px solid #334155;
-    background: #0f172a;
-    color: #f1f5f9;
-    font-size: 0.95rem;
-    transition: all 0.2s;
+    font-size: .95rem;
+    transition: 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    outline: none;
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 0 6px rgba(37,99,235,0.4);
+    outline: none;
 }
 
-/* ============================================================
-   BOTÕES PREMIUM
-============================================================ */
+/* Botão */
 .chip-btn {
-    background: linear-gradient(135deg, #2563eb, #1e40af);
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
     color: white;
-    padding: 0.9rem 1.5rem;
+    padding: 0.85rem 1.4rem;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-weight: 600;
-    font-size: 1rem;
     display: inline-flex;
     align-items: center;
-    gap: .5rem;
-    transition: .2s;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    gap: 0.5rem;
+    transition: 0.25s ease;
 }
 
 .chip-btn:hover {
+    box-shadow: 0 0 12px rgba(37,99,235,0.5);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.6);
-}
-
-.chip-btn.save { background: #2563eb !important; }
-.chip-btn.cancel { background: #3b3b3b !important; }
-
-/* ============================================================
-   BUSCA
-============================================================ */
-.search-wrapper {
-    position: relative;
-    margin-bottom: 1.5rem;
-}
-
-.search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #64748b;
-}
-
-.search-input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    background: #0f172a;
-    color: #e2e8f0;
-    transition: .2s;
-}
-
-.search-input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, .3);
 }
 
 /* ============================================================
    TABELA
 ============================================================ */
+.chip-table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
 .chip-table {
     width: 100%;
     border-collapse: collapse;
     font-size: .9rem;
 }
 
-.chip-table thead {
-    background: #0d1320;
-}
 .chip-table th {
-    padding: .9rem;
+    background: #0d1320;
     color: #60a5fa;
-    border-bottom: 1px solid #1e3a8a;
+    padding: .9rem;
+    border-bottom: 1px solid #1e3a8a55;
+    white-space: nowrap;
 }
 
 .chip-table td {
-    padding: .9rem;
+    padding: 0.9rem;
     border-bottom: 1px solid #1f2a3c;
-    color: #e2e8f0;
 }
 
 .chip-table tbody tr:hover {
-    background: #1e2333;
+    background: #1a2238;
+}
+
+/* Ações */
+.chip-table td:last-child {
+    white-space: nowrap;
 }
 
 /* ============================================================
    STATUS BADGES
 ============================================================ */
 .status-badge {
-    display: inline-block;
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .status-disponivel { background:#065f46;color:#d1fae5 }
@@ -393,62 +337,70 @@ body {
 .status-bloqueado { background:#7f1d1d;color:#fee2e2 }
 
 /* ============================================================
-   MODAL PREMIUM — CORRIGIDO E APRIMORADO
+   MODAL PREMIUM – EDITAR CHIP (NEON MODERADO)
 ============================================================ */
 .modal-overlay {
+    display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.75);
-    display: none;
+    background: rgba(0,0,0,0.65);
     justify-content: center;
     align-items: center;
-    z-index: 20000;
+    z-index: 99999;
 }
 
 .modal-content {
-    width: 480px;
-    background: #111827;
-    border: 1px solid #1e3a8a;
-    border-radius: 18px;
-    padding: 25px;
-    max-height: 90vh;
+    background: #0f172a;
+    border: 1px solid #1e3a8a66;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 88vh;
     overflow-y: auto;
-    box-shadow: 0 0 35px rgba(30,58,138,0.4);
-    animation: fadeIn .3s ease-out;
+    padding: 1.5rem;
+    box-shadow: 0 0 25px rgba(30,58,138,0.35);
 }
 
-.modal-content h2 {
-    margin-bottom: 1rem;
-    color: #e2e8f0;
-    font-size: 1.4rem;
-}
-
-/* grid do modal */
+/* Grid interno */
 .modal-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-.modal-grid .form-group.full {
+.modal-grid .full {
     grid-column: span 2;
 }
 
 .modal-actions {
-    grid-column: span 2;
     display: flex;
-    justify-content: space-between;
+    gap: 1rem;
+    grid-column: span 2;
+}
+
+.chip-btn.cancel {
+    background: #3b3b3b;
 }
 
 /* ============================================================
    RESPONSIVO
 ============================================================ */
 @media (max-width: 900px) {
-    .sidebar { display:none; }
-    .chip-container { margin-left:0 !important; }
+    .sidebar { display: none; }
+    .chip-container { margin-left: 0 !important; }
 }
 
 @media (max-width: 600px) {
-    .form-row { grid-template-columns:1fr !important; }
-    .modal-grid { grid-template-columns:1fr !important; }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chip-container {
+        padding: 1rem;
+    }
 }

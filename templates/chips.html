@@ -3,45 +3,37 @@
 
 {% block content %}
 
-<!-- ===========================================================
-     HEADER PREMIUM
-=========================================================== -->
-<header class="chip-header">
-    <div class="chip-header-content">
-        <div class="icon-wrapper">
-            <i class="fas fa-sim-card"></i>
-        </div>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <div>
-            <h1 class="chip-title">Gestão de Chips</h1>
-            <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
+<header class="chip-header">
+    <div class="container">
+        <div class="chip-header-content">
+            <div class="icon-wrapper">
+                <i class="fas fa-sim-card"></i>
+            </div>
+            <div class="header-text">
+                <h1 class="chip-title">Gestão de Chips</h1>
+                <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
+            </div>
         </div>
     </div>
 </header>
 
-<!-- ===========================================================
-     CONTAINER PRINCIPAL
-=========================================================== -->
-<main class="chip-container">
+<main class="container chip-container">
 
-    <!-- =======================================================
-         CARD — CADASTRO DE NOVO CHIP
-    ======================================================== -->
+    <!-- CARD NOVO CHIP -->
     <section class="chip-card">
-
         <div class="chip-card-header">
-            <div class="card-icon">
-                <i class="fas fa-plus"></i>
-            </div>
+            <div class="card-icon"><i class="fas fa-plus"></i></div>
             <h2 class="card-title">Novo Chip</h2>
         </div>
 
         <div class="card-content">
-
             <form action="/chips/add" method="POST" class="chip-form">
 
+                <!-- LINHA 1 -->
                 <div class="form-row">
-
                     <div class="form-group">
                         <label>ID do Chip *</label>
                         <input type="text" name="id_chip" required>
@@ -55,18 +47,17 @@
                     <div class="form-group">
                         <label>Operadora</label>
                         <select name="operadora">
-                            <option>VIVO</option>
-                            <option>TIM</option>
-                            <option>CLARO</option>
-                            <option>OI</option>
-                            <option>OUTRA</option>
+                            <option value="VIVO">VIVO</option>
+                            <option value="TIM">TIM</option>
+                            <option value="CLARO">CLARO</option>
+                            <option value="OI">OI</option>
+                            <option value="OUTRA">OUTRA</option>
                         </select>
                     </div>
-
                 </div>
 
+                <!-- LINHA 2 -->
                 <div class="form-row">
-
                     <div class="form-group">
                         <label>Operador</label>
                         <input type="text" name="operador">
@@ -93,11 +84,10 @@
                         <label>Plano</label>
                         <input type="text" name="plano">
                     </div>
-
                 </div>
 
+                <!-- LINHA 3 -->
                 <div class="form-row">
-
                     <div class="form-group">
                         <label>Data Status</label>
                         <input type="date" name="dt_inicio">
@@ -112,11 +102,10 @@
                         <label>Data Última Recarga</label>
                         <input type="date" name="ultima_recarga_data">
                     </div>
-
                 </div>
 
+                <!-- LINHA 4 -->
                 <div class="form-row">
-
                     <div class="form-group">
                         <label>Total Gasto</label>
                         <input type="number" step="0.01" name="total_gasto">
@@ -133,33 +122,28 @@
                             {% endfor %}
                         </select>
                     </div>
-
                 </div>
 
-                <div class="form-group full">
-                    <label>Observação</label>
-                    <textarea name="observacao"></textarea>
+                <!-- LINHA 5 -->
+                <div class="form-row">
+                    <div class="form-group full">
+                        <label>Observação</label>
+                        <textarea name="observacao"></textarea>
+                    </div>
                 </div>
 
                 <button type="submit" class="chip-btn">
-                    <i class="fas fa-save"></i> Cadastrar
+                    <i class="fas fa-plus"></i> Cadastrar Chip
                 </button>
 
             </form>
-
         </div>
     </section>
 
-
-    <!-- =======================================================
-         CARD — TABELA DE CHIPS
-    ======================================================== -->
+    <!-- CARD TABELA -->
     <section class="chip-card">
-
         <div class="chip-card-header">
-            <div class="card-icon">
-                <i class="fas fa-list"></i>
-            </div>
+            <div class="card-icon"><i class="fas fa-list"></i></div>
             <h2 class="card-title">Chips Cadastrados</h2>
         </div>
 
@@ -167,8 +151,7 @@
 
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input"
-                       placeholder="Buscar chips...">
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
             </div>
 
             <div class="chip-table-wrapper">
@@ -185,56 +168,57 @@
                             <th>Valor</th>
                             <th>Total Gasto</th>
                             <th>Aparelho</th>
-                            <th>Data Status</th>
+                            <th>Data Início</th>
                             <th>Obs</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
 
-                    <tbody id="tableBody"></tbody>
-
+                    <tbody id="tableBody">
+                        <!-- preenchido via JS -->
+                    </tbody>
                 </table>
             </div>
-
         </div>
     </section>
 
 </main>
 
-
-<!-- ===========================================================
-     MODAL PREMIUM — EDITAR CHIP
-=========================================================== -->
+<!-- MODAL PREMIUM ORGANIZADO -->
 <div id="editModal" class="modal-overlay">
-    <div class="modal-content modal-chip animate-modal">
+    <div class="modal-content modal-chip">
 
-        <h2 class="modal-title">Editar Chip</h2>
+        <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
 
             <input type="hidden" name="id_chip" id="modal_id_chip">
 
+            <!-- Campo Número -->
             <div class="form-group">
                 <label>Número</label>
                 <input type="text" name="numero" id="modal_numero">
             </div>
 
+            <!-- Operadora -->
             <div class="form-group">
                 <label>Operadora</label>
                 <select name="operadora" id="modal_operadora">
-                    <option>VIVO</option>
-                    <option>TIM</option>
-                    <option>CLARO</option>
-                    <option>OI</option>
-                    <option>OUTRA</option>
+                    <option value="VIVO">VIVO</option>
+                    <option value="TIM">TIM</option>
+                    <option value="CLARO">CLARO</option>
+                    <option value="OI">OI</option>
+                    <option value="OUTRA">OUTRA</option>
                 </select>
             </div>
 
+            <!-- Operador -->
             <div class="form-group">
                 <label>Operador</label>
                 <input type="text" name="operador" id="modal_operador">
             </div>
 
+            <!-- Status -->
             <div class="form-group">
                 <label>Status</label>
                 <select name="status" id="modal_status">
@@ -252,32 +236,37 @@
                 </select>
             </div>
 
+            <!-- Plano -->
             <div class="form-group">
                 <label>Plano</label>
                 <input type="text" name="plano" id="modal_plano">
             </div>
 
+            <!-- Data Início -->
             <div class="form-group">
-                <label>Data Status</label>
+                <label>Data Início</label>
                 <input type="date" name="dt_inicio" id="modal_dt_inicio">
             </div>
 
+            <!-- Data Última Recarga -->
             <div class="form-group">
-                <label>Última Recarga</label>
+                <label>Data Última Recarga</label>
                 <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
             </div>
 
+            <!-- Valor Última Recarga -->
             <div class="form-group">
-                <label>Valor Última Recarga</label>
-                <input type="number" step="0.01" name="ultima_recarga_valor"
-                       id="modal_ultima_recarga_valor">
+                <label>Valor Última Recarga (R$)</label>
+                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
             </div>
 
+            <!-- Total Gasto -->
             <div class="form-group">
-                <label>Total Gasto</label>
+                <label>Total Gasto (R$)</label>
                 <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
             </div>
 
+            <!-- Aparelho vinculado -->
             <div class="form-group full">
                 <label>Aparelho Vinculado</label>
                 <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual">
@@ -288,11 +277,13 @@
                 </select>
             </div>
 
+            <!-- Observação -->
             <div class="form-group full">
                 <label>Observação</label>
-                <textarea name="observacao" id="modal_observacao"></textarea>
+                <textarea name="observacao" id="modal_observacao" style="height: 70px;"></textarea>
             </div>
 
+            <!-- Botões -->
             <div class="modal-actions full">
                 <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
                 <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
@@ -304,22 +295,19 @@
 </div>
 
 
-<!-- ===========================================================
-     JS — RENDERIZAÇÃO, MODAL E BUSCA
-=========================================================== -->
 <script>
-
 let chipsData = {{ chips | tojson | safe }};
 
-/* ---------------------------
-   RENDERIZAÇÃO DAS LINHAS
-----------------------------*/
+// Renderização da tabela
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
 
-    if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="13" class="empty-message">Nenhum chip encontrado.</td></tr>`;
+    if (!lista || !lista.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
+            </tr>`;
         return;
     }
 
@@ -330,33 +318,32 @@ function renderRows(lista) {
                 <td>${c.numero || "-"}</td>
                 <td>${c.operadora || "-"}</td>
                 <td>${c.operador || "-"}</td>
-                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status}</span></td>
+                <td><span class="status-badge status-${(c.status || "").toLowerCase()}">${c.status || "-"}</span></td>
                 <td>${c.plano || "-"}</td>
                 <td>${c.ultima_recarga_data || "-"}</td>
                 <td>${c.ultima_recarga_valor || "-"}</td>
                 <td>${c.total_gasto || "-"}</td>
                 <td>${c.modelo_aparelho || "-"}</td>
                 <td>${c.dt_inicio || "-"}</td>
-                <td>${c.observacao ? "<i class='fas fa-comment'></i>" : "-"}</td>
                 <td>
-                    <button class="chip-btn" data-id="${c.id_chip}">
-                        Editar
-                    </button>
+                    ${c.observacao ?
+                        `<span class="obs-tooltip" data-tooltip="${c.observacao}"><i class="fa fa-comment-dots"></i></span>` :
+                        "-"
+                    }
                 </td>
-            </tr>
-        `;
+                <td>
+                    <button class="btn btn-primary btn-sm edit-btn" data-id="${c.id_chip}">Editar</button>
+                </td>
+            </tr>`;
     });
 
     bindEditButtons();
 }
 
-/* ---------------------------
-   ABRIR MODAL
-----------------------------*/
+// Bind dos botões de edição
 function bindEditButtons() {
-    document.querySelectorAll("button[data-id]").forEach(btn => {
+    document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
-
             const id = btn.dataset.id;
             const res = await fetch(`/chips/${id}`);
             const chip = await res.json();
@@ -379,45 +366,41 @@ function bindEditButtons() {
     });
 }
 
-/* ---------------------------
-   SALVAR E FECHAR MODAL
-----------------------------*/
-document.getElementById("modalSaveBtn").onclick = async () => {
+// Busca dinâmica
+document.getElementById("searchInput").addEventListener("input", e => {
+    const termo = e.target.value.toLowerCase();
 
+    const filtrados = chipsData.filter(chip =>
+        Object.values(chip).some(val =>
+            String(val || "").toLowerCase().includes(termo)
+        )
+    );
+
+    renderRows(filtrados);
+});
+
+// Fechar modal
+document.getElementById("modalCloseBtn").addEventListener("click", () => {
+    document.getElementById("editModal").style.display = "none";
+});
+
+// Salvar edição
+document.getElementById("modalSaveBtn").addEventListener("click", async () => {
     const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data)
     });
 
     const r = await res.json();
     if (r.success) location.reload();
-};
-
-document.getElementById("modalCloseBtn").onclick = () => {
-    document.getElementById("editModal").style.display = "none";
-};
-
-/* ---------------------------
-   BUSCA DINÂMICA
-----------------------------*/
-document.getElementById("searchInput").addEventListener("input", e => {
-    const t = e.target.value.toLowerCase();
-
-    renderRows(
-        chipsData.filter(c =>
-            Object.values(c).some(v =>
-                String(v || "").toLowerCase().includes(t)
-            )
-        )
-    );
+    else alert("Erro ao salvar!");
 });
 
-/* INICIALIZA A TABELA */
+// Render inicial
 renderRows(chipsData);
-
 </script>
 
 {% endblock %}

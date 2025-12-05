@@ -201,7 +201,7 @@ body::before {
 .sidebar-toggle {
     position: fixed;
     top: 20px;
-    left: 90px;
+    left: 20px;
     width: 44px;
     height: 44px;
     border-radius: 14px;

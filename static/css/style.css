@@ -32,7 +32,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 18px;
-    transition: width .25s ease;
+    transition: width .25s ease-in-out;
     z-index: 9999;
 }
 
@@ -47,7 +47,7 @@ body {
     text-align: center;
     margin-bottom: 20px;
     color: #cbd5e1;
-    transition: opacity .2s;
+    transition: opacity .25s;
 }
 
 .sidebar:not(.open) .side-title {
@@ -64,7 +64,7 @@ body {
     text-decoration: none;
     color: #cbd5e1;
     border-radius: 8px;
-    transition: .25s;
+    transition: .25s ease;
 }
 
 .sidebar a:hover {
@@ -76,11 +76,11 @@ body {
     display: none;
 }
 
-/* Botão toggle */
+/* Toggle button */
 .sidebar-toggle {
     position: fixed;
     top: 18px;
-    left: 110px; /* sidebar 75 + 35px respiro */
+    left: 110px;
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -97,32 +97,43 @@ body {
 }
 
 body.sidebar-open .sidebar-toggle {
-    left: 275px; /* 240 + 35 */
+    left: 275px;
 }
 
 /* ============================================================
-   CONTEÚDO RESPONSIVO — CENTRALIZADO
+   LAYOUT DO CONTEÚDO — RESPONSIVO E SEM CORTES
 ============================================================ */
 .content,
 .container,
 .chip-container {
-    width: 100%;
-    max-width: 1600px;          /* limite suave para não “espalhar” */
-    margin: 0 auto;             /* centraliza a página */
     padding: 1.6rem;
-    transition: margin-left .25s ease;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    transition: margin-left .25s ease, width .25s ease;
 }
 
 /* Sidebar fechada */
 body:not(.sidebar-open) .content,
 body:not(.sidebar-open) .chip-container {
-    margin-left: 115px; /* 75 + 40 */
+    margin-left: 115px;  /* 75 + 40 */
+    width: calc(100% - 115px);
 }
 
 /* Sidebar aberta */
 body.sidebar-open .content,
 body.sidebar-open .chip-container {
     margin-left: 280px; /* 240 + 40 */
+    width: calc(100% - 280px);
+}
+
+/* ============================================================
+   GARANTIA CONTRA CORTES HORIZONTAIS
+============================================================ */
+.content,
+.chip-container,
+.container {
+    overflow-x: hidden;
 }
 
 /* ============================================================
@@ -172,7 +183,7 @@ body.sidebar-open .chip-container {
     padding: 1.5rem;
     margin-bottom: 1.8rem;
     width: 100%;
-    transition: .3s;
+    transition: .3s ease;
 }
 
 .chip-card:hover {
@@ -180,7 +191,7 @@ body.sidebar-open .chip-container {
 }
 
 /* ============================================================
-   FORMULÁRIOS
+   FORMULÁRIO
 ============================================================ */
 .form-row {
     display: grid;
@@ -244,7 +255,6 @@ body.sidebar-open .chip-container {
 .chip-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
 }
 
 .chip-table th {
@@ -252,6 +262,7 @@ body.sidebar-open .chip-container {
     padding: .85rem;
     color: #60a5fa;
     border-bottom: 1px solid #1e3a8a55;
+    white-space: nowrap;
 }
 
 .chip-table td {
@@ -259,24 +270,21 @@ body.sidebar-open .chip-container {
     border-bottom: 1px solid #1f2a3c;
 }
 
-.chip-table tbody tr:hover {
-    background: #1a2238;
-}
-
 /* ============================================================
-   STATUS BADGES (CORES ORIGINAIS)
+   BADGES — CORES ORIGINAIS
 ============================================================ */
 .status-badge {
-    padding:.35rem .75rem;
-    border-radius:999px;
-    font-size:.75rem;
-    font-weight:600;
+    padding: .35rem .75rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
 }
 
 .status-disponivel { background:#065f46;color:#d1fae5 }
 .status-maturando { background:#78350f;color:#fde68a }
 .status-maturado { background:#1e3a8a;color:#bfdbfe }
-.status-descanso_1,.status-descanso_2 { background:#6d28d9;color:#f3e8ff }
+.status-descanso_1,
+.status-descanso_2 { background:#6d28d9;color:#f3e8ff }
 .status-pronto_para_maturar { background:#0f766e;color:#99f6e4 }
 .status-disparando { background:#3730a3;color:#c7d2fe }
 .status-banido { background:#7f1d1d;color:#fecaca }
@@ -315,22 +323,41 @@ body.sidebar-open .chip-container {
     gap:1rem;
 }
 
-.modal-grid .full { grid-column:span 2; }
+.modal-grid .full {
+    grid-column:span 2;
+}
 
-.modal-actions { display:flex;gap:1rem;grid-column:span 2; }
+.modal-actions {
+    display:flex;
+    gap:1rem;
+    grid-column:span 2;
+}
 
-.chip-btn.cancel { background:#3b3b3b; }
+.chip-btn.cancel {
+    background:#3b3b3b;
+}
 
 /* ============================================================
    RESPONSIVIDADE
 ============================================================ */
+@media(max-width: 1200px) {
+    .content,
+    .chip-container {
+        max-width: 95%;
+    }
+}
+
 @media(max-width:900px) {
     .sidebar { display:none; }
+
     .sidebar-toggle { left:20px !important; }
-    .content, .chip-container {
+
+    .content,
+    .chip-container {
         margin-left:0 !important;
-        padding: 1rem;
+        width:100% !important;
         max-width:100% !important;
+        padding: 1rem;
     }
 }
 

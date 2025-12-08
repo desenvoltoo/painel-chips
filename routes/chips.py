@@ -18,17 +18,12 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 # ============================================================
 
 def q_str(v):
-    """Strings → 'texto' ou NULL"""
     return f"'{v}'" if v else "NULL"
 
-
 def q_date(v):
-    """Datas → DATE('YYYY-MM-DD') ou NULL"""
     return normalize_date(v)
 
-
 def q_num(v):
-    """Números → número ou NULL"""
     return normalize_number(v)
 
 
@@ -49,14 +44,13 @@ def chips_list():
 
 
 # ============================================================
-# CADASTRAR CHIP — GERANDO SK AUTOMÁTICO
+# CADASTRAR CHIP
 # ============================================================
 
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     dados = request.form.to_dict()
 
-    # Obter próximo SK
     get_sk = f"""
         SELECT COALESCE(MAX(sk_chip), 0) + 1 AS next_sk
         FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -89,12 +83,11 @@ def chips_add():
     """
 
     bq.execute_query(query)
-
     return "<script>alert('Chip cadastrado com sucesso!'); window.location.href='/chips';</script>"
 
 
 # ============================================================
-# BUSCAR CHIP POR SK (EDIÇÃO)
+# BUSCAR CHIP POR SK
 # ============================================================
 
 @chips_bp.route("/chips/sk/<sk_chip>")
@@ -107,15 +100,13 @@ def chips_get_by_sk(sk_chip):
     """
 
     df = bq._run(query)
-
     if df.empty:
         return jsonify({"error": "Chip não encontrado"}), 404
-
     return jsonify(df.to_dict(orient="records")[0])
 
 
 # ============================================================
-# ATUALIZAR CHIP — SALVAR MODAL
+# ATUALIZAR CHIP
 # ============================================================
 
 @chips_bp.route("/chips/update-json", methods=["POST"])
@@ -139,3 +130,12 @@ def chips_update_json():
             total_gasto = {q_num(data.get("total_gasto"))},
 
             sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {data.get("sk_chip")}
+    """
+
+    print("\n🔵 UPDATE VIA JSON:\n", query)
+
+    bq._run(query)
+
+    return jsonify({"success": True})

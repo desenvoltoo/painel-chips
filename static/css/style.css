@@ -720,8 +720,9 @@ body.sidebar-open .chip-container {
 }
 
 /* ============================================================
-   STATUS BADGES
+   STATUS BADGES – PREMIUM DARK BLUE THEME
 ============================================================ */
+
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -740,69 +741,119 @@ body.sidebar-open .chip-container {
     50% { opacity: 0.85; }
 }
 
+/* ============================================================
+   VERDE – STATUS POSITIVOS
+============================================================ */
 .status-ativo,
 .status-disponivel {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.15));
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.15));
     color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
 }
 
+/* ============================================================
+   CINZA – INATIVO / SEM MOVIMENTO
+============================================================ */
 .status-inativo {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.15));
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.4);
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
-}
-
-.status-pendente,
-.status-maturando {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.15));
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.4);
-    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
-}
-
-.status-bloqueado {
-    background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.15));
-    color: #9ca3af;
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.25), rgba(75, 85, 99, 0.15));
+    color: #d1d5db;
     border: 1px solid rgba(107, 114, 128, 0.4);
     box-shadow: 0 0 15px rgba(107, 114, 128, 0.2);
 }
 
-.status-maturado {
-    background: linear-gradient(135deg, rgba(30, 58, 138, 0.3), rgba(37, 99, 235, 0.2));
-    color: #93c5fd;
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+/* ============================================================
+   AMARELO – PROCESSOS, MATURAÇÃO
+============================================================ */
+.status-pendente,
+.status-maturando {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.15));
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
 }
 
+/* ============================================================
+   AZUL – MATURADO
+============================================================ */
+.status-maturado {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(37, 99, 235, 0.25));
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+}
+
+/* ============================================================
+   ROXO – DESCANSOS
+============================================================ */
 .status-descanso_1,
 .status-descanso_2 {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(124, 58, 237, 0.15));
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.15));
     color: #c4b5fd;
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(139, 92, 246, 0.45);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
 }
 
+/* ============================================================
+   TURQUESA – PRONTO PARA MATURAR
+============================================================ */
 .status-pronto_para_maturar {
-    background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(13, 148, 136, 0.15));
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.25), rgba(13, 148, 136, 0.15));
     color: #5eead4;
-    border: 1px solid rgba(20, 184, 166, 0.4);
-    box-shadow: 0 0 15px rgba(20, 184, 166, 0.2);
+    border: 1px solid rgba(20, 184, 166, 0.45);
+    box-shadow: 0 0 15px rgba(20, 184, 166, 0.25);
 }
 
+/* ============================================================
+   ROXO NEON – DISPARANDO
+============================================================ */
 .status-disparando {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.15));
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(79, 70, 229, 0.2));
     color: #a5b4fc;
-    border: 1px solid rgba(99, 102, 241, 0.4);
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
     animation: disparandoPulse 1s ease-in-out infinite;
 }
 
 @keyframes disparandoPulse {
-    0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
-    50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.4); }
+    0%, 100% { box-shadow: 0 0 18px rgba(99, 102, 241, 0.3); }
+    50% { box-shadow: 0 0 32px rgba(99, 102, 241, 0.5); }
+}
+
+/* ============================================================
+   VERMELHO – STATUS CRÍTICOS (BANIDO / RESTRINGIDO / BLOQUEADO)
+============================================================ */
+.status-banido,
+.status-restringido,
+.status-bloqueado {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.28), rgba(190, 18, 60, 0.22));
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    box-shadow:
+        0 0 18px rgba(239, 68, 68, 0.25),
+        0 0 30px rgba(190, 18, 60, 0.2);
+    animation: dangerPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dangerPulse {
+    0% {
+        box-shadow: 
+            0 0 18px rgba(239, 68, 68, 0.25),
+            0 0 30px rgba(190, 18, 60, 0.2);
+        filter: brightness(1);
+    }
+    50% {
+        box-shadow:
+            0 0 32px rgba(239, 68, 68, 0.45),
+            0 0 55px rgba(190, 18, 60, 0.35);
+        filter: brightness(1.25);
+    }
+    100% {
+        box-shadow: 
+            0 0 18px rgba(239, 68, 68, 0.25),
+            0 0 30px rgba(190, 18, 60, 0.2);
+        filter: brightness(1);
+    }
 }
 
 /* ============================================================

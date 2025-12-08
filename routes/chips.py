@@ -2,31 +2,34 @@
 # -*- coding: utf-8 -*-
 
 from flask import Blueprint, render_template, request, jsonify
-from utils.bigquery_client import BigQueryClient
+from utils.bigquery_client import BigQueryClient, normalize_date, normalize_number
 from utils.sanitizer import sanitize_df
+import os
 
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
 
+PROJECT = os.getenv("GCP_PROJECT_ID", "painel-universidade")
+DATASET = os.getenv("BQ_DATASET", "marts")
+
+
 # ============================================================
-# HELPERS
+# HELPERS PADRONIZADOS
 # ============================================================
 
 def q_str(v):
-    """Strings → 'valor' ou NULL"""
-    return f"'{v}'" if v and v != "NULL" else "NULL"
+    """Strings → 'texto' ou NULL"""
+    return f"'{v}'" if v else "NULL"
 
 
 def q_date(v):
-    """Datas → DATE('yyyy-mm-dd') ou NULL"""
-    if not v:
-        return "NULL"
-    return f"DATE('{v}')"
+    """Datas → DATE('YYYY-MM-DD') ou NULL"""
+    return normalize_date(v)
 
 
 def q_num(v):
     """Números → número ou NULL"""
-    return str(v) if v not in (None, "", "NULL") else "NULL"
+    return normalize_number(v)
 
 
 # ============================================================
@@ -41,48 +44,44 @@ def chips_list():
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
-        aparelhos=aparelhos_df.to_dict(orient="records")
+        aparelhos=aparelhos_df.to_dict(orient="records"),
     )
 
 
 # ============================================================
-# CADASTRAR NOVO CHIP — AGORA GERANDO SK_AUTOMÁTICO
+# CADASTRAR CHIP — GERANDO SK AUTOMÁTICO
 # ============================================================
+
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     dados = request.form.to_dict()
 
-    def q(v):
-        return f"'{v}'" if v else "NULL"
-
-    # 1️⃣ Buscar o próximo SK
-    get_sk = """
+    # Obter próximo SK
+    get_sk = f"""
         SELECT COALESCE(MAX(sk_chip), 0) + 1 AS next_sk
-        FROM `painel-universidade.marts.dim_chip`
+        FROM `{PROJECT}.{DATASET}.dim_chip`
     """
-    df_sk = bq._run(get_sk)
-    next_sk = int(df_sk.iloc[0]["next_sk"])
+    next_sk = int(bq._run(get_sk).iloc[0]["next_sk"])
 
-    # 2️⃣ Executar o INSERT com o novo SK
     query = f"""
-        INSERT INTO `painel-universidade.marts.dim_chip`
+        INSERT INTO `{PROJECT}.{DATASET}.dim_chip`
         (sk_chip, id_chip, numero, operadora, operador, status, plano, dt_inicio,
          ultima_recarga_valor, ultima_recarga_data, total_gasto, 
          sk_aparelho_atual, observacao, ativo, created_at, updated_at)
         VALUES (
             {next_sk},
-            {q(dados.get("id_chip"))},
-            {q(dados.get("numero"))},
-            {q(dados.get("operadora"))},
-            {q(dados.get("operador"))},
-            {q(dados.get("status"))},
-            {q(dados.get("plano"))},
-            {q(dados.get("dt_inicio"))},
-            {dados.get("ultima_recarga_valor") or "NULL"},
-            {q(dados.get("ultima_recarga_data"))},
-            {dados.get("total_gasto") or "NULL"},
+            {q_str(dados.get("id_chip"))},
+            {q_str(dados.get("numero"))},
+            {q_str(dados.get("operadora"))},
+            {q_str(dados.get("operador"))},
+            {q_str(dados.get("status"))},
+            {q_str(dados.get("plano"))},
+            {q_date(dados.get("dt_inicio"))},
+            {q_num(dados.get("ultima_recarga_valor"))},
+            {q_date(dados.get("ultima_recarga_data"))},
+            {q_num(dados.get("total_gasto"))},
             {dados.get("sk_aparelho_atual") or "NULL"},
-            {q(dados.get("observacao"))},
+            {q_str(dados.get("observacao"))},
             TRUE,
             CURRENT_TIMESTAMP(),
             CURRENT_TIMESTAMP()
@@ -102,7 +101,7 @@ def chips_add():
 def chips_get_by_sk(sk_chip):
     query = f"""
         SELECT *
-        FROM `painel-universidade.marts.vw_chips_painel`
+        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
         WHERE sk_chip = {sk_chip}
         LIMIT 1
     """
@@ -116,46 +115,27 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# ATUALIZAR CHIP (SALVAR DO MODAL)
+# ATUALIZAR CHIP — SALVAR MODAL
 # ============================================================
 
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     data = request.json
 
-    def q(v):
-        return f"'{v}'" if v else "NULL"
-
-    def qdate(v):
-        from utils.bigquery_client import normalize_date
-        return normalize_date(v)
-
-    def qnum(v):
-        from utils.bigquery_client import normalize_number
-        return normalize_number(v)
-
     query = f"""
         UPDATE `{PROJECT}.{DATASET}.dim_chip`
         SET
-            numero = {q(data.get("numero"))},
-            operadora = {q(data.get("operadora"))},
-            operador = {q(data.get("operador"))},
-            plano = {q(data.get("plano"))},
-            status = {q(data.get("status"))},
-            observacao = {q(data.get("observacao"))},
-            dt_inicio = {qdate(data.get("dt_inicio"))},
-            ultima_recarga_valor = {qnum(data.get("ultima_recarga_valor"))},
-            ultima_recarga_data = {qdate(data.get("ultima_recarga_data"))},
-            total_gasto = {qnum(data.get("total_gasto"))},
+            numero = {q_str(data.get("numero"))},
+            operadora = {q_str(data.get("operadora"))},
+            operador = {q_str(data.get("operador"))},
+            plano = {q_str(data.get("plano"))},
+            status = {q_str(data.get("status"))},
+            observacao = {q_str(data.get("observacao"))},
+
+            dt_inicio = {q_date(data.get("dt_inicio"))},
+            ultima_recarga_data = {q_date(data.get("ultima_recarga_data"))},
+
+            ultima_recarga_valor = {q_num(data.get("ultima_recarga_valor"))},
+            total_gasto = {q_num(data.get("total_gasto"))},
+
             sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = {data.get("sk_chip")}
-    """
-
-    print("\n🔵 UPDATE VIA JSON:\n", query)
-
-    # AQUI ESTAVA O ERRO — EXECUTA COM _run()
-    bq._run(query)
-
-    return jsonify({"success": True})
-

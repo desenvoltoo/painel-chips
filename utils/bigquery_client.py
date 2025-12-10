@@ -17,11 +17,12 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # ============================================================
 # SANITIZAÇÃO DE STRINGS
 # ============================================================
-def q(value: str):
+def q(value):
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
-    return f"'{str(value).replace(\"'\", \"''\")}'"
 
+    safe = str(value).replace("'", "''")
+    return f"'{safe}'"
 
 # ============================================================
 # NORMALIZAR DATAS

@@ -73,14 +73,38 @@ def chips_get_by_sk(sk_chip):
 def chips_update_json():
     data = request.json
 
-    # usa a rotina oficial que:
-    # ✔ compara valores antigos
-    # ✔ registra eventos na auditoria
-    # ✔ executa SP de registro
-    # ✔ salva o chip já normalizado
-    bq.upsert_chip(data)
+    sk = data.get("sk_chip")
 
+    if not sk:
+        return jsonify({"error": "sk_chip não enviado"}), 400
+
+    query = f"""
+        UPDATE `{PROJECT}.{DATASET}.dim_chip`
+        SET
+            id_chip = {q_str(data.get("id_chip"))},
+            numero = {q_str(data.get("numero"))},
+            operadora = {q_str(data.get("operadora"))},
+            operador = {q_str(data.get("operador"))},
+            plano = {q_str(data.get("plano"))},
+            status = {q_str(data.get("status"))},
+            observacao = {q_str(data.get("observacao"))},
+
+            dt_inicio = {q_date(data.get("dt_inicio"))},
+            ultima_recarga_data = {q_date(data.get("ultima_recarga_data"))},
+
+            ultima_recarga_valor = {q_num(data.get("ultima_recarga_valor"))},
+            total_gasto = {q_num(data.get("total_gasto"))},
+
+            sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {sk}
+    """
+
+    print("\n🔵 UPDATE VIA JSON:\n", query)
+
+    bq._run(query)
     return jsonify({"success": True})
+
 
 
 # ============================================================

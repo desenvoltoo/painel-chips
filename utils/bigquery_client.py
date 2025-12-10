@@ -14,12 +14,22 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Sanitizador simples para strings SQL
-def q(value: str):
+# Sanitizador seguro para SQL – AGORA TRATA STRING CORRETAMENTE
+def q(value):
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
-    return str(value).replace("'", "''")
 
+    value = str(value).strip()
+
+    # Se for número (int ou float), retorna SEM aspas
+    try:
+        float(value)
+        return value
+    except:
+        pass
+
+    # Se for texto → coloca aspas corretamente
+    return f"'{value.replace("'", "''")}'"
 
 # ------------------------------
 # Normalizar datas

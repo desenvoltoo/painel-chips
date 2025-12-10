@@ -76,7 +76,7 @@ def chips_update_json():
     sk = data.get("sk_chip")
     id_chip = data.get("id_chip")
 
-    # Se veio apenas SK, buscamos o ID correspondente
+    # Se vier apenas sk_chip, buscar id_chip correto
     if sk and not id_chip:
         df = bq._run(f"""
             SELECT id_chip
@@ -88,14 +88,15 @@ def chips_update_json():
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        id_chip = df.iloc[0]["id_chip"]
-        data["id_chip"] = id_chip  # adiciona ao JSON antes de chamar o upsert
+        # GARANTE QUE ID VEM COMO STRING
+        id_chip = str(df.iloc[0]["id_chip"])
+        data["id_chip"] = id_chip
 
-    # Se MESMO ASSIM não tivermos id_chip, erro real
+    # Se ainda não existir id_chip → erro real
     if not id_chip:
         return jsonify({"error": "id_chip não enviado"}), 400
 
-    # Agora o upsert funciona perfeitamente
+    # Agora envia para a lógica oficial de upsert
     bq.upsert_chip(data)
 
     return jsonify({"success": True})

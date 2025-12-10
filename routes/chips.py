@@ -4,6 +4,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
+from utils.bigquery_client import q
 import os
 
 chips_bp = Blueprint("chips", __name__)
@@ -76,7 +77,7 @@ def chips_update_json():
     sk = data.get("sk_chip")
     id_chip = data.get("id_chip")
 
-    # Se vier apenas sk_chip, buscar id_chip correto
+    # 1) SE NÃO VEIO id_chip → BUSCA PELO sk_chip
     if sk and not id_chip:
         df = bq._run(f"""
             SELECT id_chip
@@ -88,19 +89,19 @@ def chips_update_json():
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        # GARANTE QUE ID VEM COMO STRING
+        # GARANTE STRING
         id_chip = str(df.iloc[0]["id_chip"])
         data["id_chip"] = id_chip
 
-    # Se ainda não existir id_chip → erro real
-    if not id_chip:
-        return jsonify({"error": "id_chip não enviado"}), 400
+    # 2) AQUI É O PULO DO GATO:
+    # FORÇA O id_chip PARA STRING, MESMO SE VIER NÚMERO
+    data["id_chip"] = str(data["id_chip"])
 
-    # Agora envia para a lógica oficial de upsert
+    # 3) CHAMA O UPSERT COMPLETO COM HISTÓRICO
     bq.upsert_chip(data)
 
     return jsonify({"success": True})
-
+    
 # ============================================================
 # TIMELINE / HISTÓRICO DO CHIP
 # ============================================================

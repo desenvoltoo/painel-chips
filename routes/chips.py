@@ -29,13 +29,13 @@ def chips_list():
 
 
 # ============================================================
-# CADASTRAR CHIP (USANDO UPSERT COMPLETO)
+# CADASTRAR CHIP (UPsert COMPLETO)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     form = request.form.to_dict()
 
-    # usa a rotina completa — registra histórico e tudo
+    # usa o upsert completo (inclui histórico)
     bq.upsert_chip(form)
 
     return """
@@ -47,7 +47,7 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA EDIÇÃO (carrega no modal)
+# BUSCAR CHIP PARA EDIÇÃO (carregar dados no modal)
 # ============================================================
 @chips_bp.route("/chips/sk/<sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -67,44 +67,20 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# SALVAR EDIÇÃO (UPERT COMPLETO + HISTÓRICO)
+# SALVAR EDIÇÃO (USANDO UPSERT COMPLETO)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     data = request.json
 
-    sk = data.get("sk_chip")
+    if not data.get("id_chip"):
+        return jsonify({"error": "id_chip não enviado"}), 400
 
-    if not sk:
-        return jsonify({"error": "sk_chip não enviado"}), 400
+    # usa o MESMO método do ADD
+    # → isso garante: histórico, eventos, comparação de dados, etc.
+    bq.upsert_chip(data)
 
-    query = f"""
-        UPDATE `{PROJECT}.{DATASET}.dim_chip`
-        SET
-            id_chip = {q_str(data.get("id_chip"))},
-            numero = {q_str(data.get("numero"))},
-            operadora = {q_str(data.get("operadora"))},
-            operador = {q_str(data.get("operador"))},
-            plano = {q_str(data.get("plano"))},
-            status = {q_str(data.get("status"))},
-            observacao = {q_str(data.get("observacao"))},
-
-            dt_inicio = {q_date(data.get("dt_inicio"))},
-            ultima_recarga_data = {q_date(data.get("ultima_recarga_data"))},
-
-            ultima_recarga_valor = {q_num(data.get("ultima_recarga_valor"))},
-            total_gasto = {q_num(data.get("total_gasto"))},
-
-            sk_aparelho_atual = {data.get("sk_aparelho_atual") or "NULL"},
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = {sk}
-    """
-
-    print("\n🔵 UPDATE VIA JSON:\n", query)
-
-    bq._run(query)
     return jsonify({"success": True})
-
 
 
 # ============================================================
@@ -112,7 +88,5 @@ def chips_update_json():
 # ============================================================
 @chips_bp.route("/chips/timeline/<sk_chip>")
 def chips_timeline(sk_chip):
-
     eventos_df = bq.get_eventos_chip(sk_chip)
-
     return jsonify(eventos_df.to_dict(orient="records"))

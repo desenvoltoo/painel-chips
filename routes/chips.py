@@ -73,15 +73,32 @@ def chips_get_by_sk(sk_chip):
 def chips_update_json():
     data = request.json
 
-    if not data.get("id_chip"):
+    sk = data.get("sk_chip")
+    id_chip = data.get("id_chip")
+
+    # Se veio apenas SK, buscamos o ID correspondente
+    if sk and not id_chip:
+        df = bq._run(f"""
+            SELECT id_chip
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE sk_chip = {sk}
+            LIMIT 1
+        """)
+
+        if df.empty:
+            return jsonify({"error": "Chip não encontrado"}), 404
+
+        id_chip = df.iloc[0]["id_chip"]
+        data["id_chip"] = id_chip  # adiciona ao JSON antes de chamar o upsert
+
+    # Se MESMO ASSIM não tivermos id_chip, erro real
+    if not id_chip:
         return jsonify({"error": "id_chip não enviado"}), 400
 
-    # usa o MESMO método do ADD
-    # → isso garante: histórico, eventos, comparação de dados, etc.
+    # Agora o upsert funciona perfeitamente
     bq.upsert_chip(data)
 
     return jsonify({"success": True})
-
 
 # ============================================================
 # TIMELINE / HISTÓRICO DO CHIP

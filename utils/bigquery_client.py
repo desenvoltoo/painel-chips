@@ -6,40 +6,46 @@ import pandas as pd
 from datetime import datetime
 from google.cloud import bigquery
 
-# ===========================
+# ============================================================
 # VARIÁVEIS DE AMBIENTE
-# ===========================
+# ============================================================
 PROJECT = os.getenv("GCP_PROJECT_ID", "painel-universidade")
 DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Sanitizador simples para strings SQL
+# ============================================================
+# SANITIZAÇÃO DE STRINGS
+# ============================================================
 def q(value: str):
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
-    return str(value).replace("'", "''")
+    return f"'{str(value).replace(\"'\", \"''\")}'"
 
 
-# ------------------------------
-# Normalizar datas
-# ------------------------------
+# ============================================================
+# NORMALIZAR DATAS
+# ============================================================
 def normalize_date(value):
     if not value:
         return "NULL"
 
     try:
+        # Já está no formato YYYY-MM-DD
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
 
+        # Formato BR: DD/MM/YYYY
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
 
+        # Formato ISO com T
         if "T" in value:
             date_part = value.split("T")[0]
             return f"DATE('{date_part}')"
 
+        # DateTime Python
         dt = datetime.fromisoformat(value)
         return f"DATE('{dt.strftime('%Y-%m-%d')}')"
 
@@ -47,9 +53,9 @@ def normalize_date(value):
         return "NULL"
 
 
-# ------------------------------
-# Normalizar números
-# ------------------------------
+# ============================================================
+# NORMALIZAR NÚMEROS
+# ============================================================
 def normalize_number(value):
     if not value:
         return "NULL"
@@ -60,6 +66,9 @@ def normalize_number(value):
         return "NULL"
 
 
+# ============================================================
+# BIGQUERY CLIENT
+# ============================================================
 class BigQueryClient:
 
     def __init__(self):
@@ -67,9 +76,9 @@ class BigQueryClient:
         self.dataset = DATASET
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
-    # ============================================================
-    # EXECUTA SQL
-    # ============================================================
+    # ------------------------------------------------------------
+    # EXECUTA QUALQUER SQL
+    # ------------------------------------------------------------
     def _run(self, sql: str):
 
         print("\n🔥 SQL EXECUTANDO:\n", sql, "\n========================================")
@@ -77,16 +86,18 @@ class BigQueryClient:
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
+
             df = df.astype(object).where(pd.notnull(df), None)
+
             return df
 
         except Exception as e:
             print("\n🚨 ERRO NO SQL:\n", sql)
             raise e
 
-    # ============================================================
+    # ------------------------------------------------------------
     # GET VIEW
-    # ============================================================
+    # ------------------------------------------------------------
     def get_view(self, view_name: str):
         sql = f"""
             SELECT *
@@ -144,14 +155,13 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # UPSERT CHIP + EVENTOS
+    # UPSERT CHIP + REGISTRO DE EVENTOS
     # ============================================================
     def upsert_chip(self, form):
 
         id_chip = form.get("id_chip") or str(uuid.uuid4())
         id_chip_sql = q(id_chip)
 
-        # Buscar estado antigo
         sql_busca = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -179,7 +189,9 @@ class BigQueryClient:
         sk_ap = form.get("sk_aparelho_atual")
         aparelho_sql = sk_ap if sk_ap else "NULL"
 
-        # Registrar eventos de mudança
+        # ------------------------------------------------------------
+        # REGISTRAR EVENTOS DE ALTERAÇÃO
+        # ------------------------------------------------------------
         if antigo:
             campos = {
                 "numero": numero,
@@ -204,7 +216,9 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # MERGE final
+        # ------------------------------------------------------------
+        # MERGE FINAL
+        # ------------------------------------------------------------
         sql = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT {id_chip_sql} AS id_chip) S
@@ -243,7 +257,7 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # MOVIMENTAÇÃO
+    # MOVIMENTAÇÃO DE CHIP
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -267,7 +281,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS
+    # EVENTOS DE ALTERAÇÃO
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -292,13 +306,15 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # TIMELINE
+    # TIMELINE COMPLETA
     # ============================================================
     def get_eventos_chip(self, sk_chip):
+
         sql = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
             WHERE sk_chip = {sk_chip}
             ORDER BY data_evento DESC
         """
+
         return self._run(sql)

@@ -25,7 +25,8 @@
 
                 <div class="slot-number">Slot {{ slot.slot }}</div>
 
-                {% if slot.chip.sk_chip %}
+                {% if slot.chip and slot.chip.sk_chip %}
+                <!-- CHIP OCUPANDO O SLOT -->
                 <div class="chip-info">
                     <span class="chip-number">{{ slot.chip.numero }}</span>
                     <span class="chip-operadora">{{ slot.chip.operadora }}</span>
@@ -36,6 +37,7 @@
                 </div>
 
                 {% else %}
+                <!-- SLOT VAZIO -->
                 <div class="chip-empty">Vazio</div>
 
                 {% if a.chips_sem_slot|length > 0 %}
@@ -48,18 +50,24 @@
                     </option>
                     {% endfor %}
                 </select>
+                {% else %}
+                    <div class="chip-empty-info">Nenhum chip disponível</div>
                 {% endif %}
 
                 {% endif %}
             </div>
             {% endfor %}
+
         </div>
 
     </div>
     {% endfor %}
+
 </div>
 
-
+<!-- ============================================================
+     FUNÇÕES VINCULAR / DESVINCULAR
+============================================================ -->
 <script>
 function vincular(sk_chip, slot) {
     if (!sk_chip) return;
@@ -70,20 +78,26 @@ function vincular(sk_chip, slot) {
         body: JSON.stringify({ sk_chip, slot })
     })
     .then(r => r.json())
-    .then(() => location.reload());
+    .then(() => location.reload())
+    .catch(err => console.error("Erro ao vincular:", err));
 }
 
 function desvincular(sk_chip) {
+
     fetch("/relacionamentos/desvincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sk_chip })
     })
     .then(r => r.json())
-    .then(() => location.reload());
+    .then(() => location.reload())
+    .catch(err => console.error("Erro ao desvincular:", err));
 }
 </script>
 
+<!-- ============================================================
+     ESTILO PREMIUM
+============================================================ -->
 <style>
 .page-header {
     margin-bottom: 2rem;
@@ -134,6 +148,11 @@ function desvincular(sk_chip) {
     border-radius: 10px;
     border: 1px solid #1e3a8a33;
     text-align: center;
+    transition: .25s ease;
+}
+
+.slot-card:hover {
+    box-shadow: 0 0 10px #1e40af55;
 }
 
 .slot-number {
@@ -171,6 +190,11 @@ function desvincular(sk_chip) {
     width: 100%;
     padding: 6px;
     border-radius: 8px;
+}
+
+.chip-empty-info {
+    color: #475569;
+    font-size: 0.8rem;
 }
 </style>
 

@@ -1,68 +1,83 @@
-# utils/relacionamentos.py
-from flask import Blueprint, render_template, request, redirect, jsonify
+# -*- coding: utf-8 -*-
+from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
+import datetime
 
-relacionamentos_bp = Blueprint("relacionamentos", __name__)
+rel_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
 
+# ============================================================
+# 📌 PÁGINA PRINCIPAL
+# ============================================================
+@rel_bp.route("/relacionamentos")
+def relacionamentos_home():
 
-# =======================================================
-# LISTAGEM DE RELACIONAMENTOS
-# =======================================================
-@relacionamentos_bp.route("/relacionamentos")
-def listar_relacionamentos():
     try:
-        df = bq.get_eventos()
-        df = sanitize_df(df)
+        df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
 
         return render_template(
             "relacionamentos.html",
-            relacionamentos=df.to_dict(orient="records")
+            aparelhos=df.to_dict(orient="records")
         )
 
     except Exception as e:
-        print("Erro ao carregar relacionamentos:", e)
+        print("ERRO CARREGAR RELACIONAMENTOS:", e)
         return "Erro ao carregar relacionamentos", 500
 
 
-# =======================================================
-# INSERIR NOVO RELACIONAMENTO (MOVIMENTAÇÃO)
-# =======================================================
-@relacionamentos_bp.route("/relacionamentos/add", methods=["POST"])
-def adicionar_relacionamento():
+# ============================================================
+# 🔄 ATUALIZAR UM SLOT: vincular chip → slot
+# ============================================================
+@rel_bp.route("/relacionamentos/vincular", methods=["POST"])
+def relacionamentos_vincular():
+
     try:
-        dados = request.form
+        sk_chip = request.json.get("sk_chip")
+        slot = request.json.get("slot")
 
-        bq.registrar_movimento_chip(
-            sk_chip=dados.get("sk_chip"),
-            sk_aparelho=dados.get("sk_aparelho"),
-            tipo=dados.get("tipo"),
-            origem=dados.get("origem", "Painel"),
-            observacao=dados.get("observacao", "")
-        )
+        if not sk_chip or slot is None:
+            return jsonify({"erro": "Dados incompletos"}), 400
 
-        return redirect("/relacionamentos")
+        sql = f"""
+        UPDATE `painel-universidade.marts.dim_chip`
+        SET slot_whatsapp = {slot},
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {sk_chip}
+        """
+
+        bq.execute_query(sql)
+
+        return jsonify({"ok": True})
 
     except Exception as e:
-        print("Erro ao inserir relacionamento:", e)
-        return "Erro ao inserir relacionamento", 500
+        print("ERRO AO VINCULAR SLOT:", e)
+        return jsonify({"erro": "Falha ao vincular"}), 500
 
 
-# =======================================================
-# DETALHE DE UM RELACIONAMENTO
-# =======================================================
-@relacionamentos_bp.route("/relacionamentos/<sk_fato>")
-def detalhe_relacionamento(sk_fato):
+# ============================================================
+# ❌ DESVINCULAR SLOT: remover chip → slot
+# ============================================================
+@rel_bp.route("/relacionamentos/desvincular", methods=["POST"])
+def relacionamentos_desvincular():
+
     try:
-        df = bq.get_eventos()
-        df = df[df["sk_fato"] == int(sk_fato)]
+        sk_chip = request.json.get("sk_chip")
 
-        if df.empty:
-            return jsonify({"erro": "Relacionamento não encontrado"}), 404
+        if not sk_chip:
+            return jsonify({"erro": "sk_chip ausente"}), 400
 
-        return jsonify(df.to_dict(orient="records")[0])
+        sql = f"""
+        UPDATE `painel-universidade.marts.dim_chip`
+        SET slot_whatsapp = NULL,
+            updated_at = CURRENT_TIMESTAMP()
+        WHERE sk_chip = {sk_chip}
+        """
+
+        bq.execute_query(sql)
+
+        return jsonify({"ok": True})
 
     except Exception as e:
-        print("Erro ao carregar registro:", e)
-        return "Erro ao buscar relacionamento", 500
+        print("ERRO AO DESVINCULAR:", e)
+        return jsonify({"erro": "Falha ao desvincular"}), 500

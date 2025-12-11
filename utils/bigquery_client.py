@@ -156,101 +156,124 @@ class BigQueryClient:
     # ============================================================
     # UPSERT CHIP + EVENTOS
     # ============================================================
-    def upsert_chip(self, form):
+  def upsert_chip(self, form):
 
-        id_chip = form.get("id_chip") or str(uuid.uuid4())
-        id_chip_sql = q(id_chip)
+    # ------------------------------------------
+    # 1) Preparar ID (chave lógica)
+    # ------------------------------------------
+    id_chip = form.get("id_chip") or str(uuid.uuid4())
+    id_chip_sql = q(id_chip)
 
-        # Buscar estado antigo
-        sql_busca = f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE id_chip = {id_chip_sql}
-            LIMIT 1
-        """
+    # ------------------------------------------
+    # 2) Buscar estado atual no banco
+    # ------------------------------------------
+    sql_busca = f"""
+        SELECT *
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        WHERE id_chip = {id_chip_sql}
+        LIMIT 1
+    """
 
-        atual_df = self._run(sql_busca)
-        antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
+    atual_df = self._run(sql_busca)
+    antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-        # Novos valores
-        numero = q(form.get("numero"))
-        operadora = q(form.get("operadora"))
-        operador = q(form.get("operador"))
-        plano = q(form.get("plano"))
-        status = q(form.get("status") or "DISPONIVEL")
-        observacao = q(form.get("observacao"))
+    # ------------------------------------------
+    # 3) Preparar novos valores sanitizados
+    # ------------------------------------------
+    numero      = q(form.get("numero"))
+    operadora   = q(form.get("operadora"))
+    operador    = q(form.get("operador"))
+    plano       = q(form.get("plano"))
+    status      = q(form.get("status") or "DISPONIVEL")
+    observacao  = q(form.get("observacao"))
 
-        dt_inicio = normalize_date(form.get("dt_inicio"))
-        dt_recarga = normalize_date(form.get("ultima_recarga_data"))
+    dt_inicio   = normalize_date(form.get("dt_inicio"))
+    dt_recarga  = normalize_date(form.get("ultima_recarga_data"))
 
-        val_recarga = normalize_number(form.get("ultima_recarga_valor"))
-        total_gasto = normalize_number(form.get("total_gasto"))
+    val_recarga = normalize_number(form.get("ultima_recarga_valor"))
+    total_gasto = normalize_number(form.get("total_gasto"))
 
-        sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_ap if sk_ap else "NULL"
+    # aparelho atual
+    sk_ap = form.get("sk_aparelho_atual")
+    aparelho_sql = sk_ap if sk_ap not in [None, "", "NULL", "None"] else None
 
-        # Registrar eventos de mudança
-        if antigo:
-            campos = {
-                "numero": numero,
-                "operadora": operadora,
-                "operador": operador,
-                "plano": plano,
-                "status": status,
-                "sk_aparelho_atual": aparelho_sql,
-            }
+    # ------------------------------------------
+    # 4) Se existe registro atual → comparar e registrar histórico
+    # ------------------------------------------
+    if antigo:
+        campos = {
+            "numero": numero,
+            "operadora": operadora,
+            "operador": operador,
+            "plano": plano,
+            "status": status,
+            "sk_aparelho_atual": aparelho_sql,
+        }
 
-            for campo, novo_valor in campos.items():
-                old = str(antigo.get(campo) or "")
-                new = str(novo_valor or "")
+        for campo, novo_valor_sql in campos.items():
 
-                if old != new:
-                    self.registrar_evento_chip(
-                        sk_chip=antigo["sk_chip"],
-                        tipo_evento=campo.upper(),
-                        valor_antigo=old,
-                        valor_novo=new,
-                        origem="Painel",
-                        obs="Alteração via painel"
-                    )
-
-        # MERGE final
-        sql = f"""
-            MERGE `{PROJECT}.{DATASET}.dim_chip` T
-            USING (SELECT {id_chip_sql} AS id_chip) S
-            ON T.id_chip = S.id_chip
-
-            WHEN MATCHED THEN UPDATE SET
-                numero = {numero},
-                operadora = {operadora},
-                operador = {operador},
-                plano = {plano},
-                status = {status},
-                observacao = {observacao},
-                dt_inicio = {dt_inicio},
-                ultima_recarga_valor = {val_recarga},
-                ultima_recarga_data = {dt_recarga},
-                total_gasto = {total_gasto},
-                sk_aparelho_atual = {aparelho_sql},
-                updated_at = CURRENT_TIMESTAMP()
-
-            WHEN NOT MATCHED THEN INSERT (
-                id_chip, numero, operadora, operador, plano, status,
-                observacao,
-                dt_inicio, ultima_recarga_valor, ultima_recarga_data,
-                total_gasto, sk_aparelho_atual,
-                ativo, created_at, updated_at
+            # Valor novo sem aspas
+            novo_valor = (
+                str(novo_valor_sql)
+                .replace("'", "")
+                .strip()
+                if novo_valor_sql is not None else ""
             )
-            VALUES (
-                {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
-                {observacao},
-                {dt_inicio}, {val_recarga}, {dt_recarga},
-                {total_gasto}, {aparelho_sql},
-                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-            )
-        """
 
-        self._run(sql)
+            # Valor antigo
+            old_val = antigo.get(campo)
+            old_val = "" if old_val in [None, "None", "NULL"] else str(old_val).strip()
+
+            # Se mudou → registrar evento
+            if old_val != novo_valor:
+                self.registrar_evento_chip(
+                    sk_chip=antigo["sk_chip"],
+                    tipo_evento=campo.upper(),
+                    valor_antigo=old_val,
+                    valor_novo=novo_valor,
+                    origem="Painel",
+                    obs="Alteração via painel"
+                )
+
+    # ------------------------------------------
+    # 5) MERGE FINAL (faz UPDATE ou INSERT automaticamente)
+    # ------------------------------------------
+    sql_merge = f"""
+        MERGE `{PROJECT}.{DATASET}.dim_chip` T
+        USING (SELECT {id_chip_sql} AS id_chip) S
+        ON T.id_chip = S.id_chip
+
+        WHEN MATCHED THEN UPDATE SET
+            numero = {numero},
+            operadora = {operadora},
+            operador = {operador},
+            plano = {plano},
+            status = {status},
+            observacao = {observacao},
+            dt_inicio = {dt_inicio},
+            ultima_recarga_valor = {val_recarga},
+            ultima_recarga_data = {dt_recarga},
+            total_gasto = {total_gasto},
+            sk_aparelho_atual = {aparelho_sql if aparelho_sql else "NULL"},
+            updated_at = CURRENT_TIMESTAMP()
+
+        WHEN NOT MATCHED THEN INSERT (
+            id_chip, numero, operadora, operador, plano, status,
+            observacao, dt_inicio,
+            ultima_recarga_valor, ultima_recarga_data,
+            total_gasto, sk_aparelho_atual,
+            ativo, created_at, updated_at
+        )
+        VALUES (
+            {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
+            {observacao}, {dt_inicio},
+            {val_recarga}, {dt_recarga},
+            {total_gasto}, {aparelho_sql if aparelho_sql else "NULL"},
+            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+        )
+    """
+
+    self._run(sql_merge)
 
     # ============================================================
     # MOVIMENTAÇÃO

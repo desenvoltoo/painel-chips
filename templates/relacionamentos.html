@@ -1,76 +1,177 @@
 {% extends "base.html" %}
-{% block conteudo %}
+{% block title %}Relacionamentos{% endblock %}
 
-<h2>Registrar Evento</h2>
+{% block content %}
 
-<form id="form-evento" class="form-box">
+<div class="page-header">
+    <h1><i class="fas fa-link"></i> Relacionamentos WhatsApp x Chips</h1>
+    <p class="subtitle">Gerencie a ocupação dos slots de WhatsApp de cada aparelho.</p>
+</div>
 
-    <label>Chip</label>
-    <select name="sk_chip">
-        {% for c in chips %}
-            <option value="{{ c.sk_chip }}">{{ c.numero }}</option>
-        {% endfor %}
-    </select>
+<div class="aparelhos-container">
 
-    <label>Aparelho</label>
-    <select name="sk_aparelho">
-        {% for a in aparelhos %}
-            <option value="{{ a.sk_aparelho }}">{{ a.modelo }}</option>
-        {% endfor %}
-    </select>
+    {% for a in aparelhos %}
+    <div class="aparelho-card">
+        
+        <div class="aparelho-header">
+            <h2>{{ a.marca }} • {{ a.modelo }}</h2>
+            <span class="tag">Capacidade: {{ a.capacidade_total }} WhatsApps</span>
+        </div>
 
-    <label>Tipo de Movimento</label>
-    <select name="tipo_movimento">
-        <option>ENTREGA</option>
-        <option>DEVOLUÇÃO</option>
-        <option>RECARGA</option>
-    </select>
+        <div class="slots-grid">
 
-    <label>Data</label>
-    <input type="date" name="data_uso">
+            {% for slot in a.slots %}
+            <div class="slot-card">
 
-    <label>Origem</label>
-    <input name="origem">
+                <div class="slot-number">Slot {{ slot.slot }}</div>
 
-    <label>Observação</label>
-    <input name="observacao">
+                {% if slot.chip.sk_chip %}
+                <div class="chip-info">
+                    <span class="chip-number">{{ slot.chip.numero }}</span>
+                    <span class="chip-operadora">{{ slot.chip.operadora }}</span>
 
-    <button>Salvar Evento</button>
-</form>
+                    <button class="btn-remove" onclick="desvincular({{ slot.chip.sk_chip }})">
+                        <i class="fas fa-times"></i> Remover
+                    </button>
+                </div>
 
-<h2>Eventos Registrados</h2>
+                {% else %}
+                <div class="chip-empty">Vazio</div>
 
-<table class="tabela">
-<thead>
-<tr>
-    <th>Chip</th>
-    <th>Aparelho</th>
-    <th>Tipo</th>
-    <th>Data</th>
-    <th>Origem</th>
-    <th>Observação</th>
-</tr>
-</thead>
-<tbody>
-{% for r in rel %}
-<tr>
-    <td>{{ r.sk_chip }}</td>
-    <td>{{ r.sk_aparelho }}</td>
-    <td>{{ r.tipo_movimento }}</td>
-    <td>{{ r.data_uso }}</td>
-    <td>{{ r.origem }}</td>
-    <td>{{ r.observacao }}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+                {% if a.chips_sem_slot|length > 0 %}
+                <select class="select-chip" onchange="vincular(this.value, {{ slot.slot }})">
+                    <option value="">Selecionar Chip</option>
+
+                    {% for c in a.chips_sem_slot %}
+                    <option value="{{ c.sk_chip }}">
+                        {{ c.numero }} ({{ c.operadora }})
+                    </option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
+
 
 <script>
-document.querySelector("#form-evento").onsubmit = async e => {
-    e.preventDefault();
-    await fetch("/eventos/add", {method:"POST", body:new URLSearchParams(new FormData(e.target))});
-    location.reload();
-};
+function vincular(sk_chip, slot) {
+    if (!sk_chip) return;
+
+    fetch("/relacionamentos/vincular", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sk_chip, slot })
+    })
+    .then(r => r.json())
+    .then(() => location.reload());
+}
+
+function desvincular(sk_chip) {
+    fetch("/relacionamentos/desvincular", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sk_chip })
+    })
+    .then(r => r.json())
+    .then(() => location.reload());
+}
 </script>
+
+<style>
+.page-header {
+    margin-bottom: 2rem;
+}
+.subtitle {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.aparelhos-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.aparelho-card {
+    background: #111827;
+    padding: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid #1e3a8a55;
+    box-shadow: 0 0 15px #1e3a8a33;
+}
+
+.aparelho-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+}
+
+.tag {
+    background: #1e3a8a55;
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: #93c5fd;
+    font-size: 0.8rem;
+}
+
+.slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 1rem;
+}
+
+.slot-card {
+    background: #0f172a;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid #1e3a8a33;
+    text-align: center;
+}
+
+.slot-number {
+    color: #60a5fa;
+    margin-bottom: 0.6rem;
+}
+
+.chip-info {
+    background: #1e40af44;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+}
+
+.chip-number {
+    font-weight: bold;
+    color: #93c5fd;
+}
+
+.chip-empty {
+    color: #64748b;
+    margin-bottom: 0.6rem;
+}
+
+.btn-remove {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.select-chip {
+    width: 100%;
+    padding: 6px;
+    border-radius: 8px;
+}
+</style>
 
 {% endblock %}

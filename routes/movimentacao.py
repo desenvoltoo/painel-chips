@@ -63,19 +63,28 @@ def buscar_chip():
 def historico_chip(sk_chip):
 
     try:
-        # Garante que o parâmetro sk_chip seja INT
+        # Garante que sk_chip seja inteiro
         sk_chip_int = int(sk_chip)
 
-        # SQL com filtro para origem = 'Painel'
+        # SQL seguro com parâmetros
         sql = f"""
-            SELECT *
+            SELECT
+              sk_chip,
+              categoria,
+              tipo_evento,
+              campo,
+              valor_antigo,
+              valor_novo,
+              origem,
+              observacao,
+              data_evento,
+              data_fmt
             FROM `{bq.project}.{bq.dataset}.vw_chip_timeline`
             WHERE sk_chip = @sk_chip
               AND origem = @origem
             ORDER BY data_evento DESC
         """
 
-        # Passa os parâmetros de forma segura
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip_int),
@@ -83,15 +92,26 @@ def historico_chip(sk_chip):
             ]
         )
 
-        # Executa
         query_job = bq.client.query(sql, job_config=job_config)
-        df = query_job.result().to_dataframe(create_bqstorage_client=False)
+        rows = query_job.result()
 
-        # Sanitiza (remove None, etc)
-        df = sanitize_df(df)
+        # Converte para JSON manualmente, sem pandas
+        events = []
+        for row in rows:
+            events.append({
+                "sk_chip": row.sk_chip,
+                "categoria": row.categoria,
+                "tipo_evento": row.tipo_evento,
+                "campo": row.campo,
+                "valor_antigo": row.valor_antigo,
+                "valor_novo": row.valor_novo,
+                "origem": row.origem,
+                "observacao": row.observacao,
+                "data_evento": str(row.data_evento),
+                "data_fmt": row.data_fmt
+            })
 
-        # Retorna JSON
-        return jsonify(df.to_dict(orient="records"))
+        return jsonify(events)
 
     except Exception as e:
         print("🚨 Erro ao buscar histórico:", e)

@@ -21,7 +21,7 @@
         <div class="slots-grid">
 
             {% for slot in a.slots %}
-            <div class="slot-card">
+            <div class="slot-card" id="slot-{{ a.sk_aparelho }}-{{ slot.slot }}">
 
                 <div class="slot-number">Slot {{ slot.slot }}</div>
 
@@ -31,17 +31,29 @@
                     <span class="chip-number">{{ slot.chip.numero }}</span>
                     <span class="chip-operadora">{{ slot.chip.operadora }}</span>
 
-                    <button class="btn-remove" onclick="desvincular({{ slot.chip.sk_chip }})">
+                    <button class="btn-remove"
+                        onclick="desvincular({{ a.sk_aparelho }}, {{ slot.slot }})">
                         <i class="fas fa-times"></i> Remover
                     </button>
                 </div>
+
+                <!-- SELECT PARA ALTERAR -->
+                <select class="select-chip"
+                        onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
+                    <option value="">Alterar chip...</option>
+
+                    {% for c in a.chips_sem_slot %}
+                    <option value="{{ c.sk_chip }}">{{ c.numero }} ({{ c.operadora }})</option>
+                    {% endfor %}
+                </select>
 
                 {% else %}
                 <!-- SLOT VAZIO -->
                 <div class="chip-empty">Vazio</div>
 
                 {% if a.chips_sem_slot|length > 0 %}
-                <select class="select-chip" onchange="vincular(this.value, {{ slot.slot }})">
+                <select class="select-chip"
+                        onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
                     <option value="">Selecionar Chip</option>
 
                     {% for c in a.chips_sem_slot %}
@@ -62,33 +74,31 @@
         </div>
     </div>
     {% endfor %}
-
 </div>
 
 <!-- ============================================================
-     FUNÇÕES VINCULAR / DESVINCULAR
+     JS — FUNÇÕES VINCULAR / DESVINCULAR
 ============================================================ -->
 <script>
-function vincular(sk_chip, slot) {
+function vincular(sk_chip, sk_aparelho, slot) {
     if (!sk_chip) return;
 
     fetch("/relacionamentos/vincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_chip, slot })
+        body: JSON.stringify({ sk_chip, sk_aparelho, slot })
     })
     .then(r => r.json())
     .then(() => location.reload())
     .catch(err => console.error("Erro ao vincular:", err));
 }
 
-function desvincular(sk_chip) {
+function desvincular(sk_aparelho, slot) {
     fetch("/relacionamentos/desvincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_chip })
+        body: JSON.stringify({ sk_aparelho, slot })
     })
-    .then(r => r.json())
     .then(() => location.reload())
     .catch(err => console.error("Erro ao desvincular:", err));
 }
@@ -98,9 +108,7 @@ function desvincular(sk_chip) {
      ESTILO PREMIUM
 ============================================================ -->
 <style>
-.page-header {
-    margin-bottom: 2rem;
-}
+.page-header { margin-bottom: 2rem; }
 .subtitle {
     color: #94a3b8;
     font-size: 0.9rem;
@@ -199,6 +207,7 @@ function desvincular(sk_chip) {
     width: 100%;
     padding: 6px;
     border-radius: 8px;
+    margin-top: .5rem;
 }
 </style>
 

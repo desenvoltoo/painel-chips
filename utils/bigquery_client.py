@@ -24,14 +24,12 @@ def q(value):
 
     value = str(value).strip()
 
-    # Se for número → retorna sem aspas
     try:
         float(value)
         return value
     except:
         pass
 
-    # Texto → escapa aspas internas e adiciona aspas externas
     value = value.replace("'", "''")
     return "'" + value + "'"
 
@@ -166,9 +164,6 @@ class BigQueryClient:
     # ============================================================
     def upsert_chip(self, form):
 
-        # ---------------------------------------------------------
-        # 1) Garantir que id_chip seja sempre STRING
-        # ---------------------------------------------------------
         raw_id = form.get("id_chip")
         if raw_id in [None, "", "None", "NULL"]:
             id_chip = str(uuid.uuid4())
@@ -177,22 +172,15 @@ class BigQueryClient:
 
         id_chip_sql = q(id_chip)
 
-        # ---------------------------------------------------------
-        # 2) Buscar estado atual
-        # ---------------------------------------------------------
         sql_busca = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
             WHERE id_chip = {id_chip_sql}
             LIMIT 1
         """
-
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-        # ---------------------------------------------------------
-        # 3) Novos valores
-        # ---------------------------------------------------------
         numero      = q(form.get("numero"))
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))
@@ -207,11 +195,8 @@ class BigQueryClient:
         total_gasto = normalize_number(form.get("total_gasto"))
 
         sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_ap if sk_ap else "NULL"
+        aparelho_sql = q(sk_ap) if sk_ap not in [None, "", "None"] else "NULL"
 
-        # ---------------------------------------------------------
-        # 4) Registrar eventos no histórico
-        # ---------------------------------------------------------
         if antigo:
 
             campos = {
@@ -224,11 +209,9 @@ class BigQueryClient:
             }
 
             for campo, novo_sql in campos.items():
-
                 novo_valor = (
                     str(novo_sql).replace("'", "") if novo_sql != "NULL" else ""
                 )
-
                 old_val = antigo.get(campo)
                 old_val = "" if old_val in [None, "None", "NULL"] else str(old_val)
 
@@ -242,9 +225,6 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # ---------------------------------------------------------
-        # 5) MERGE FINAL
-        # ---------------------------------------------------------
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT {id_chip_sql} AS id_chip) S
@@ -283,62 +263,13 @@ class BigQueryClient:
         self._run(sql_merge)
 
     # ============================================================
-    # MOVIMENTAÇÃO
-    # ============================================================
-    def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
-
-        query = f"""
-            CALL `{PROJECT}.{DATASET}.sp_registrar_movimento_chip`(
-                @sk_chip, @sk_aparelho, @tipo, @origem, @obs
-            )
-        """
-
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
-                bigquery.ScalarQueryParameter("tipo", "STRING", tipo),
-                bigquery.ScalarQueryParameter("origem", "STRING", origem),
-                bigquery.ScalarQueryParameter("obs", "STRING", observacao),
-            ]
-        )
-
-        self.client.query(query, job_config=job_config).result()
-        return True
-
-    # ============================================================
-    # EVENTOS
-    # ============================================================
-    def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
-
-        query = f"""
-            CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
-                @sk, @tipo, @old, @new, @orig, @obs
-            )
-        """
-
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("sk", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("tipo", "STRING", tipo_evento),
-                bigquery.ScalarQueryParameter("old", "STRING", valor_antigo),
-                bigquery.ScalarQueryParameter("new", "STRING", valor_novo),
-                bigquery.ScalarQueryParameter("orig", "STRING", origem),
-                bigquery.ScalarQueryParameter("obs", "STRING", obs),
-            ]
-        )
-
-        self.client.query(query, job_config=job_config).result()
-        return True
-
-    # ============================================================
-    # TIMELINE
+    # TIMELINE COM CORREÇÃO
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
-            WHERE sk_chip = {sk_chip}
+            WHERE sk_chip = {q(sk_chip)}
             ORDER BY data_evento DESC
         """
         return self._run(sql)

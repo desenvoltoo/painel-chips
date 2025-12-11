@@ -14,43 +14,52 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
-# Sanitizador seguro para SQL – AGORA TRATA STRING CORRETAMENTE
+# ============================================================
+# 🔹 Sanitizador SEGURO para BigQuery
+# ============================================================
 def q(value):
+    """Escapa texto e converte None → NULL"""
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
 
-    # Se parecer número → retorna sem aspas
+    # Se for número, retorna sem aspas
     try:
         float(value)
         return value
     except:
         pass
 
-    # Texto → escapa aspas corretamente sem quebrar Python
+    # Caso seja string → escapa aspas corretamente
     value = value.replace("'", "''")
-    return "'" + value + "'"
+    return f"'{value}'"
 
-# ------------------------------
-# Normalizar datas
-# ------------------------------
+
+# ============================================================
+# 🔹 Normalizar DATAS
+# ============================================================
 def normalize_date(value):
     if not value:
         return "NULL"
 
     try:
+        value = str(value).strip()
+
+        # formato YYYY-MM-DD
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
 
+        # formato DD/MM/YYYY
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
 
+        # formato ISO com T
         if "T" in value:
-            date_part = value.split("T")[0]
-            return f"DATE('{date_part}')"
+            return f"DATE('{value.split('T')[0]}')"
 
+        # qualquer outro formato interpretável
         dt = datetime.fromisoformat(value)
         return f"DATE('{dt.strftime('%Y-%m-%d')}')"
 
@@ -58,19 +67,21 @@ def normalize_date(value):
         return "NULL"
 
 
-# ------------------------------
-# Normalizar números
-# ------------------------------
+# ============================================================
+# 🔹 Normalizar números (recarga, total gasto)
+# ============================================================
 def normalize_number(value):
     if not value:
         return "NULL"
-
     try:
         return str(float(str(value).replace(",", ".")))
     except:
         return "NULL"
 
 
+# ============================================================
+# 🌎 CLIENTE BIGQUERY PRINCIPAL
+# ============================================================
 class BigQueryClient:
 
     def __init__(self):
@@ -155,124 +166,122 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # UPSERT CHIP + EVENTOS
+    # CHIP — UPSERT + HISTÓRICO
     # ============================================================
- def upsert_chip(self, form):
+    def upsert_chip(self, form):
 
-    # ------------------------------------------
-    # 1) Preparar ID lógico (não muda nunca)
-    # ------------------------------------------
-    id_chip = form.get("id_chip") or str(uuid.uuid4())
-    id_chip_sql = q(id_chip)
+        # -------------------------------
+        # 1) ID lógico (fixo)
+        # -------------------------------
+        id_chip = form.get("id_chip") or str(uuid.uuid4())
+        id_chip_sql = q(id_chip)
 
-    # ------------------------------------------
-    # 2) Buscar estado atual para comparação/histórico
-    # ------------------------------------------
-    sql_busca = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.dim_chip`
-        WHERE id_chip = {id_chip_sql}
-        LIMIT 1
-    """
+        # -------------------------------
+        # 2) Buscar estado atual
+        # -------------------------------
+        sql_busca = f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE id_chip = {id_chip_sql}
+            LIMIT 1
+        """
+        atual_df = self._run(sql_busca)
+        antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-    atual_df = self._run(sql_busca)
-    antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
+        # -------------------------------
+        # 3) Novos valores
+        # -------------------------------
+        numero      = q(form.get("numero"))
+        operadora   = q(form.get("operadora"))
+        operador    = q(form.get("operador"))
+        plano       = q(form.get("plano"))
+        status      = q(form.get("status") or "DISPONIVEL")
+        observacao  = q(form.get("observacao"))
 
-    # ------------------------------------------
-    # 3) Novos valores já sanitizados
-    # ------------------------------------------
-    numero      = q(form.get("numero"))
-    operadora   = q(form.get("operadora"))
-    operador    = q(form.get("operador"))
-    plano       = q(form.get("plano"))
-    status      = q(form.get("status") or "DISPONIVEL")
-    observacao  = q(form.get("observacao"))
+        dt_inicio   = normalize_date(form.get("dt_inicio"))
+        dt_recarga  = normalize_date(form.get("ultima_recarga_data"))
 
-    dt_inicio   = normalize_date(form.get("dt_inicio"))
-    dt_recarga  = normalize_date(form.get("ultima_recarga_data"))
+        val_recarga = normalize_number(form.get("ultima_recarga_valor"))
+        total_gasto = normalize_number(form.get("total_gasto"))
 
-    val_recarga = normalize_number(form.get("ultima_recarga_valor"))
-    total_gasto = normalize_number(form.get("total_gasto"))
+        sk_ap = form.get("sk_aparelho_atual")
+        aparelho_sql = sk_ap if sk_ap not in ["", None, "NULL", "None"] else None
 
-    sk_ap = form.get("sk_aparelho_atual")
-    aparelho_sql = sk_ap if sk_ap not in [None, "", "NULL", "None"] else None
+        # -------------------------------
+        # 4) Histórico — registrar apenas mudanças reais
+        # -------------------------------
+        if antigo:
+            campos = {
+                "numero": numero,
+                "operadora": operadora,
+                "operador": operador,
+                "plano": plano,
+                "status": status,
+                "sk_aparelho_atual": aparelho_sql,
+            }
 
-    # ------------------------------------------
-    # 4) Registrar histórico (somente mudanças reais)
-    # ------------------------------------------
-    if antigo:
-        campos = {
-            "numero": numero,
-            "operadora": operadora,
-            "operador": operador,
-            "plano": plano,
-            "status": status,
-            "sk_aparelho_atual": aparelho_sql,
-        }
+            for campo, novo_valor_sql in campos.items():
 
-        for campo, novo_valor_sql in campos.items():
-
-            # Remover aspas para comparação real
-            novo_valor = (
-                str(novo_valor_sql).replace("'", "").strip()
-                if novo_valor_sql is not None else ""
-            )
-
-            old_val = antigo.get(campo)
-            old_val = "" if old_val in [None, "None", "NULL"] else str(old_val).strip()
-
-            if old_val != novo_valor:
-                self.registrar_evento_chip(
-                    sk_chip=antigo["sk_chip"],
-                    tipo_evento=campo.upper(),
-                    valor_antigo=old_val,
-                    valor_novo=novo_valor,
-                    origem="Painel",
-                    obs="Alteração via painel"
+                novo_valor = (
+                    str(novo_valor_sql).replace("'", "").strip()
+                    if novo_valor_sql is not None else ""
                 )
 
-    # ------------------------------------------
-    # 5) MERGE – Atualiza ou cria chip automaticamente
-    # ------------------------------------------
-    sql_merge = f"""
-        MERGE `{PROJECT}.{DATASET}.dim_chip` T
-        USING (SELECT {id_chip_sql} AS id_chip) S
-        ON T.id_chip = S.id_chip
+                old_val = antigo.get(campo)
+                old_val = "" if old_val in [None, "None", "NULL"] else str(old_val).strip()
 
-        WHEN MATCHED THEN UPDATE SET
-            numero = {numero},
-            operadora = {operadora},
-            operador = {operador},
-            plano = {plano},
-            status = {status},
-            observacao = {observacao},
-            dt_inicio = {dt_inicio},
-            ultima_recarga_valor = {val_recarga},
-            ultima_recarga_data = {dt_recarga},
-            total_gasto = {total_gasto},
-            sk_aparelho_atual = {aparelho_sql if aparelho_sql else "NULL"},
-            updated_at = CURRENT_TIMESTAMP()
+                if old_val != novo_valor:
+                    self.registrar_evento_chip(
+                        sk_chip=antigo["sk_chip"],
+                        tipo_evento=campo.upper(),
+                        valor_antigo=old_val,
+                        valor_novo=novo_valor,
+                        origem="Painel",
+                        obs="Alteração via painel"
+                    )
 
-        WHEN NOT MATCHED THEN INSERT (
-            id_chip, numero, operadora, operador, plano, status,
-            observacao, dt_inicio,
-            ultima_recarga_valor, ultima_recarga_data,
-            total_gasto, sk_aparelho_atual,
-            ativo, created_at, updated_at
-        )
-        VALUES (
-            {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
-            {observacao}, {dt_inicio},
-            {val_recarga}, {dt_recarga},
-            {total_gasto}, {aparelho_sql if aparelho_sql else "NULL"},
-            TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
-        )
-    """
+        # -------------------------------
+        # 5) MERGE CHIP
+        # -------------------------------
+        sql_merge = f"""
+            MERGE `{PROJECT}.{DATASET}.dim_chip` T
+            USING (SELECT {id_chip_sql} AS id_chip) S
+            ON T.id_chip = S.id_chip
 
-    self._run(sql_merge)
+            WHEN MATCHED THEN UPDATE SET
+                numero = {numero},
+                operadora = {operadora},
+                operador = {operador},
+                plano = {plano},
+                status = {status},
+                observacao = {observacao},
+                dt_inicio = {dt_inicio},
+                ultima_recarga_valor = {val_recarga},
+                ultima_recarga_data = {dt_recarga},
+                total_gasto = {total_gasto},
+                sk_aparelho_atual = {aparelho_sql if aparelho_sql else "NULL"},
+                updated_at = CURRENT_TIMESTAMP()
+
+            WHEN NOT MATCHED THEN INSERT (
+                id_chip, numero, operadora, operador, plano, status,
+                observacao, dt_inicio,
+                ultima_recarga_valor, ultima_recarga_data,
+                total_gasto, sk_aparelho_atual,
+                ativo, created_at, updated_at
+            )
+            VALUES (
+                {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
+                {observacao}, {dt_inicio},
+                {val_recarga}, {dt_recarga},
+                {total_gasto}, {aparelho_sql if aparelho_sql else "NULL"},
+                TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
+            )
+        """
+
+        self._run(sql_merge)
 
     # ============================================================
-    # MOVIMENTAÇÃO
+    # MOVIMENTAÇÃO DO CHIP (APARELHO)
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -296,7 +305,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS
+    # EVENTOS (HISTÓRICO)
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -321,7 +330,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # TIMELINE
+    # TIMELINE COMPLETA DO CHIP
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""

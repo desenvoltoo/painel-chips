@@ -17,13 +17,13 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # Sanitização segura
 # ============================================================
 def q(value):
-    """Retorna NULL, número sem aspas ou string escapada."""
+    """Retorna NULL, valor numérico sem aspas ou string escapada."""
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
 
-    # tenta número
+    # tenta interpretar como número
     try:
         float(value.replace(",", "."))
         return value
@@ -41,22 +41,16 @@ def q(value):
 def normalize_date(value):
     if not value:
         return "NULL"
-
     try:
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
-
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
-
         if "T" in value:
-            dt = value.split("T")[0]
-            return f"DATE('{dt}')"
-
+            return f"DATE('{value.split('T')[0]}')"
         dt = datetime.fromisoformat(value)
         return f"DATE('{dt.strftime('%Y-%m-%d')}')"
-
     except:
         return "NULL"
 
@@ -67,7 +61,6 @@ def normalize_date(value):
 def normalize_number(value):
     if not value:
         return "NULL"
-
     try:
         return str(float(str(value).replace(",", ".")))
     except:
@@ -158,7 +151,7 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # UPSERT CHIP (AGORA SOMENTE COM sk_chip)
+    # UPSERT CHIP
     # ============================================================
     def upsert_chip(self, form):
 
@@ -176,7 +169,13 @@ class BigQueryClient:
             sk_chip = int(sk_chip)
             is_new = False
 
-        numero      = q(form.get("numero"))
+        # — TRATAMENTO CORRETO: numero sempre STRING
+        raw_num = form.get("numero")
+        if raw_num in [None, "", "None"]:
+            numero = "NULL"
+        else:
+            numero = f"'{str(raw_num).replace(\"'\",\"''\")}'"
+
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))
         plano       = q(form.get("plano"))
@@ -188,10 +187,13 @@ class BigQueryClient:
         val_recarga = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto = normalize_number(form.get("total_gasto"))
 
+        # sk_aparelho_atual é INT64
         sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_ap if sk_ap else "NULL"
+        aparelho_sql = sk_ap if sk_ap not in [None, "", "None"] else "NULL"
 
+        # ----------------------------------------------------
         # Se chip já existe → registrar eventos
+        # ----------------------------------------------------
         if not is_new:
             sql_old = f"""
                 SELECT *
@@ -227,7 +229,9 @@ class BigQueryClient:
                             obs="Alteração via painel"
                         )
 
-        # MERGE FINAL — AGORA TOTALMENTE BLINDADO
+        # =============================================================
+        #   MERGE FINAL (campos com tipos corretos segundo esquema)
+        # =============================================================
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT {sk_chip} AS sk_chip) S

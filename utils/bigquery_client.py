@@ -160,10 +160,13 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # UPSERT CHIP + EVENTOS
+    # UPSERT CHIP + EVENTOS (COM CORREÇÃO)
     # ============================================================
     def upsert_chip(self, form):
 
+        # ---------------------------------------------------------
+        # 1) id_chip → sempre STRING
+        # ---------------------------------------------------------
         raw_id = form.get("id_chip")
         if raw_id in [None, "", "None", "NULL"]:
             id_chip = str(uuid.uuid4())
@@ -172,15 +175,37 @@ class BigQueryClient:
 
         id_chip_sql = q(id_chip)
 
-        sql_busca = f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE id_chip = {id_chip_sql}
-            LIMIT 1
-        """
+        # ---------------------------------------------------------
+        # 1.5) Pega sk_chip se veio
+        # ---------------------------------------------------------
+        sk_chip = form.get("sk_chip")
+        sk_chip_sql = q(sk_chip) if sk_chip not in [None, "", "None"] else "NULL"
+
+        # ---------------------------------------------------------
+        # 2) Buscar estado atual por sk_chip
+        # ---------------------------------------------------------
+        if sk_chip_sql != "NULL":
+            sql_busca = f"""
+                SELECT *
+                FROM `{PROJECT}.{DATASET}.dim_chip`
+                WHERE sk_chip = {sk_chip_sql}
+                LIMIT 1
+            """
+        else:
+            # fallback: busca por id_chip string
+            sql_busca = f"""
+                SELECT *
+                FROM `{PROJECT}.{DATASET}.dim_chip`
+                WHERE id_chip = {id_chip_sql}
+                LIMIT 1
+            """
+
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
+        # ---------------------------------------------------------
+        # 3) Novos valores
+        # ---------------------------------------------------------
         numero      = q(form.get("numero"))
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))
@@ -197,6 +222,9 @@ class BigQueryClient:
         sk_ap = form.get("sk_aparelho_atual")
         aparelho_sql = q(sk_ap) if sk_ap not in [None, "", "None"] else "NULL"
 
+        # ---------------------------------------------------------
+        # 4) Eventos no histórico (idem seu original)
+        # ---------------------------------------------------------
         if antigo:
 
             campos = {
@@ -225,10 +253,13 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
+        # ---------------------------------------------------------
+        # 5) MERGE FINAL → usando sk_chip como chave se houver
+        # ---------------------------------------------------------
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
-            USING (SELECT {id_chip_sql} AS id_chip) S
-            ON T.id_chip = S.id_chip
+            USING (SELECT {sk_chip_sql} AS sk_chip, {id_chip_sql} AS id_chip) S
+            ON T.sk_chip = S.sk_chip
 
             WHEN MATCHED THEN UPDATE SET
                 numero = {numero},

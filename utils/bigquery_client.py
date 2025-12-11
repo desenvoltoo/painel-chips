@@ -15,23 +15,30 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
 # ============================================================
-# Sanitização segura para SQL
+# Sanitização segura para SQL (VERSÃO CORRIGIDA)
 # ============================================================
 def q(value):
-    """ Retorna NULL, número sem aspas ou string escapada com aspas """
+    """Retorna NULL, número sem aspas ou string escapada com aspas."""
+
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
-    value = str(value).strip()
+    value_str = str(value).strip()
 
+    # Telefones, CPFs e IDs longos -> STRING SEMPRE
+    if value_str.isdigit() and len(value_str) > 10:
+        return f"'{value_str}'"
+
+    # Tentar converter para número (para floats, inteiros pequenos etc)
     try:
-        float(value)
-        return value
+        float(value_str.replace(",", "."))
+        return value_str
     except:
         pass
 
-    value = value.replace("'", "''")
-    return "'" + value + "'"
+    # Texto padrão
+    value_str = value_str.replace("'", "''")
+    return f"'{value_str}'"
 
 
 # ============================================================
@@ -42,16 +49,13 @@ def normalize_date(value):
         return "NULL"
 
     try:
-        # Já no formato yyyy-mm-dd
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
 
-        # Brasil dd/mm/yyyy
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
 
-        # Timestamp ISO
         if "T" in value:
             date_part = value.split("T")[0]
             return f"DATE('{date_part}')"
@@ -76,7 +80,7 @@ def normalize_number(value):
 
 
 # ============================================================
-# CLIENTE BIGQUERY
+# CLASSE PRINCIPAL
 # ============================================================
 class BigQueryClient:
 
@@ -86,13 +90,18 @@ class BigQueryClient:
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
     # ============================================================
+    # EXECUTA SQL
+    # ============================================================
     def _run(self, sql: str):
+
         print("\n🔥 SQL EXECUTANDO:\n", sql, "\n========================================")
+
         try:
             job = self.client.query(sql)
             df = job.result().to_dataframe(create_bqstorage_client=False)
             df = df.astype(object).where(pd.notnull(df), None)
             return df
+
         except Exception as e:
             print("\n🚨 ERRO NO SQL:\n", sql)
             raise e
@@ -106,7 +115,6 @@ class BigQueryClient:
             FROM `{PROJECT}.{DATASET}.{view_name}`
         """
         return self._run(sql)
-
 
     # ============================================================
     # APARELHOS
@@ -131,6 +139,7 @@ class BigQueryClient:
             SELECT COALESCE(MAX(sk_aparelho),0) + 1 AS next_sk
             FROM `{PROJECT}.{DATASET}.dim_aparelho`
         """
+
         next_sk = int(self._run(sql_next).iloc[0]["next_sk"])
 
         sql = f"""
@@ -157,45 +166,27 @@ class BigQueryClient:
 
         self._run(sql)
 
-
     # ============================================================
     # UPSERT CHIP + EVENTOS
     # ============================================================
     def upsert_chip(self, form):
 
         # ---------------------------------------------------------
-        # 1) id_chip sempre STRING
+        # Garantir ID CHIP STRING
         # ---------------------------------------------------------
         raw_id = form.get("id_chip")
-        if raw_id in [None, "", "None", "NULL"]:
-            id_chip = str(uuid.uuid4())
-        else:
-            id_chip = str(raw_id)
+        id_chip = str(uuid.uuid4()) if raw_id in [None, "", "None", "NULL"] else str(raw_id)
         id_chip_sql = q(id_chip)
 
         # ---------------------------------------------------------
-        # sk_chip pode vir no form (Update) ou não (Insert)
+        # Buscar estado atual
         # ---------------------------------------------------------
-        sk_chip = form.get("sk_chip")
-        sk_chip_sql = q(sk_chip) if sk_chip not in [None, "", "None"] else "NULL"
-
-        # ---------------------------------------------------------
-        # Buscar estado atual por sk_chip quando possível
-        # ---------------------------------------------------------
-        if sk_chip_sql != "NULL":
-            sql_busca = f"""
-                SELECT *
-                FROM `{PROJECT}.{DATASET}.dim_chip`
-                WHERE sk_chip = {sk_chip_sql}
-                LIMIT 1
-            """
-        else:
-            sql_busca = f"""
-                SELECT *
-                FROM `{PROJECT}.{DATASET}.dim_chip`
-                WHERE id_chip = {id_chip_sql}
-                LIMIT 1
-            """
+        sql_busca = f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE id_chip = {id_chip_sql}
+            LIMIT 1
+        """
 
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
@@ -217,10 +208,10 @@ class BigQueryClient:
         total_gasto = normalize_number(form.get("total_gasto"))
 
         sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = q(sk_ap) if sk_ap not in [None, "", "None"] else "NULL"
+        aparelho_sql = sk_ap if sk_ap not in [None, "", "None"] else "NULL"  # INT correto
 
         # ---------------------------------------------------------
-        # Registrar eventos no histórico
+        # Registrar eventos do histórico
         # ---------------------------------------------------------
         if antigo:
 
@@ -234,9 +225,9 @@ class BigQueryClient:
             }
 
             for campo, novo_sql in campos.items():
-                novo_valor = (
-                    str(novo_sql).replace("'", "") if novo_sql != "NULL" else ""
-                )
+
+                novo_valor = str(novo_sql).replace("'", "") if novo_sql != "NULL" else ""
+
                 old_val = antigo.get(campo)
                 old_val = "" if old_val in [None, "None", "NULL"] else str(old_val)
 
@@ -251,12 +242,12 @@ class BigQueryClient:
                     )
 
         # ---------------------------------------------------------
-        # MERGE final
+        # MERGE FINAL CORRIGIDO (numero agora é STRING sempre)
         # ---------------------------------------------------------
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
-            USING (SELECT {sk_chip_sql} AS sk_chip, {id_chip_sql} AS id_chip) S
-            ON T.sk_chip = S.sk_chip
+            USING (SELECT {id_chip_sql} AS id_chip) S
+            ON T.id_chip = S.id_chip
 
             WHEN MATCHED THEN UPDATE SET
                 numero = {numero},
@@ -290,7 +281,6 @@ class BigQueryClient:
 
         self._run(sql_merge)
 
-
     # ============================================================
     # MOVIMENTAÇÃO
     # ============================================================
@@ -315,9 +305,8 @@ class BigQueryClient:
         self.client.query(query, job_config=job_config).result()
         return True
 
-
     # ============================================================
-    # EVENTOS (registrar_evento_chip)
+    # EVENTOS
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -340,7 +329,6 @@ class BigQueryClient:
 
         self.client.query(query, job_config=job_config).result()
         return True
-
 
     # ============================================================
     # TIMELINE

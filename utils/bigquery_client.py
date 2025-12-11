@@ -17,13 +17,13 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # Sanitização segura
 # ============================================================
 def q(value):
-    """Retorna NULL, valor numérico sem aspas ou string escapada."""
+    """Retorna NULL, número sem aspas ou string escapada."""
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
 
-    # tenta interpretar como número
+    # tenta número
     try:
         float(value.replace(",", "."))
         return value
@@ -174,7 +174,8 @@ class BigQueryClient:
         if raw_num in [None, "", "None"]:
             numero = "NULL"
         else:
-            numero = f"'{str(raw_num).replace(\"'\",\"''\")}'"
+            escaped = str(raw_num).replace("'", "''")
+            numero = f"'{escaped}'"
 
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))

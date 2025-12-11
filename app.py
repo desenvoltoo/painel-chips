@@ -88,7 +88,7 @@ def dashboard():
 app.register_blueprint(aparelhos_bp)
 app.register_blueprint(chips_bp)
 app.register_blueprint(recargas_bp)
-app.register_blueprint(rel_bp)
+app.register_blueprint(relacionamentos_bp)
 app.register_blueprint(mov_bp)
 
 # ================================

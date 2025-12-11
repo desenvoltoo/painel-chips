@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
+from google.cloud import bigquery
 
 mov_bp = Blueprint("movimentacao", __name__)
 bq = BigQueryClient()
@@ -56,22 +57,40 @@ def buscar_chip():
 
 
 # ============================================================
-# 📜 API — HISTÓRICO COMPLETO DO CHIP (Eventos + Movimentos)
+# 📜 API — HISTÓRICO DO CHIP (Eventos DO PAINEL)
 # ============================================================
 @mov_bp.route("/movimentacao/historico/<sk_chip>")
 def historico_chip(sk_chip):
 
     try:
+        # Garante que o parâmetro sk_chip seja INT
+        sk_chip_int = int(sk_chip)
+
+        # SQL com filtro para origem = 'Painel'
         sql = f"""
             SELECT *
             FROM `{bq.project}.{bq.dataset}.vw_chip_timeline`
-            WHERE sk_chip = {sk_chip}
+            WHERE sk_chip = @sk_chip
+              AND origem = @origem
             ORDER BY data_evento DESC
         """
 
-        df = bq._run(sql)
+        # Passa os parâmetros de forma segura
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip_int),
+                bigquery.ScalarQueryParameter("origem", "STRING", "Painel")
+            ]
+        )
+
+        # Executa
+        query_job = bq.client.query(sql, job_config=job_config)
+        df = query_job.result().to_dataframe(create_bqstorage_client=False)
+
+        # Sanitiza (remove None, etc)
         df = sanitize_df(df)
 
+        # Retorna JSON
         return jsonify(df.to_dict(orient="records"))
 
     except Exception as e:

@@ -21,15 +21,16 @@ def q(value):
 
     value = str(value).strip()
 
-    # Se for número (int ou float), retorna SEM aspas
+    # Se parecer número → retorna sem aspas
     try:
         float(value)
         return value
     except:
         pass
 
-    # Se for texto → coloca aspas corretamente
-    return f"'{value.replace("'", "''")}'"
+    # Texto → escapa aspas corretamente sem quebrar Python
+    value = value.replace("'", "''")
+    return "'" + value + "'"
 
 # ------------------------------
 # Normalizar datas

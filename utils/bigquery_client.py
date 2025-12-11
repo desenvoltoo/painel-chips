@@ -17,20 +17,17 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # Sanitização segura
 # ============================================================
 def q(value):
-    """Retorna NULL, número sem aspas ou string escapada."""
+    """Retorna NULL, valor numérico sem aspas ou string escapada."""
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
-
-    # tenta número
     try:
         float(value.replace(",", "."))
         return value
     except:
         pass
 
-    # string
     value = value.replace("'", "''")
     return f"'{value}'"
 
@@ -75,9 +72,6 @@ class BigQueryClient:
     def __init__(self):
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
 
-    # ========================================================
-    # EXECUTA SQL
-    # ========================================================
     def _run(self, sql: str):
         print("\n🔥 SQL EXECUTANDO:\n", sql, "\n========================================")
         try:
@@ -89,9 +83,9 @@ class BigQueryClient:
             print("\n🚨 ERRO NO SQL:\n", sql)
             raise e
 
-    # ========================================================
+    # ============================================================
     # GET VIEW
-    # ========================================================
+    # ============================================================
     def get_view(self, view_name: str):
         sql = f"""
             SELECT *
@@ -99,9 +93,9 @@ class BigQueryClient:
         """
         return self._run(sql)
 
-    # ========================================================
+    # ============================================================
     # GET APARELHOS
-    # ========================================================
+    # ============================================================
     def get_aparelhos(self):
         sql = f"""
             SELECT *
@@ -114,7 +108,6 @@ class BigQueryClient:
     # UPSERT APARELHO
     # ============================================================
     def upsert_aparelho(self, form):
-
         id_aparelho = q(form.get("id_aparelho"))
         modelo = q(form.get("modelo"))
         marca = q(form.get("marca"))
@@ -169,7 +162,7 @@ class BigQueryClient:
             sk_chip = int(sk_chip)
             is_new = False
 
-        # — TRATAMENTO CORRETO: numero sempre STRING
+        # TRATAMENTO CORRETO dos campos
         raw_num = form.get("numero")
         if raw_num in [None, "", "None"]:
             numero = "NULL"
@@ -193,45 +186,61 @@ class BigQueryClient:
         aparelho_sql = sk_ap if sk_ap not in [None, "", "None"] else "NULL"
 
         # ----------------------------------------------------
-        # Se chip já existe → registrar eventos
+        # REGISTRAR EVENTO: CRIAÇÃO OU ALTERAÇÃO
         # ----------------------------------------------------
+
+        # valores puros para comparação
+        campos_novos = {
+            "numero": str(form.get("numero") or ""),
+            "operadora": str(form.get("operadora") or ""),
+            "operador": str(form.get("operador") or ""),
+            "plano": str(form.get("plano") or ""),
+            "status": str(form.get("status") or ""),
+            "sk_aparelho_atual": str(form.get("sk_aparelho_atual") or "")
+        }
+
+        # buscar estado antigo
+        antigo = None
         if not is_new:
             sql_old = f"""
-                SELECT *
+                SELECT numero, operadora, operador, plano, status, sk_aparelho_atual
                 FROM `{PROJECT}.{DATASET}.dim_chip`
                 WHERE sk_chip = {sk_chip}
                 LIMIT 1
             """
-            antigo_df = self._run(sql_old)
-            antigo = antigo_df.to_dict(orient="records")[0] if not antigo_df.empty else None
+            df_old = self._run(sql_old)
+            if not df_old.empty:
+                antigo = df_old.to_dict(orient="records")[0]
 
-            if antigo:
-                campos = {
-                    "numero": numero,
-                    "operadora": operadora,
-                    "operador": operador,
-                    "plano": plano,
-                    "status": status,
-                    "sk_aparelho_atual": aparelho_sql,
-                }
+        # para novo: marca como evento de criação
+        if is_new:
+            self.registrar_evento_chip(
+                sk_chip=sk_chip,
+                tipo_evento="CRIACAO",
+                valor_antigo="",
+                valor_novo=f"Chip criado ({raw_num})",
+                origem="Painel",
+                obs="Criação via painel"
+            )
 
-                for campo, novo_sql in campos.items():
-                    novo_val = str(novo_sql).replace("'", "") if novo_sql != "NULL" else ""
-                    old_val = antigo.get(campo)
-                    old_val = "" if old_val in [None, "None", "NULL"] else str(old_val)
+        # para atualizações: compara mudanças
+        if antigo:
+            for campo, novo_val in campos_novos.items():
+                old_val = antigo.get(campo)
+                old_val = "" if old_val is None else str(old_val)
 
-                    if old_val != novo_val:
-                        self.registrar_evento_chip(
-                            sk_chip=sk_chip,
-                            tipo_evento=campo.upper(),
-                            valor_antigo=old_val,
-                            valor_novo=novo_val,
-                            origem="Painel",
-                            obs="Alteração via painel"
-                        )
+                if old_val != novo_val:
+                    self.registrar_evento_chip(
+                        sk_chip=sk_chip,
+                        tipo_evento=campo.upper(),
+                        valor_antigo=old_val,
+                        valor_novo=novo_val,
+                        origem="Painel",
+                        obs="Alteração via painel"
+                    )
 
         # =============================================================
-        #   MERGE FINAL (campos com tipos corretos segundo esquema)
+        #   MERGE FINAL
         # =============================================================
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T

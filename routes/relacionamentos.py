@@ -3,87 +3,107 @@ from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-# ============================================================
-# BLUEPRINT OFICIAL
-# ============================================================
-relacionamentos_bp = Blueprint("relacionamentos", __name__)
+rel_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
 
-
-# ============================================================
-# 📌 PÁGINA PRINCIPAL — LISTA APARELHOS + SLOTS
-# ============================================================
-@relacionamentos_bp.route("/relacionamentos")
-def relacionamentos_home():
+# ===============================================================
+# 📌 PÁGINA PRINCIPAL
+# ===============================================================
+@rel_bp.route("/relacionamentos")
+def pagina_relacionamentos():
     try:
-        # Vista completa já estruturada com slots, chips e chips_sem_slot
-        aparelhos_df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
+        aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
+        rel_df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
+        chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
 
-        return render_template(
-            "relacionamentos.html",
-            aparelhos=aparelhos_df.to_dict(orient="records")
-        )
+        # agrupar chips por aparelho
+        aparelhos = {}
+        for a in aparelhos_df.to_dict(orient="records"):
+            a["slots"] = [
+                {"slot": i + 1, "chip": None}
+                for i in range(a["capacidade_whatsapp"])
+            ]
+            aparelhos[a["sk_aparelho"]] = a
+
+        # preencher slots ocupados
+        for r in rel_df.to_dict(orient="records"):
+            aparelho = aparelhos.get(r["sk_aparelho"])
+            if aparelho:
+                aparelho["slots"][r["slot"] - 1]["chip"] = {
+                    "sk_chip": r["sk_chip"],
+                    "numero": r["numero"],
+                    "operadora": r["operadora"]
+                }
+
+        # chips não atribuídos
+        chips_sem_slot = []
+        for c in chips_df.to_dict(orient="records"):
+            encontrado = False
+            for a in aparelhos.values():
+                for slot in a["slots"]:
+                    if slot["chip"] and slot["chip"]["sk_chip"] == c["sk_chip"]:
+                        encontrado = True
+                        break
+                if encontrado:
+                    break
+            if not encontrado:
+                chips_sem_slot.append(c)
+
+        # adicionar lista de livres por aparelho
+        for a in aparelhos.values():
+            a["chips_sem_slot"] = chips_sem_slot
+
+        return render_template("relacionamentos.html", aparelhos=list(aparelhos.values()))
 
     except Exception as e:
         print("ERRO CARREGAR RELACIONAMENTOS:", e)
-        return "Erro ao carregar relacionamentos", 500
+        return "Erro", 500
 
 
-# ============================================================
-# 🔄 VINCULAR — associa chip → slot WhatsApp
-# ============================================================
-@relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
-def relacionamentos_vincular():
-
+# ===============================================================
+# ➕ AUTO-SAVE — Vincular chip ao slot
+# ===============================================================
+@rel_bp.route("/relacionamentos/vincular", methods=["POST"])
+def vincular_chip():
     try:
-        dados = request.get_json(silent=True) or {}
-
-        sk_chip = dados.get("sk_chip")
-        slot = dados.get("slot")
-
-        if not sk_chip or slot is None:
-            return jsonify({"erro": "Dados incompletos"}), 400
+        data = request.json
+        sk_chip = data["sk_chip"]
+        sk_aparelho = data["sk_aparelho"]
+        slot = data["slot"]
 
         sql = f"""
-            UPDATE `painel-universidade.marts.dim_chip`
-            SET 
-                slot_whatsapp = {slot},
-                updated_at = CURRENT_TIMESTAMP()
-            WHERE sk_chip = {sk_chip}
+            INSERT INTO `painel-universidade.marts.relacionamentos_whatsapp`
+            (sk_chip, sk_aparelho, slot, updated_at)
+            VALUES ({sk_chip}, {sk_aparelho}, {slot}, CURRENT_TIMESTAMP())
+            ON CONFLICT(sk_aparelho, slot) DO UPDATE SET sk_chip={sk_chip}, updated_at=CURRENT_TIMESTAMP();
         """
 
-        bq.execute_query(sql)
-        return jsonify({"ok": True})
+        bq.execute(sql)
+        return jsonify({"status": "ok"})
 
     except Exception as e:
-        print("ERRO AO VINCULAR SLOT:", e)
-        return jsonify({"erro": "Falha ao vincular"}), 500
+        print("ERRO VINCULAR:", e)
+        return jsonify({"erro": str(e)}), 500
 
 
-# ============================================================
-# ❌ DESVINCULAR — chip deixa o slot WhatsApp
-# ============================================================
-@relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
-def relacionamentos_desvincular():
-
+# ===============================================================
+# ❌ AUTO-SAVE — Desvincular chip do slot
+# ===============================================================
+@rel_bp.route("/relacionamentos/desvincular", methods=["POST"])
+def desvincular_chip():
     try:
-        dados = request.get_json(silent=True) or {}
-        sk_chip = dados.get("sk_chip")
-
-        if not sk_chip:
-            return jsonify({"erro": "sk_chip ausente"}), 400
+        data = request.json
+        sk_aparelho = data["sk_aparelho"]
+        slot = data["slot"]
 
         sql = f"""
-            UPDATE `painel-universidade.marts.dim_chip`
-            SET 
-                slot_whatsapp = NULL,
-                updated_at = CURRENT_TIMESTAMP()
-            WHERE sk_chip = {sk_chip}
+            DELETE FROM `painel-universidade.marts.relacionamentos_whatsapp`
+            WHERE sk_aparelho={sk_aparelho} AND slot={slot}
         """
 
-        bq.execute_query(sql)
-        return jsonify({"ok": True})
+        bq.execute(sql)
+        return jsonify({"status": "ok"})
 
     except Exception as e:
-        print("ERRO AO DESVINCULAR SLOT:", e)
-        return jsonify({"erro": "Falha ao desvincular"}), 500
+        print("ERRO DESVINCULAR:", e)
+        return jsonify({"erro": str(e)}), 500

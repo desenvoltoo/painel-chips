@@ -66,7 +66,7 @@ def historico_chip(sk_chip):
         # Garante que sk_chip seja inteiro
         sk_chip_int = int(sk_chip)
 
-        # SQL seguro com parâmetros
+        # SQL seguro com parâmetros para filtrar apenas eventos do Painel
         sql = f"""
             SELECT
               sk_chip,
@@ -95,7 +95,7 @@ def historico_chip(sk_chip):
         query_job = bq.client.query(sql, job_config=job_config)
         rows = query_job.result()
 
-        # Converte para JSON manualmente, sem pandas
+        # Converte para JSON manualmente (sem pandas) mantendo todos os campos
         events = []
         for row in rows:
             events.append({

@@ -3,52 +3,25 @@ from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
+# ============================================================
+# BLUEPRINT OFICIAL
+# ============================================================
 relacionamentos_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
 
 
 # ============================================================
-# 📌 PÁGINA PRINCIPAL — APARELHOS + CHIPS + SLOTS
+# 📌 PÁGINA PRINCIPAL — LISTA APARELHOS + SLOTS
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
-
     try:
-        # -------------------------------
-        # 1. CARREGAR TODOS OS APARELHOS
-        # -------------------------------
-        aparelhos_df = sanitize_df(bq.query("""
-            SELECT 
-                sk_aparelho,
-                marca,
-                modelo,
-                capacidade_whatsapp
-            FROM `painel-universidade.marts.dim_aparelho`
-            ORDER BY marca, modelo
-        """))
-
-        # -------------------------------
-        # 2. CARREGAR TODOS OS CHIPS
-        # -------------------------------
-        chips_df = sanitize_df(bq.query("""
-            SELECT 
-                sk_chip,
-                numero,
-                operadora,
-                status,
-                sk_aparelho_atual,
-                slot_whatsapp
-            FROM `painel-universidade.marts.dim_chip`
-            ORDER BY numero
-        """))
-
-        aparelhos = aparelhos_df.to_dict(orient="records")
-        chips = chips_df.to_dict(orient="records")
+        # Vista completa já estruturada com slots, chips e chips_sem_slot
+        aparelhos_df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
 
         return render_template(
             "relacionamentos.html",
-            aparelhos=aparelhos,
-            chips=chips
+            aparelhos=aparelhos_df.to_dict(orient="records")
         )
 
     except Exception as e:
@@ -57,7 +30,7 @@ def relacionamentos_home():
 
 
 # ============================================================
-# 🔄 VINCULAR — CHIP → APARELHO + SLOT
+# 🔄 VINCULAR — associa chip → slot WhatsApp
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
@@ -66,19 +39,17 @@ def relacionamentos_vincular():
         dados = request.get_json(silent=True) or {}
 
         sk_chip = dados.get("sk_chip")
-        sk_aparelho = dados.get("sk_aparelho")
         slot = dados.get("slot")
 
-        if not sk_chip or not sk_aparelho or slot is None:
+        if not sk_chip or slot is None:
             return jsonify({"erro": "Dados incompletos"}), 400
 
         sql = f"""
-        UPDATE `painel-universidade.marts.dim_chip`
-        SET 
-            sk_aparelho_atual = {sk_aparelho},
-            slot_whatsapp = {slot},
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = {sk_chip}
+            UPDATE `painel-universidade.marts.dim_chip`
+            SET 
+                slot_whatsapp = {slot},
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE sk_chip = {sk_chip}
         """
 
         bq.execute_query(sql)
@@ -90,7 +61,7 @@ def relacionamentos_vincular():
 
 
 # ============================================================
-# ❌ DESVINCULAR — CHIP → LIBERAR APARELHO + SLOT
+# ❌ DESVINCULAR — chip deixa o slot WhatsApp
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
@@ -103,12 +74,11 @@ def relacionamentos_desvincular():
             return jsonify({"erro": "sk_chip ausente"}), 400
 
         sql = f"""
-        UPDATE `painel-universidade.marts.dim_chip`
-        SET 
-            sk_aparelho_atual = NULL,
-            slot_whatsapp = NULL,
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = {sk_chip}
+            UPDATE `painel-universidade.marts.dim_chip`
+            SET 
+                slot_whatsapp = NULL,
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE sk_chip = {sk_chip}
         """
 
         bq.execute_query(sql)

@@ -156,16 +156,16 @@ class BigQueryClient:
     # ============================================================
     # UPSERT CHIP + EVENTOS
     # ============================================================
-  def upsert_chip(self, form):
+ def upsert_chip(self, form):
 
     # ------------------------------------------
-    # 1) Preparar ID (chave lógica)
+    # 1) Preparar ID lógico (não muda nunca)
     # ------------------------------------------
     id_chip = form.get("id_chip") or str(uuid.uuid4())
     id_chip_sql = q(id_chip)
 
     # ------------------------------------------
-    # 2) Buscar estado atual no banco
+    # 2) Buscar estado atual para comparação/histórico
     # ------------------------------------------
     sql_busca = f"""
         SELECT *
@@ -178,7 +178,7 @@ class BigQueryClient:
     antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
     # ------------------------------------------
-    # 3) Preparar novos valores sanitizados
+    # 3) Novos valores já sanitizados
     # ------------------------------------------
     numero      = q(form.get("numero"))
     operadora   = q(form.get("operadora"))
@@ -193,12 +193,11 @@ class BigQueryClient:
     val_recarga = normalize_number(form.get("ultima_recarga_valor"))
     total_gasto = normalize_number(form.get("total_gasto"))
 
-    # aparelho atual
     sk_ap = form.get("sk_aparelho_atual")
     aparelho_sql = sk_ap if sk_ap not in [None, "", "NULL", "None"] else None
 
     # ------------------------------------------
-    # 4) Se existe registro atual → comparar e registrar histórico
+    # 4) Registrar histórico (somente mudanças reais)
     # ------------------------------------------
     if antigo:
         campos = {
@@ -212,19 +211,15 @@ class BigQueryClient:
 
         for campo, novo_valor_sql in campos.items():
 
-            # Valor novo sem aspas
+            # Remover aspas para comparação real
             novo_valor = (
-                str(novo_valor_sql)
-                .replace("'", "")
-                .strip()
+                str(novo_valor_sql).replace("'", "").strip()
                 if novo_valor_sql is not None else ""
             )
 
-            # Valor antigo
             old_val = antigo.get(campo)
             old_val = "" if old_val in [None, "None", "NULL"] else str(old_val).strip()
 
-            # Se mudou → registrar evento
             if old_val != novo_valor:
                 self.registrar_evento_chip(
                     sk_chip=antigo["sk_chip"],
@@ -236,7 +231,7 @@ class BigQueryClient:
                 )
 
     # ------------------------------------------
-    # 5) MERGE FINAL (faz UPDATE ou INSERT automaticamente)
+    # 5) MERGE – Atualiza ou cria chip automaticamente
     # ------------------------------------------
     sql_merge = f"""
         MERGE `{PROJECT}.{DATASET}.dim_chip` T

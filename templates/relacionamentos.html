@@ -11,32 +11,27 @@
 <div class="aparelhos-container">
 
     {% for a in aparelhos %}
-    {% set capacidade = a.capacidade_whatsapp %}
-    {% set chips_do_aparelho = chips | selectattr("sk_aparelho_atual", "equalto", a.sk_aparelho) | list %}
-    {% set chips_livres = chips | selectattr("sk_aparelho_atual", "none") | list %}
-
     <div class="aparelho-card">
-
+        
         <div class="aparelho-header">
             <h2>{{ a.marca }} • {{ a.modelo }}</h2>
-            <span class="tag">Capacidade: {{ capacidade }} WhatsApps</span>
+            <span class="tag">Capacidade: {{ a.capacidade_total }} WhatsApps</span>
         </div>
 
         <div class="slots-grid">
 
-            {% for slot in range(1, capacidade + 1) %}
-            {% set chip_slot = chips_do_aparelho | selectattr("slot_whatsapp", "equalto", slot) | first %}
-
+            {% for slot in a.slots %}
             <div class="slot-card">
-                <div class="slot-number">Slot {{ slot }}</div>
 
-                {% if chip_slot %}
-                <!-- CHIP OCUPANDO O SLOT -->
+                <div class="slot-number">Slot {{ slot.slot }}</div>
+
+                {% if slot.chip and slot.chip.sk_chip %}
+                <!-- SLOT OCUPADO -->
                 <div class="chip-info">
-                    <span class="chip-number">{{ chip_slot.numero }}</span>
-                    <span class="chip-operadora">{{ chip_slot.operadora }}</span>
+                    <span class="chip-number">{{ slot.chip.numero }}</span>
+                    <span class="chip-operadora">{{ slot.chip.operadora }}</span>
 
-                    <button class="btn-remove" onclick="desvincular({{ chip_slot.sk_chip }})">
+                    <button class="btn-remove" onclick="desvincular({{ slot.chip.sk_chip }})">
                         <i class="fas fa-times"></i> Remover
                     </button>
                 </div>
@@ -45,46 +40,42 @@
                 <!-- SLOT VAZIO -->
                 <div class="chip-empty">Vazio</div>
 
-                {% if chips_livres|length > 0 %}
-                <select class="select-chip"
-                        onchange="vincular(this.value, {{ slot }}, {{ a.sk_aparelho }})">
-
+                {% if a.chips_sem_slot|length > 0 %}
+                <select class="select-chip" onchange="vincular(this.value, {{ slot.slot }})">
                     <option value="">Selecionar Chip</option>
 
-                    {% for c in chips_livres %}
+                    {% for c in a.chips_sem_slot %}
                     <option value="{{ c.sk_chip }}">
                         {{ c.numero }} ({{ c.operadora }})
                     </option>
                     {% endfor %}
                 </select>
                 {% else %}
-                    <div class="chip-empty-info">Nenhum chip disponível</div>
+                <div class="chip-empty-info">Nenhum chip disponível</div>
                 {% endif %}
 
                 {% endif %}
+
             </div>
-
             {% endfor %}
 
         </div>
-
     </div>
     {% endfor %}
 
 </div>
 
-
 <!-- ============================================================
-     JS – VINCULAR / DESVINCULAR
+     FUNÇÕES VINCULAR / DESVINCULAR
 ============================================================ -->
 <script>
-function vincular(sk_chip, slot, sk_aparelho) {
+function vincular(sk_chip, slot) {
     if (!sk_chip) return;
 
     fetch("/relacionamentos/vincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_chip, slot, sk_aparelho })
+        body: JSON.stringify({ sk_chip, slot })
     })
     .then(r => r.json())
     .then(() => location.reload())
@@ -102,7 +93,6 @@ function desvincular(sk_chip) {
     .catch(err => console.error("Erro ao desvincular:", err));
 }
 </script>
-
 
 <!-- ============================================================
      ESTILO PREMIUM
@@ -181,9 +171,19 @@ function desvincular(sk_chip) {
     color: #93c5fd;
 }
 
+.chip-operadora {
+    font-size: .85rem;
+    color: #cbd5e1;
+}
+
 .chip-empty {
     color: #64748b;
     margin-bottom: 0.6rem;
+}
+
+.chip-empty-info {
+    color: #475569;
+    font-size: 0.8rem;
 }
 
 .btn-remove {
@@ -199,11 +199,6 @@ function desvincular(sk_chip) {
     width: 100%;
     padding: 6px;
     border-radius: 8px;
-}
-
-.chip-empty-info {
-    color: #475569;
-    font-size: 0.8rem;
 }
 </style>
 

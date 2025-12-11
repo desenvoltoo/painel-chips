@@ -2,17 +2,16 @@
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-import datetime
 
 # ============================================================
-# BLUEPRINT CORRIGIDO — NOME PADRÃO QUE O APP ESPERA
+# BLUEPRINT — NOME EXATO QUE O app.py VAI IMPORTAR
 # ============================================================
 relacionamentos_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
 
 
 # ============================================================
-# 📌 PÁGINA PRINCIPAL
+# 📌 PÁGINA PRINCIPAL — LISTA APARELHOS + SLOTS
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
@@ -31,13 +30,14 @@ def relacionamentos_home():
 
 
 # ============================================================
-# 🔄 ATUALIZAR UM SLOT: vincular chip → slot
+# 🔄 VINCULAR — associa chip → slot WhatsApp
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
 
     try:
         dados = request.get_json(silent=True) or {}
+
         sk_chip = dados.get("sk_chip")
         slot = dados.get("slot")
 
@@ -51,8 +51,8 @@ def relacionamentos_vincular():
             updated_at = CURRENT_TIMESTAMP()
         WHERE sk_chip = {sk_chip}
         """
-        bq.execute_query(sql)
 
+        bq.execute_query(sql)
         return jsonify({"ok": True})
 
     except Exception as e:
@@ -61,7 +61,7 @@ def relacionamentos_vincular():
 
 
 # ============================================================
-# ❌ DESVINCULAR SLOT
+# ❌ DESVINCULAR — chip deixa o slot WhatsApp
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
@@ -80,10 +80,10 @@ def relacionamentos_desvincular():
             updated_at = CURRENT_TIMESTAMP()
         WHERE sk_chip = {sk_chip}
         """
-        bq.execute_query(sql)
 
+        bq.execute_query(sql)
         return jsonify({"ok": True})
 
     except Exception as e:
-        print("ERRO AO DESVINCULAR:", e)
+        print("ERRO AO DESVINCULAR SLOT:", e)
         return jsonify({"erro": "Falha ao desvincular"}), 500

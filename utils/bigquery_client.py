@@ -17,17 +17,20 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # Sanitização segura
 # ============================================================
 def q(value):
-    """Retorna NULL, valor numérico sem aspas ou string escapada."""
+    """Retorna NULL, número sem aspas ou string escapada."""
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
+
+    # tenta número
     try:
         float(value.replace(",", "."))
         return value
     except:
         pass
 
+    # string escapada
     value = value.replace("'", "''")
     return f"'{value}'"
 
@@ -71,7 +74,12 @@ class BigQueryClient:
 
     def __init__(self):
         self.client = bigquery.Client(project=PROJECT, location=LOCATION)
+        self.project = PROJECT   # agora disponível
+        self.dataset = DATASET   # agora disponível
 
+    # ========================================================
+    # EXECUTA SQL (sem parâmetros)
+    # ========================================================
     def _run(self, sql: str):
         print("\n🔥 SQL EXECUTANDO:\n", sql, "\n========================================")
         try:
@@ -83,23 +91,23 @@ class BigQueryClient:
             print("\n🚨 ERRO NO SQL:\n", sql)
             raise e
 
-    # ============================================================
+    # ========================================================
     # GET VIEW
-    # ============================================================
+    # ========================================================
     def get_view(self, view_name: str):
         sql = f"""
             SELECT *
-            FROM `{PROJECT}.{DATASET}.{view_name}`
+            FROM `{self.project}.{self.dataset}.{view_name}`
         """
         return self._run(sql)
 
-    # ============================================================
+    # ========================================================
     # GET APARELHOS
-    # ============================================================
+    # ========================================================
     def get_aparelhos(self):
         sql = f"""
             SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_aparelhos`
+            FROM `{self.project}.{self.dataset}.vw_aparelhos`
             ORDER BY modelo
         """
         return self._run(sql)
@@ -108,6 +116,7 @@ class BigQueryClient:
     # UPSERT APARELHO
     # ============================================================
     def upsert_aparelho(self, form):
+
         id_aparelho = q(form.get("id_aparelho"))
         modelo = q(form.get("modelo"))
         marca = q(form.get("marca"))
@@ -116,12 +125,12 @@ class BigQueryClient:
 
         sql_next = f"""
             SELECT COALESCE(MAX(sk_aparelho),0) + 1 AS next_sk
-            FROM `{PROJECT}.{DATASET}.dim_aparelho`
+            FROM `{self.project}.{self.dataset}.dim_aparelho`
         """
         next_sk = int(self._run(sql_next).iloc[0]["next_sk"])
 
         sql = f"""
-            MERGE `{PROJECT}.{DATASET}.dim_aparelho` T
+            MERGE `{self.project}.{self.dataset}.dim_aparelho` T
             USING (SELECT {id_aparelho} AS id_aparelho) S
             ON T.id_aparelho = S.id_aparelho
 
@@ -150,11 +159,10 @@ class BigQueryClient:
 
         sk_chip = form.get("sk_chip")
 
-        # CHIP NOVO → gerar próximo SK
         if not sk_chip:
             sql_next = f"""
                 SELECT COALESCE(MAX(sk_chip),0) + 1 AS next_sk
-                FROM `{PROJECT}.{DATASET}.dim_chip`
+                FROM `{self.project}.{self.dataset}.dim_chip`
             """
             sk_chip = int(self._run(sql_next).iloc[0]["next_sk"])
             is_new = True
@@ -162,7 +170,7 @@ class BigQueryClient:
             sk_chip = int(sk_chip)
             is_new = False
 
-        # TRATAMENTO CORRETO dos campos
+        # Normalização
         raw_num = form.get("numero")
         if raw_num in [None, "", "None"]:
             numero = "NULL"
@@ -181,15 +189,10 @@ class BigQueryClient:
         val_recarga = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto = normalize_number(form.get("total_gasto"))
 
-        # sk_aparelho_atual é INT64
         sk_ap = form.get("sk_aparelho_atual")
         aparelho_sql = sk_ap if sk_ap not in [None, "", "None"] else "NULL"
 
-        # ----------------------------------------------------
-        # REGISTRAR EVENTO: CRIAÇÃO OU ALTERAÇÃO
-        # ----------------------------------------------------
-
-        # valores puros para comparação
+        # Detectar e registrar eventos no painel
         campos_novos = {
             "numero": str(form.get("numero") or ""),
             "operadora": str(form.get("operadora") or ""),
@@ -199,12 +202,11 @@ class BigQueryClient:
             "sk_aparelho_atual": str(form.get("sk_aparelho_atual") or "")
         }
 
-        # buscar estado antigo
         antigo = None
         if not is_new:
             sql_old = f"""
                 SELECT numero, operadora, operador, plano, status, sk_aparelho_atual
-                FROM `{PROJECT}.{DATASET}.dim_chip`
+                FROM `{self.project}.{self.dataset}.dim_chip`
                 WHERE sk_chip = {sk_chip}
                 LIMIT 1
             """
@@ -212,7 +214,7 @@ class BigQueryClient:
             if not df_old.empty:
                 antigo = df_old.to_dict(orient="records")[0]
 
-        # para novo: marca como evento de criação
+        # Evento de criação
         if is_new:
             self.registrar_evento_chip(
                 sk_chip=sk_chip,
@@ -223,7 +225,7 @@ class BigQueryClient:
                 obs="Criação via painel"
             )
 
-        # para atualizações: compara mudanças
+        # Registrar eventos de alteração
         if antigo:
             for campo, novo_val in campos_novos.items():
                 old_val = antigo.get(campo)
@@ -239,11 +241,9 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # =============================================================
-        #   MERGE FINAL
-        # =============================================================
+        # Merge final
         sql_merge = f"""
-            MERGE `{PROJECT}.{DATASET}.dim_chip` T
+            MERGE `{self.project}.{self.dataset}.dim_chip` T
             USING (SELECT {sk_chip} AS sk_chip) S
             ON T.sk_chip = S.sk_chip
 
@@ -280,12 +280,13 @@ class BigQueryClient:
 
         return sk_chip
 
+
     # ============================================================
     # REGISTRAR MOVIMENTO
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
         query = f"""
-            CALL `{PROJECT}.{DATASET}.sp_registrar_movimento_chip`(
+            CALL `{self.project}.{self.dataset}.sp_registrar_movimento_chip`(
                 @sk_chip, @sk_aparelho, @tipo, @origem, @obs
             )
         """
@@ -301,12 +302,13 @@ class BigQueryClient:
         self.client.query(query, job_config=job_config).result()
         return True
 
+
     # ============================================================
     # REGISTRAR EVENTO
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
         query = f"""
-            CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+            CALL `{self.project}.{self.dataset}.sp_registrar_evento_chip`(
                 @sk, @tipo, @old, @new, @orig, @obs
             )
         """
@@ -323,13 +325,14 @@ class BigQueryClient:
         self.client.query(query, job_config=job_config).result()
         return True
 
+
     # ============================================================
     # TIMELINE
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""
             SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
+            FROM `{self.project}.{self.dataset}.vw_chip_timeline`
             WHERE sk_chip = {sk_chip}
             ORDER BY data_evento DESC
         """

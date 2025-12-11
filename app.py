@@ -11,7 +11,7 @@ from utils.sanitizer import sanitize_df
 from routes.aparelhos import aparelhos_bp
 from routes.chips import chips_bp
 from routes.recargas import recargas_bp
-from routes.relacionamentos import rel_bp
+from .relacionamentos import relacionamentos_bp
 from routes.movimentacao import mov_bp
 
 

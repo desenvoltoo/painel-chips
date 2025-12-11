@@ -15,51 +15,46 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 
 
 # ============================================================
-# 🔹 Sanitizador SEGURO para BigQuery
+# Sanitização segura para SQL
 # ============================================================
 def q(value):
-    """Escapa texto e converte None → NULL"""
+    """ Retorna NULL, número sem aspas ou string escapada com aspas """
     if value is None or value == "" or str(value).lower() == "none":
         return "NULL"
 
     value = str(value).strip()
 
-    # Se for número, retorna sem aspas
+    # Se for número → retorna sem aspas
     try:
         float(value)
         return value
     except:
         pass
 
-    # Caso seja string → escapa aspas corretamente
+    # Texto → escapa aspas internas e adiciona aspas externas
     value = value.replace("'", "''")
-    return f"'{value}'"
+    return "'" + value + "'"
 
 
 # ============================================================
-# 🔹 Normalizar DATAS
+# Normalização de datas
 # ============================================================
 def normalize_date(value):
     if not value:
         return "NULL"
 
     try:
-        value = str(value).strip()
-
-        # formato YYYY-MM-DD
         if len(value) == 10 and value[4] == "-" and value[7] == "-":
             return f"DATE('{value}')"
 
-        # formato DD/MM/YYYY
         if "/" in value:
             d, m, y = value.split("/")
             return f"DATE('{y}-{m.zfill(2)}-{d.zfill(2)}')"
 
-        # formato ISO com T
         if "T" in value:
-            return f"DATE('{value.split('T')[0]}')"
+            date_part = value.split("T")[0]
+            return f"DATE('{date_part}')"
 
-        # qualquer outro formato interpretável
         dt = datetime.fromisoformat(value)
         return f"DATE('{dt.strftime('%Y-%m-%d')}')"
 
@@ -68,11 +63,12 @@ def normalize_date(value):
 
 
 # ============================================================
-# 🔹 Normalizar números (recarga, total gasto)
+# Normalização de números
 # ============================================================
 def normalize_number(value):
     if not value:
         return "NULL"
+
     try:
         return str(float(str(value).replace(",", ".")))
     except:
@@ -80,7 +76,7 @@ def normalize_number(value):
 
 
 # ============================================================
-# 🌎 CLIENTE BIGQUERY PRINCIPAL
+# CLASSE PRINCIPAL
 # ============================================================
 class BigQueryClient:
 
@@ -166,31 +162,37 @@ class BigQueryClient:
         self._run(sql)
 
     # ============================================================
-    # CHIP — UPSERT + HISTÓRICO
+    # UPSERT CHIP + EVENTOS
     # ============================================================
     def upsert_chip(self, form):
 
-        # -------------------------------
-        # 1) ID lógico (fixo)
-        # -------------------------------
-        id_chip = form.get("id_chip") or str(uuid.uuid4())
+        # ---------------------------------------------------------
+        # 1) Garantir que id_chip seja sempre STRING
+        # ---------------------------------------------------------
+        raw_id = form.get("id_chip")
+        if raw_id in [None, "", "None", "NULL"]:
+            id_chip = str(uuid.uuid4())
+        else:
+            id_chip = str(raw_id)
+
         id_chip_sql = q(id_chip)
 
-        # -------------------------------
+        # ---------------------------------------------------------
         # 2) Buscar estado atual
-        # -------------------------------
+        # ---------------------------------------------------------
         sql_busca = f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
             WHERE id_chip = {id_chip_sql}
             LIMIT 1
         """
+
         atual_df = self._run(sql_busca)
         antigo = atual_df.to_dict(orient="records")[0] if not atual_df.empty else None
 
-        # -------------------------------
+        # ---------------------------------------------------------
         # 3) Novos valores
-        # -------------------------------
+        # ---------------------------------------------------------
         numero      = q(form.get("numero"))
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))
@@ -205,12 +207,13 @@ class BigQueryClient:
         total_gasto = normalize_number(form.get("total_gasto"))
 
         sk_ap = form.get("sk_aparelho_atual")
-        aparelho_sql = sk_ap if sk_ap not in ["", None, "NULL", "None"] else None
+        aparelho_sql = sk_ap if sk_ap else "NULL"
 
-        # -------------------------------
-        # 4) Histórico — registrar apenas mudanças reais
-        # -------------------------------
+        # ---------------------------------------------------------
+        # 4) Registrar eventos no histórico
+        # ---------------------------------------------------------
         if antigo:
+
             campos = {
                 "numero": numero,
                 "operadora": operadora,
@@ -220,15 +223,14 @@ class BigQueryClient:
                 "sk_aparelho_atual": aparelho_sql,
             }
 
-            for campo, novo_valor_sql in campos.items():
+            for campo, novo_sql in campos.items():
 
                 novo_valor = (
-                    str(novo_valor_sql).replace("'", "").strip()
-                    if novo_valor_sql is not None else ""
+                    str(novo_sql).replace("'", "") if novo_sql != "NULL" else ""
                 )
 
                 old_val = antigo.get(campo)
-                old_val = "" if old_val in [None, "None", "NULL"] else str(old_val).strip()
+                old_val = "" if old_val in [None, "None", "NULL"] else str(old_val)
 
                 if old_val != novo_valor:
                     self.registrar_evento_chip(
@@ -240,9 +242,9 @@ class BigQueryClient:
                         obs="Alteração via painel"
                     )
 
-        # -------------------------------
-        # 5) MERGE CHIP
-        # -------------------------------
+        # ---------------------------------------------------------
+        # 5) MERGE FINAL
+        # ---------------------------------------------------------
         sql_merge = f"""
             MERGE `{PROJECT}.{DATASET}.dim_chip` T
             USING (SELECT {id_chip_sql} AS id_chip) S
@@ -259,7 +261,7 @@ class BigQueryClient:
                 ultima_recarga_valor = {val_recarga},
                 ultima_recarga_data = {dt_recarga},
                 total_gasto = {total_gasto},
-                sk_aparelho_atual = {aparelho_sql if aparelho_sql else "NULL"},
+                sk_aparelho_atual = {aparelho_sql},
                 updated_at = CURRENT_TIMESTAMP()
 
             WHEN NOT MATCHED THEN INSERT (
@@ -273,7 +275,7 @@ class BigQueryClient:
                 {id_chip_sql}, {numero}, {operadora}, {operador}, {plano}, {status},
                 {observacao}, {dt_inicio},
                 {val_recarga}, {dt_recarga},
-                {total_gasto}, {aparelho_sql if aparelho_sql else "NULL"},
+                {total_gasto}, {aparelho_sql},
                 TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
             )
         """
@@ -281,7 +283,7 @@ class BigQueryClient:
         self._run(sql_merge)
 
     # ============================================================
-    # MOVIMENTAÇÃO DO CHIP (APARELHO)
+    # MOVIMENTAÇÃO
     # ============================================================
     def registrar_movimento_chip(self, sk_chip, sk_aparelho, tipo, origem, observacao):
 
@@ -305,7 +307,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # EVENTOS (HISTÓRICO)
+    # EVENTOS
     # ============================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, valor_antigo, valor_novo, origem, obs):
 
@@ -330,7 +332,7 @@ class BigQueryClient:
         return True
 
     # ============================================================
-    # TIMELINE COMPLETA DO CHIP
+    # TIMELINE
     # ============================================================
     def get_eventos_chip(self, sk_chip):
         sql = f"""

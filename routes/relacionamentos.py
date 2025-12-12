@@ -1,4 +1,3 @@
-# routes/relacionamentos.py
 # -*- coding: utf-8 -*-
 
 from flask import Blueprint, render_template, request, jsonify
@@ -11,140 +10,132 @@ relacionamentos_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
 
 
-# ============================================================
-# REGRAS DE CAPACIDADE (CONFORME DEFINIDO)
-# ============================================================
-def capacidade_por_marca(marca: str) -> int:
-    m = (marca or "").strip().upper()
-    # Motorola = 4 Business + 8 Normal
-    if m == "MOTOROLA":
-        return 12
-    # Demais = 1 Business + 2 Normal
-    return 3
-
-
-def norm_tipo_whatsapp(v: str) -> str:
-    t = (v or "").strip()
-    if not t:
+# ============================
+# Normalização WhatsApp
+# ============================
+def norm_tipo_whatsapp(v):
+    if not v or str(v).strip() == "":
         return "NORMAL"
-    up = t.upper()
-    if "BUS" in up:
+    v = str(v).upper()
+    if "BUS" in v:
         return "BUSINESS"
-    if "NOR" in up:
-        return "NORMAL"
-    return t
+    return "NORMAL"
 
 
-# ============================================================
+# ============================
 # HOME
-# ============================================================
+# ============================
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
     try:
         aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
         chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
 
-        # ----------------------------
-        # CHIPS LIVRES (SEM APARELHO)
-        # ----------------------------
-        livres_df = chips_df[
-            chips_df["sk_aparelho"].isna()
-        ].copy()
+        # -----------------------------
+        # Chips livres (globais)
+        # -----------------------------
+        chips_livres = []
 
-        chips_livres = [
-            {
-                "sk_chip": int(r.sk_chip),
-                "numero": r.numero,
-                "operadora": r.operadora,
-                "tipo_whatsapp": norm_tipo_whatsapp(r.tipo_whatsapp),
-            }
-            for r in livres_df.itertuples()
-        ]
+        if not chips_df.empty:
+            livres_df = chips_df[
+                chips_df["sk_aparelho"].isna()
+                | (chips_df["sk_aparelho"].astype(str).str.strip() == "")
+            ]
+
+            for _, c in livres_df.iterrows():
+                chips_livres.append({
+                    "sk_chip": int(c["sk_chip"]),
+                    "numero": c["numero"],
+                    "operadora": c["operadora"],
+                    "tipo_whatsapp": norm_tipo_whatsapp(c.get("tipo_whatsapp")),
+                })
 
         aparelhos = []
 
-        for a in aparelhos_df.itertuples():
-            sk_ap = int(a.sk_aparelho)
-            cap_total = capacidade_por_marca(a.marca)
+        # -----------------------------
+        # Loop aparelhos
+        # -----------------------------
+        for _, a in aparelhos_df.iterrows():
 
-            # slots vazios
-            slots = [{"slot": i, "chip": None} for i in range(1, cap_total + 1)]
+            sk_aparelho = int(a["sk_aparelho"])
+            marca = a["marca"]
+            modelo = a["modelo"]
+            capacidade = int(a["capacidade_whatsapp"])
 
-            # ----------------------------
-            # CHIPS VINCULADOS AO APARELHO
-            # ----------------------------
-            vinc_df = chips_df[
-                chips_df["sk_aparelho"] == sk_ap
-            ].copy()
+            # cria slots vazios
+            slots = [{"slot": i, "chip": None} for i in range(1, capacidade + 1)]
 
-            for r in vinc_df.itertuples():
-                if pd.isna(r.slot_whatsapp):
+            # chips vinculados a este aparelho
+            vinculados = chips_df[
+                chips_df["sk_aparelho"] == sk_aparelho
+            ]
+
+            for _, c in vinculados.iterrows():
+                slot = c.get("slot_whatsapp")
+                if pd.isna(slot):
                     continue
-                idx = int(r.slot_whatsapp) - 1
-                if 0 <= idx < cap_total:
+
+                idx = int(slot) - 1
+                if 0 <= idx < len(slots):
                     slots[idx]["chip"] = {
-                        "sk_chip": int(r.sk_chip),
-                        "numero": r.numero,
-                        "operadora": r.operadora,
-                        "tipo_whatsapp": norm_tipo_whatsapp(r.tipo_whatsapp),
+                        "sk_chip": int(c["sk_chip"]),
+                        "numero": c["numero"],
+                        "operadora": c["operadora"],
+                        "tipo_whatsapp": norm_tipo_whatsapp(c.get("tipo_whatsapp")),
                     }
 
             aparelhos.append({
-                "sk_aparelho": sk_ap,
-                "marca": a.marca,
-                "modelo": a.modelo,
-                "capacidade_total": cap_total,
+                "sk_aparelho": sk_aparelho,
+                "marca": marca,
+                "modelo": modelo,
+                "capacidade_total": capacidade,
                 "slots": slots,
-                "chips_sem_slot": chips_livres
+                "chips_sem_slot": chips_livres,  # GLOBAL
             })
 
-        return render_template("relacionamentos.html", aparelhos=aparelhos)
+        return render_template(
+            "relacionamentos.html",
+            aparelhos=aparelhos
+        )
 
     except Exception as e:
         print("ERRO CARREGAR RELACIONAMENTOS:", e)
         return "Erro ao carregar relacionamentos", 500
 
 
-# ============================================================
-# VINCULAR / TROCAR CHIP (EVENTO)
-# ============================================================
+# ============================
+# VINCULAR / TROCAR
+# ============================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
     try:
-        data = request.get_json(force=True) or {}
+        data = request.get_json(force=True)
 
-        sk_chip = int(data.get("sk_chip"))
-        sk_aparelho = int(data.get("sk_aparelho"))
-        slot = int(data.get("slot"))
+        sk_chip = int(data["sk_chip"])
+        sk_aparelho = int(data["sk_aparelho"])
+        slot = int(data["slot"])
 
-        tabela_fato = f"`{bq.project}.marts.f_chip_aparelho`"
+        tabela = f"`{bq.project}.marts.dim_chip`"
 
         sql = f"""
-        INSERT INTO {tabela_fato}
-        (
-            sk_chip,
-            sk_aparelho,
-            slot_whatsapp,
-            created_at
-        )
-        VALUES
-        (
-            @sk_chip,
-            @sk_aparelho,
-            @slot,
-            CURRENT_TIMESTAMP()
-        )
+        UPDATE {tabela}
+        SET sk_aparelho = @sk_aparelho,
+            slot_whatsapp = @slot
+        WHERE sk_chip = @sk_chip
         """
 
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
-                bigquery.ScalarQueryParameter("slot", "INT64", slot),
-            ]
+        job = bq.client.query(
+            sql,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
+                    bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
+                    bigquery.ScalarQueryParameter("slot", "INT64", slot),
+                ]
+            )
         )
+        job.result()
 
-        bq.client.query(sql, job_config=job_config).result()
         return jsonify({"ok": True})
 
     except Exception as e:
@@ -152,41 +143,33 @@ def relacionamentos_vincular():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-# ============================================================
-# DESVINCULAR CHIP (EVENTO)
-# ============================================================
+# ============================
+# DESVINCULAR
+# ============================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
     try:
-        data = request.get_json(force=True) or {}
-        sk_chip = int(data.get("sk_chip"))
+        data = request.get_json(force=True)
+        sk_chip = int(data["sk_chip"])
 
-        tabela_fato = f"`{bq.project}.marts.f_chip_aparelho`"
+        tabela = f"`{bq.project}.marts.dim_chip`"
 
         sql = f"""
-        INSERT INTO {tabela_fato}
-        (
-            sk_chip,
-            sk_aparelho,
-            slot_whatsapp,
-            created_at
-        )
-        VALUES
-        (
-            @sk_chip,
-            NULL,
-            NULL,
-            CURRENT_TIMESTAMP()
-        )
+        UPDATE {tabela}
+        SET sk_aparelho = NULL,
+            slot_whatsapp = NULL
+        WHERE sk_chip = @sk_chip
         """
 
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)
-            ]
-        )
+        bq.client.query(
+            sql,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)
+                ]
+            )
+        ).result()
 
-        bq.client.query(sql, job_config=job_config).result()
         return jsonify({"ok": True})
 
     except Exception as e:

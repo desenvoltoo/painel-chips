@@ -4,7 +4,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-from utils.bigquery_client import q
 import os
 
 chips_bp = Blueprint("chips", __name__)
@@ -15,10 +14,17 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# LISTAR CHIPS
+# LISTAR CHIPS (PAINEL PRINCIPAL)
 # ============================================================
 @chips_bp.route("/chips")
 def chips_list():
+    """
+    Usa vw_chips_painel
+    Campos existentes:
+    sk_chip, numero, operadora, tipo_whatsapp,
+    sk_aparelho, slot_whatsapp,
+    aparelho_marca, aparelho_modelo
+    """
     chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
     aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
 
@@ -30,13 +36,13 @@ def chips_list():
 
 
 # ============================================================
-# CADASTRAR CHIP (UPsert COMPLETO)
+# CADASTRAR CHIP (UPSERT COMPLETO)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     form = request.form.to_dict()
 
-    # usa o upsert completo (inclui histórico)
+    # upsert já grava em dim_chip + histórico
     bq.upsert_chip(form)
 
     return """
@@ -48,14 +54,22 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA EDIÇÃO (carregar dados no modal)
+# BUSCAR CHIP PARA EDIÇÃO (MODAL)
 # ============================================================
-@chips_bp.route("/chips/sk/<sk_chip>")
+@chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
+    """
+    vw_chips_painel NÃO TEM id_chip
+    então buscamos estado visual + id_chip da dim_chip
+    """
     query = f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-        WHERE sk_chip = {sk_chip}
+        SELECT
+            p.*,
+            d.id_chip
+        FROM `{PROJECT}.{DATASET}.vw_chips_painel` p
+        LEFT JOIN `{PROJECT}.{DATASET}.dim_chip` d
+            ON p.sk_chip = d.sk_chip
+        WHERE p.sk_chip = {sk_chip}
         LIMIT 1
     """
 
@@ -68,44 +82,56 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# SALVAR EDIÇÃO (USANDO UPSERT COMPLETO)
+# SALVAR EDIÇÃO (UPSERT COM HISTÓRICO)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
-    data = request.json
+    data = request.json or {}
 
-    sk = data.get("sk_chip")
+    sk_chip = data.get("sk_chip")
     id_chip = data.get("id_chip")
 
-    # 1) SE NÃO VEIO id_chip → BUSCA PELO sk_chip
-    if sk and not id_chip:
+    # Garante id_chip (obrigatório no upsert)
+    if sk_chip and not id_chip:
         df = bq._run(f"""
             SELECT id_chip
             FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE sk_chip = {sk}
+            WHERE sk_chip = {sk_chip}
             LIMIT 1
         """)
 
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        # GARANTE STRING
         id_chip = str(df.iloc[0]["id_chip"])
         data["id_chip"] = id_chip
 
-    # 2) AQUI É O PULO DO GATO:
-    # FORÇA O id_chip PARA STRING, MESMO SE VIER NÚMERO
+    # força string
     data["id_chip"] = str(data["id_chip"])
 
-    # 3) CHAMA O UPSERT COMPLETO COM HISTÓRICO
+    # UPSERT COMPLETO
     bq.upsert_chip(data)
 
     return jsonify({"success": True})
-    
+
+
 # ============================================================
 # TIMELINE / HISTÓRICO DO CHIP
 # ============================================================
-@chips_bp.route("/chips/timeline/<sk_chip>")
+@chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
-    eventos_df = bq.get_eventos_chip(sk_chip)
-    return jsonify(eventos_df.to_dict(orient="records"))
+    """
+    Usa vw_chip_timeline
+    Campos:
+    categoria, tipo_evento, campo,
+    valor_antigo, valor_novo,
+    origem, observacao, data_evento, data_fmt
+    """
+    df = bq._run(f"""
+        SELECT *
+        FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
+        WHERE sk_chip = {sk_chip}
+        ORDER BY data_evento DESC
+    """)
+
+    return jsonify(df.to_dict(orient="records"))

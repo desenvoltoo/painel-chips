@@ -33,12 +33,14 @@ def relacionamentos_home():
         df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
 
         if df.empty:
-            return render_template("relacionamentos.html", aparelhos=[])
-
-        aparelhos = []
+            return render_template(
+                "relacionamentos.html",
+                aparelhos=[],
+                chips_livres=[]
+            )
 
         # --------------------------------------------------
-        # 🔹 Chips livres (garantido pela view)
+        # 🔹 Chips livres (sk_aparelho NULL = não vinculado)
         # --------------------------------------------------
         chips_livres = [
             {
@@ -51,10 +53,13 @@ def relacionamentos_home():
                 df["sk_aparelho"].isna()
                 & df["sk_chip"].notna()
             ].iterrows()
+            if to_int(r["sk_chip"]) is not None
         ]
 
+        aparelhos = []
+
         # --------------------------------------------------
-        # 🔹 Agrupa por aparelho
+        # 🔹 Agrupamento por aparelho
         # --------------------------------------------------
         for sk_aparelho, g in df[
             df["sk_aparelho"].notna()
@@ -71,10 +76,14 @@ def relacionamentos_home():
             cap_norm = to_int(g["cap_whats_normal"].iloc[0]) or 0
             capacidade_total = cap_bus + cap_norm
 
+            # -----------------------------
             # Cria slots vazios
+            # -----------------------------
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
+            # -----------------------------
             # Chips vinculados
+            # -----------------------------
             vinculados = g[
                 g["sk_chip"].notna()
                 & g["slot_whatsapp"].notna()
@@ -98,19 +107,19 @@ def relacionamentos_home():
                 "sk_aparelho": sk_aparelho,
                 "marca": marca,
                 "modelo": modelo,
-                "capacidade_total": capacidade_total,
                 "cap_whats_business": cap_bus,
                 "cap_whats_normal": cap_norm,
+                "capacidade_total": capacidade_total,
                 "slots": [
                     {"slot": s, "chip": slots[s]}
                     for s in range(1, capacidade_total + 1)
                 ],
-                "chips_sem_slot": chips_livres,
             })
 
         return render_template(
             "relacionamentos.html",
-            aparelhos=aparelhos
+            aparelhos=aparelhos,
+            chips_livres=chips_livres   # 🔥 ESSENCIAL
         )
 
     except Exception as e:

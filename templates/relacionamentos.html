@@ -1,13 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Relacionamentos{% endblock %}
-
 {% block content %}
 
-<!-- ============================================================
-     CONTAINER COM RECUO DA SIDEBAR
-============================================================ -->
 <div class="relacionamentos-wrapper">
 
+    <!-- ================= HEADER ================= -->
     <div class="page-header">
         <h1><i class="fas fa-link"></i> Relacionamentos WhatsApp x Chips</h1>
         <p class="subtitle">
@@ -15,12 +12,12 @@
         </p>
     </div>
 
+    <!-- ================= APARELHOS ================= -->
     <div class="aparelhos-container">
 
     {% for a in aparelhos %}
     <div class="aparelho-card">
 
-        <!-- ================= APARELHO ================= -->
         <div class="aparelho-header">
             <h2>{{ a.marca }} • {{ a.modelo }}</h2>
             <span class="tag">
@@ -28,11 +25,12 @@
             </span>
         </div>
 
-        <!-- ================= SLOTS ================= -->
         <div class="slots-grid">
 
         {% for slot in a.slots %}
-        <div class="slot-card">
+        <div class="slot-card"
+             data-sk-aparelho="{{ a.sk_aparelho }}"
+             data-slot="{{ slot.slot }}">
 
             <div class="slot-number">
                 Slot {{ slot.slot }}
@@ -57,20 +55,20 @@
                 {% endif %}
 
                 <button class="btn-remove"
-                    onclick="desvincular({{ slot.chip.sk_chip }})">
+                        onclick="desvincular({{ slot.chip.sk_chip }})">
                     <i class="fas fa-times"></i> Remover
                 </button>
-
             </div>
             {% else %}
-            <div class="chip-empty">
-                Slot vazio
+            <!-- SLOT VAZIO -->
+            <div class="chip-empty drop-zone">
+                Slot vazio — selecione ou arraste um chip
             </div>
             {% endif %}
 
-            <!-- ===== SELECT ===== -->
+            <!-- ===== SELECT DE CHIPS LIVRES ===== -->
             <select class="select-chip"
-                onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
+                    onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
 
                 <option value="">
                     {% if slot.chip %}
@@ -80,8 +78,8 @@
                     {% endif %}
                 </option>
 
-                {% if a.chips_sem_slot %}
-                    {% for c in a.chips_sem_slot %}
+                {% if chips_livres %}
+                    {% for c in chips_livres %}
                     <option value="{{ c.sk_chip }}">
                         {{ c.numero }} • {{ c.operadora }}
                     </option>
@@ -91,7 +89,6 @@
                         Nenhum chip disponível
                     </option>
                 {% endif %}
-
             </select>
 
         </div>
@@ -100,12 +97,11 @@
         </div>
     </div>
     {% endfor %}
-
     </div>
 </div>
 
 <!-- ============================================================
-     JS — MANTIDO
+     JS
 ============================================================ -->
 <script>
 function handleVinculo(select, sk_aparelho, slot) {
@@ -127,7 +123,7 @@ function handleVinculo(select, sk_aparelho, slot) {
             alert(resp.error || "Erro ao vincular");
             return;
         }
-        location.reload();
+        location.reload(); // depois removemos
     })
     .catch(() => alert("Erro de comunicação"));
 }
@@ -144,27 +140,21 @@ function desvincular(sk_chip) {
 </script>
 
 <!-- ============================================================
-     ESTILO — MELHORADO + RECUO SIDEBAR
+     ESTILO
 ============================================================ -->
 <style>
-/* ===============================
-   RECUO DA SIDEBAR
-=============================== */
 .relacionamentos-wrapper {
-    padding-left: 90px; /* sidebar colapsada */
+    padding-left: 90px;
     padding-right: 24px;
     padding-top: 24px;
 }
 
 @media (min-width: 1024px) {
     .relacionamentos-wrapper {
-        padding-left: 260px; /* sidebar aberta */
+        padding-left: 260px;
     }
 }
 
-/* ===============================
-   HEADER
-=============================== */
 .page-header {
     margin-bottom: 2rem;
 }
@@ -174,9 +164,6 @@ function desvincular(sk_chip) {
     font-size: 0.9rem;
 }
 
-/* ===============================
-   APARELHOS
-=============================== */
 .aparelhos-container {
     display: flex;
     flex-direction: column;
@@ -206,9 +193,6 @@ function desvincular(sk_chip) {
     font-size: 0.8rem;
 }
 
-/* ===============================
-   SLOTS
-=============================== */
 .slots-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -221,11 +205,6 @@ function desvincular(sk_chip) {
     border-radius: 14px;
     border: 1px solid #1e3a8a33;
     min-height: 210px;
-    transition: .25s;
-}
-
-.slot-card:hover {
-    box-shadow: 0 0 14px #1e40af55;
 }
 
 .slot-number {
@@ -234,9 +213,6 @@ function desvincular(sk_chip) {
     margin-bottom: .6rem;
 }
 
-/* ===============================
-   CHIP INFO
-=============================== */
 .chip-info {
     background: #1e40af33;
     padding: 10px;
@@ -255,33 +231,24 @@ function desvincular(sk_chip) {
     margin-bottom: .3rem;
 }
 
-/* ===============================
-   BADGES
-=============================== */
 .badge {
     display: inline-block;
     padding: 3px 10px;
     border-radius: 999px;
     font-size: .7rem;
     font-weight: 700;
-    margin-bottom: .4rem;
 }
 
 .badge-business {
     background: #16a34a33;
     color: #4ade80;
-    border: 1px solid #22c55e66;
 }
 
 .badge-normal {
     background: #2563eb33;
     color: #93c5fd;
-    border: 1px solid #3b82f666;
 }
 
-/* ===============================
-   OUTROS
-=============================== */
 .chip-empty {
     color: #64748b;
     margin-bottom: .6rem;

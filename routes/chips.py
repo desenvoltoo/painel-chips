@@ -20,18 +20,12 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 def chips_list():
     """
     Usa vw_chips_painel
-    Campos existentes:
-    sk_chip, numero, operadora, tipo_whatsapp,
-    sk_aparelho, slot_whatsapp,
-    aparelho_marca, aparelho_modelo
     """
     chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
-    aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
 
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
-        aparelhos=aparelhos_df.to_dict(orient="records"),
     )
 
 
@@ -41,8 +35,6 @@ def chips_list():
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     form = request.form.to_dict()
-
-    # upsert já grava em dim_chip + histórico
     bq.upsert_chip(form)
 
     return """
@@ -59,17 +51,26 @@ def chips_add():
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     """
-    vw_chips_painel NÃO TEM id_chip
-    então buscamos estado visual + id_chip da dim_chip
+    Busca direto da dim_chip (fonte real do tipo_whatsapp)
     """
     query = f"""
         SELECT
-            p.*,
-            d.id_chip
-        FROM `{PROJECT}.{DATASET}.vw_chips_painel` p
-        LEFT JOIN `{PROJECT}.{DATASET}.dim_chip` d
-            ON p.sk_chip = d.sk_chip
-        WHERE p.sk_chip = {sk_chip}
+            c.sk_chip,
+            c.id_chip,
+            c.numero,
+            c.operadora,
+            c.tipo_whatsapp,
+            c.slot_whatsapp,
+            c.status,
+            c.plano,
+            c.operador,
+            c.dt_inicio,
+            c.ultima_recarga_data,
+            c.ultima_recarga_valor,
+            c.total_gasto,
+            c.observacao
+        FROM `{PROJECT}.{DATASET}.dim_chip` c
+        WHERE c.sk_chip = {sk_chip}
         LIMIT 1
     """
 
@@ -88,30 +89,11 @@ def chips_get_by_sk(sk_chip):
 def chips_update_json():
     data = request.json or {}
 
-    sk_chip = data.get("sk_chip")
-    id_chip = data.get("id_chip")
+    # força id_chip como string
+    if "id_chip" in data:
+        data["id_chip"] = str(data["id_chip"])
 
-    # Garante id_chip (obrigatório no upsert)
-    if sk_chip and not id_chip:
-        df = bq._run(f"""
-            SELECT id_chip
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE sk_chip = {sk_chip}
-            LIMIT 1
-        """)
-
-        if df.empty:
-            return jsonify({"error": "Chip não encontrado"}), 404
-
-        id_chip = str(df.iloc[0]["id_chip"])
-        data["id_chip"] = id_chip
-
-    # força string
-    data["id_chip"] = str(data["id_chip"])
-
-    # UPSERT COMPLETO
     bq.upsert_chip(data)
-
     return jsonify({"success": True})
 
 
@@ -120,13 +102,6 @@ def chips_update_json():
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
-    """
-    Usa vw_chip_timeline
-    Campos:
-    categoria, tipo_evento, campo,
-    valor_antigo, valor_novo,
-    origem, observacao, data_evento, data_fmt
-    """
     df = bq._run(f"""
         SELECT *
         FROM `{PROJECT}.{DATASET}.vw_chip_timeline`

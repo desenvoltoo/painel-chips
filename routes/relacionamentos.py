@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 from google.cloud import bigquery
-import pandas as pd
 
 relacionamentos_bp = Blueprint("relacionamentos", __name__)
 bq = BigQueryClient()
@@ -25,13 +24,6 @@ def to_int(v):
         return None
 
 
-# Normalização segura do tipo de WhatsApp
-norm_tipo_whatsapp = {
-    "BUSINESS": "BUSINESS",
-    "NORMAL": "NORMAL",
-}
-
-
 # ============================================================
 # HOME
 # ============================================================
@@ -46,28 +38,27 @@ def relacionamentos_home():
         aparelhos = []
 
         # --------------------------------------------------
-        # ✅ Chips disponíveis (SEM SLOT / SEM APARELHO)
+        # 🔹 Chips livres (garantido pela view)
         # --------------------------------------------------
         chips_livres = [
             {
                 "sk_chip": to_int(r["sk_chip"]),
                 "numero": r["numero"],
                 "operadora": r["operadora"],
-                "tipo_whatsapp": norm_tipo_whatsapp.get(
-                    r.get("tipo_whatsapp"), "A DEFINIR"
-                ),
+                "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR",
             }
             for _, r in df[
-                df["slot_whatsapp"].isna()
+                df["sk_aparelho"].isna()
                 & df["sk_chip"].notna()
             ].iterrows()
-            if to_int(r["sk_chip"]) is not None
         ]
 
         # --------------------------------------------------
-        # Agrupa por aparelho
+        # 🔹 Agrupa por aparelho
         # --------------------------------------------------
-        for sk_aparelho, g in df.groupby("sk_aparelho", dropna=True):
+        for sk_aparelho, g in df[
+            df["sk_aparelho"].notna()
+        ].groupby("sk_aparelho"):
 
             sk_aparelho = to_int(sk_aparelho)
             if sk_aparelho is None:
@@ -80,21 +71,13 @@ def relacionamentos_home():
             cap_norm = to_int(g["cap_whats_normal"].iloc[0]) or 0
             capacidade_total = cap_bus + cap_norm
 
-            if capacidade_total == 0:
-                continue
-
-            # --------------------------------------------------
-            # Criação dos slots vazios
-            # --------------------------------------------------
+            # Cria slots vazios
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
-            # --------------------------------------------------
-            # Chips vinculados ao aparelho
-            # --------------------------------------------------
+            # Chips vinculados
             vinculados = g[
-                g["sk_aparelho_atual"].notna()
+                g["sk_chip"].notna()
                 & g["slot_whatsapp"].notna()
-                & g["sk_chip"].notna()
             ]
 
             for _, r in vinculados.iterrows():

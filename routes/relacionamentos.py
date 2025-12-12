@@ -25,6 +25,13 @@ def to_int(v):
         return None
 
 
+# Normalização segura do tipo de WhatsApp
+norm_tipo_whatsapp = {
+    "BUSINESS": "BUSINESS",
+    "NORMAL": "NORMAL",
+}
+
+
 # ============================================================
 # HOME
 # ============================================================
@@ -39,22 +46,23 @@ def relacionamentos_home():
         aparelhos = []
 
         # --------------------------------------------------
-        # Chips livres (não vinculados a aparelho)
+        # ✅ Chips disponíveis (SEM SLOT / SEM APARELHO)
         # --------------------------------------------------
-        chips_livres = []
-        livres_df = df[df["sk_aparelho_atual"].isna() & df["sk_chip"].notna()]
-
-        for _, r in livres_df.iterrows():
-            sk_chip = to_int(r["sk_chip"])
-            if sk_chip is None:
-                continue
-
-            chips_livres.append({
-                "sk_chip": sk_chip,
+        chips_livres = [
+            {
+                "sk_chip": to_int(r["sk_chip"]),
                 "numero": r["numero"],
                 "operadora": r["operadora"],
-                "tipo_whatsapp": "A DEFINIR"
-            })
+                "tipo_whatsapp": norm_tipo_whatsapp.get(
+                    r.get("tipo_whatsapp"), "A DEFINIR"
+                ),
+            }
+            for _, r in df[
+                df["slot_whatsapp"].isna()
+                & df["sk_chip"].notna()
+            ].iterrows()
+            if to_int(r["sk_chip"]) is not None
+        ]
 
         # --------------------------------------------------
         # Agrupa por aparelho
@@ -76,15 +84,12 @@ def relacionamentos_home():
                 continue
 
             # --------------------------------------------------
-            # Cria slots vazios
+            # Criação dos slots vazios
             # --------------------------------------------------
-            slots = {
-                i: None
-                for i in range(1, capacidade_total + 1)
-            }
+            slots = {i: None for i in range(1, capacidade_total + 1)}
 
             # --------------------------------------------------
-            # Chips vinculados
+            # Chips vinculados ao aparelho
             # --------------------------------------------------
             vinculados = g[
                 g["sk_aparelho_atual"].notna()
@@ -103,7 +108,7 @@ def relacionamentos_home():
                     "sk_chip": to_int(r["sk_chip"]),
                     "numero": r["numero"],
                     "operadora": r["operadora"],
-                    "tipo_whatsapp": tipo
+                    "tipo_whatsapp": tipo,
                 }
 
             aparelhos.append({
@@ -117,7 +122,7 @@ def relacionamentos_home():
                     {"slot": s, "chip": slots[s]}
                     for s in range(1, capacidade_total + 1)
                 ],
-                "chips_sem_slot": chips_livres
+                "chips_sem_slot": chips_livres,
             })
 
         return render_template(
@@ -126,12 +131,12 @@ def relacionamentos_home():
         )
 
     except Exception as e:
-        print("ERRO CARREGAR RELACIONAMENTOS:", e)
+        print("🚨 ERRO AO CARREGAR RELACIONAMENTOS:", e)
         return "Erro ao carregar relacionamentos", 500
 
 
 # ============================================================
-# VINCULAR / TROCAR
+# VINCULAR / TROCAR CHIP
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
@@ -168,12 +173,12 @@ def relacionamentos_vincular():
         return jsonify({"ok": True})
 
     except Exception as e:
-        print("ERRO VINCULAR:", e)
+        print("🚨 ERRO VINCULAR:", e)
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ============================================================
-# DESVINCULAR
+# DESVINCULAR CHIP
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
@@ -205,5 +210,5 @@ def relacionamentos_desvincular():
         return jsonify({"ok": True})
 
     except Exception as e:
-        print("ERRO DESVINCULAR:", e)
+        print("🚨 ERRO DESVINCULAR:", e)
         return jsonify({"ok": False, "error": str(e)}), 500

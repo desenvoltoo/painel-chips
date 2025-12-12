@@ -19,7 +19,9 @@
 
 <main class="container chip-container">
 
-    <!-- FORMULÁRIO -->
+    <!-- =====================================================
+         FORMULÁRIO
+    ====================================================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon">
@@ -29,7 +31,10 @@
         </div>
 
         <div class="card-content">
-            <form action="{{ url_for('aparelhos.aparelhos_add') }}" method="POST" class="chip-form">
+            <form action="{{ url_for('aparelhos.aparelhos_add') }}"
+                  method="POST"
+                  class="chip-form"
+                  autocomplete="off">
 
                 <div class="form-row">
                     <div class="form-group">
@@ -59,7 +64,7 @@
                         <select name="status" id="status">
                             <option value="ATIVO">ATIVO</option>
                             <option value="EM_USO">EM USO</option>
-                            <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                            <option value="MANUTENCAO">MANUTENÇÃO</option>
                             <option value="PARADO">PARADO</option>
                             <option value="DESCARTADO">DESCARTADO</option>
                         </select>
@@ -74,7 +79,9 @@
         </div>
     </section>
 
-    <!-- LISTAGEM -->
+    <!-- =====================================================
+         LISTAGEM
+    ====================================================== -->
     <section class="chip-card">
         <div class="chip-card-header">
             <div class="card-icon">
@@ -87,7 +94,10 @@
 
             <div class="search-wrapper">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar aparelhos...">
+                <input type="text"
+                       id="searchInput"
+                       class="search-input"
+                       placeholder="Buscar aparelhos...">
             </div>
 
             <div class="chip-table-wrapper">
@@ -105,40 +115,50 @@
 
                     <tbody id="tableBody">
                         {% for a in aparelhos %}
+                        {% set status_val = a.status or 'DESCONHECIDO' %}
                         <tr>
                             <td>{{ a.id_aparelho }}</td>
                             <td>{{ a.modelo }}</td>
                             <td>{{ a.marca }}</td>
                             <td>{{ a.imei or "-" }}</td>
                             <td>
-                                {% set status_val = (a.status or 'DESCONHECIDO') %}
-                                <span class="status-badge status-{{ status_val|lower|replace(' ', '-') }}">
-                                    {{ status_val }}
+                                <span class="status-badge status-{{ status_val|lower }}">
+                                    {{ status_val.replace('_', ' ') }}
                                 </span>
                             </td>
                             <td>
                                 <button
                                     class="btn-edit"
                                     onclick='editarAparelho(
-                                        {{ a.id_aparelho|tojson }},
-                                        {{ a.modelo|tojson }},
-                                        {{ a.marca|tojson }},
-                                        {{ (a.imei or "")|tojson }},
-                                        {{ status_val|tojson }}
+                                        {{ a.id_aparelho | tojson }},
+                                        {{ a.modelo | tojson }},
+                                        {{ a.marca | tojson }},
+                                        {{ (a.imei or "") | tojson }},
+                                        {{ status_val | tojson }}
                                     )'
                                 >
                                     <i class="fas fa-pen"></i>
                                 </button>
                             </td>
                         </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:#64748b;">
+                                Nenhum aparelho cadastrado
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+
         </div>
     </section>
 </main>
 
+<!-- =====================================================
+     JS
+====================================================== -->
 <script>
 function editarAparelho(id, modelo, marca, imei, status) {
     document.getElementById("id_aparelho").value = id;
@@ -149,6 +169,7 @@ function editarAparelho(id, modelo, marca, imei, status) {
 
     document.getElementById("titulo-form").innerHTML =
         '<i class="fas fa-pen"></i> Editar Aparelho';
+
     document.getElementById("botao-salvar").innerHTML =
         '<i class="fas fa-save"></i> Salvar Alterações';
 
@@ -157,11 +178,10 @@ function editarAparelho(id, modelo, marca, imei, status) {
 
 document.getElementById('searchInput').addEventListener('input', function (e) {
     const searchTerm = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#tableBody tr');
-
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? "" : "none";
+    document.querySelectorAll('#tableBody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(searchTerm)
+            ? ""
+            : "none";
     });
 });
 </script>

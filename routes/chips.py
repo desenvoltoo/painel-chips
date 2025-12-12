@@ -19,13 +19,20 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 @chips_bp.route("/chips")
 def chips_list():
     """
-    Usa vw_chips_painel
+    Template chips.html espera:
+    - chips
+    - aparelhos
     """
+
     chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+
+    # ⚠️ IMPORTANTE: garantir que aparelhos SEMPRE exista
+    aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
 
     return render_template(
         "chips.html",
         chips=chips_df.to_dict(orient="records"),
+        aparelhos=aparelhos_df.to_dict(orient="records"),  # 👈 ISSO CORRIGE O ERRO
     )
 
 
@@ -50,27 +57,24 @@ def chips_add():
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
-    """
-    Busca direto da dim_chip (fonte real do tipo_whatsapp)
-    """
     query = f"""
         SELECT
-            c.sk_chip,
-            c.id_chip,
-            c.numero,
-            c.operadora,
-            c.tipo_whatsapp,
-            c.slot_whatsapp,
-            c.status,
-            c.plano,
-            c.operador,
-            c.dt_inicio,
-            c.ultima_recarga_data,
-            c.ultima_recarga_valor,
-            c.total_gasto,
-            c.observacao
-        FROM `{PROJECT}.{DATASET}.dim_chip` c
-        WHERE c.sk_chip = {sk_chip}
+            sk_chip,
+            id_chip,
+            numero,
+            operadora,
+            tipo_whatsapp,
+            slot_whatsapp,
+            status,
+            plano,
+            operador,
+            dt_inicio,
+            ultima_recarga_data,
+            ultima_recarga_valor,
+            total_gasto,
+            observacao
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        WHERE sk_chip = {sk_chip}
         LIMIT 1
     """
 
@@ -89,8 +93,7 @@ def chips_get_by_sk(sk_chip):
 def chips_update_json():
     data = request.json or {}
 
-    # força id_chip como string
-    if "id_chip" in data:
+    if "id_chip" in data and data["id_chip"] is not None:
         data["id_chip"] = str(data["id_chip"])
 
     bq.upsert_chip(data)

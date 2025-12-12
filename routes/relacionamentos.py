@@ -30,7 +30,7 @@ def to_int(v):
 # ============================
 def norm_tipo_whatsapp(v):
     if not v or str(v).strip() == "":
-        return "NORMAL"
+        return None
     v = str(v).upper()
     if "BUS" in v:
         return "BUSINESS"
@@ -52,7 +52,9 @@ def relacionamentos_home():
 
         aparelhos = []
 
-        # chips livres = NÃO vinculados a nenhum aparelho
+        # -----------------------------
+        # Chips livres (NÃO vinculados)
+        # -----------------------------
         chips_livres = [
             {
                 "sk_chip": to_int(r["sk_chip"]),
@@ -64,7 +66,9 @@ def relacionamentos_home():
             if to_int(r["sk_chip"]) is not None
         ]
 
-        # agrupa por aparelho
+        # -----------------------------
+        # Agrupa por aparelho
+        # -----------------------------
         for sk_aparelho, g in df.groupby("sk_aparelho", dropna=True):
 
             sk_aparelho = to_int(sk_aparelho)
@@ -73,15 +77,15 @@ def relacionamentos_home():
 
             marca = g["marca"].iloc[0]
             modelo = g["modelo"].iloc[0]
-            capacidade = to_int(g["capacidade_total"].iloc[0])
+            capacidade = to_int(g["capacidade_whatsapp"].iloc[0])
 
             if capacidade is None:
                 continue
 
-            # slots vazios
+            # cria slots vazios
             slots = {i: None for i in range(1, capacidade + 1)}
 
-            # chips vinculados
+            # chips vinculados a este aparelho
             vinculados = g[
                 g["sk_aparelho_atual"].notna()
                 & g["slot_whatsapp"].notna()
@@ -138,7 +142,7 @@ def relacionamentos_vincular():
 
         sql = f"""
         UPDATE {tabela}
-        SET sk_aparelho = @sk_aparelho,
+        SET sk_aparelho_atual = @sk_aparelho,
             slot_whatsapp = @slot
         WHERE sk_chip = @sk_chip
         """
@@ -177,7 +181,7 @@ def relacionamentos_desvincular():
 
         sql = f"""
         UPDATE {tabela}
-        SET sk_aparelho = NULL,
+        SET sk_aparelho_atual = NULL,
             slot_whatsapp = NULL
         WHERE sk_chip = @sk_chip
         """

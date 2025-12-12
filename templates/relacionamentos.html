@@ -33,7 +33,7 @@
             <div class="chip-number">{{ slot.chip.numero }}</div>
             <div class="chip-operadora">{{ slot.chip.operadora }}</div>
             <div class="whatsapp-type">
-                {{ slot.chip.tipo_whatsapp or "Tipo desconhecido" }}
+                {{ slot.chip.tipo_whatsapp or "NORMAL" }}
             </div>
 
             <button class="btn-remove"
@@ -45,22 +45,18 @@
         <div class="chip-empty">Slot vazio</div>
         {% endif %}
 
-        <!-- ===== SELECT SEMPRE VISÍVEL ===== -->
+        <!-- ===== SELECT ===== -->
         <select class="select-chip"
-            onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
+            onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
 
-            <option value="">
-                {% if slot.chip %}
-                    Trocar chip…
-                {% else %}
-                    Selecionar chip…
-                {% endif %}
-            </option>
+            <option value="">Selecionar chip…</option>
 
             {% for c in a.chips_sem_slot %}
-            <option value="{{ c.sk_chip }}">
-                {{ c.numero }} • {{ c.operadora }} • {{ c.tipo_whatsapp or "Tipo desconhecido" }}
-            </option>
+                {% if not slot.chip or c.sk_chip != slot.chip.sk_chip %}
+                <option value="{{ c.sk_chip }}">
+                    {{ c.numero }} • {{ c.operadora }} • {{ c.tipo_whatsapp or "NORMAL" }}
+                </option>
+                {% endif %}
             {% endfor %}
 
         </select>
@@ -75,27 +71,41 @@
 </div>
 
 <!-- ============================================================
-     JS — VINCULAR / DESVINCULAR
+     JS — VINCULAR / DESVINCULAR (ROBUSTO)
 ============================================================ -->
 <script>
-function vincular(sk_chip, sk_aparelho, slot) {
+function handleVinculo(select, sk_aparelho, slot) {
+    const sk_chip = select.value;
     if (!sk_chip) return;
 
     fetch("/relacionamentos/vincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_chip, sk_aparelho, slot })
+        body: JSON.stringify({
+            sk_chip: Number(sk_chip),
+            sk_aparelho: Number(sk_aparelho),
+            slot: Number(slot)
+        })
     })
     .then(r => r.json())
-    .then(() => location.reload())
-    .catch(e => console.error(e));
+    .then(resp => {
+        if (!resp.ok) {
+            alert(resp.error || "Erro ao vincular");
+            return;
+        }
+        location.reload();
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erro de comunicação");
+    });
 }
 
 function desvincular(sk_chip) {
     fetch("/relacionamentos/desvincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_chip })
+        body: JSON.stringify({ sk_chip: Number(sk_chip) })
     })
     .then(() => location.reload())
     .catch(e => console.error(e));
@@ -103,7 +113,7 @@ function desvincular(sk_chip) {
 </script>
 
 <!-- ============================================================
-     ESTILO
+     ESTILO (INALTERADO)
 ============================================================ -->
 <style>
 .page-header { margin-bottom: 2rem; }

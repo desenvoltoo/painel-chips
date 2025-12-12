@@ -12,53 +12,49 @@ bq = BigQueryClient()
 
 
 # ============================================================
-# 📌 LISTAGEM COMPLETA — APARELHOS + SLOTS + CHIPS LIVRES
+# LISTAR RELACIONAMENTOS
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
     try:
-        # 1️⃣ Aparelhos + slots + chips já vinculados
-        df = bq.query(f"""
-            SELECT
-              sk_aparelho,
-              marca,
-              modelo,
-              capacidade_whatsapp,
-              slot,
-              sk_chip,
-              numero,
-              operadora,
-              tipo_whatsapp
-            FROM `{bq.project}.marts.vw_relacionamentos_whatsapp`
-            ORDER BY marca, modelo, sk_aparelho, slot
-        """)
+        sql = f"""
+        SELECT
+            a.sk_aparelho,
+            a.marca,
+            a.modelo,
+            a.capacidade_whatsapp AS capacidade_total,
+
+            c.sk_chip,
+            c.numero,
+            c.operadora,
+            c.tipo_whatsapp,
+            c.sk_aparelho_atual,
+            c.slot_whatsapp
+
+        FROM `{bq.project}.marts.dim_aparelho` a
+        LEFT JOIN `{bq.project}.marts.dim_chip` c
+            ON c.sk_aparelho_atual = a.sk_aparelho
+
+        ORDER BY a.marca, a.modelo, c.slot_whatsapp
+        """
+
+        df = bq.client.query(sql).to_dataframe()
         df = sanitize_df(df)
 
-        # 2️⃣ Chips LIVRES (GLOBAL — aparecem para TODOS os aparelhos)
-        chips_livres_df = bq.query(f"""
-            SELECT
-              sk_chip,
-              numero,
-              operadora,
-              tipo_whatsapp
-            FROM `{bq.project}.marts.dim_chip`
-            WHERE sk_aparelho_atual IS NULL
-               OR slot_whatsapp IS NULL
-            ORDER BY numero
-        """)
-        chips_livres = sanitize_df(chips_livres_df).to_dict(orient="records")
-
         aparelhos = {}
+        chips_livres = []
 
-        # 3️⃣ Cria aparelhos + slots vazios
+        # ------------------------------------------------
+        # Primeiro: criar aparelhos + slots vazios
+        # ------------------------------------------------
         for _, r in df.iterrows():
-            sk_ap = int(r["sk_aparelho"])
+            sk = int(r["sk_aparelho"])
 
-            if sk_ap not in aparelhos:
-                capacidade = int(r["capacidade_whatsapp"] or 0)
+            if sk not in aparelhos:
+                capacidade = int(r["capacidade_total"] or 0)
 
-                aparelhos[sk_ap] = {
-                    "sk_aparelho": sk_ap,
+                aparelhos[sk] = {
+                    "sk_aparelho": sk,
                     "marca": r["marca"],
                     "modelo": r["modelo"],
                     "capacidade_total": capacidade,
@@ -66,23 +62,38 @@ def relacionamentos_home():
                         {"slot": i + 1, "chip": None}
                         for i in range(capacidade)
                     ],
-                    # 🔥 GLOBAL
-                    "chips_sem_slot": chips_livres
+                    "chips_sem_slot": []
                 }
 
-        # 4️⃣ Encaixa chips nos slots corretos
+        # ------------------------------------------------
+        # Segundo: classificar chips
+        # ------------------------------------------------
         for _, r in df.iterrows():
-            if pd.notna(r["sk_chip"]) and pd.notna(r["slot"]):
-                sk_ap = int(r["sk_aparelho"])
-                idx = int(r["slot"]) - 1
 
-                if 0 <= idx < len(aparelhos[sk_ap]["slots"]):
-                    aparelhos[sk_ap]["slots"][idx]["chip"] = {
-                        "sk_chip": int(r["sk_chip"]),
-                        "numero": r["numero"],
-                        "operadora": r["operadora"],
-                        "tipo_whatsapp": r["tipo_whatsapp"]
-                    }
+            if pd.isna(r["sk_chip"]):
+                continue
+
+            chip = {
+                "sk_chip": int(r["sk_chip"]),
+                "numero": r["numero"],
+                "operadora": r["operadora"],
+                "tipo_whatsapp": r["tipo_whatsapp"]
+            }
+
+            if pd.isna(r["sk_aparelho_atual"]) or pd.isna(r["slot_whatsapp"]):
+                chips_livres.append(chip)
+            else:
+                sk_ap = int(r["sk_aparelho_atual"])
+                slot = int(r["slot_whatsapp"]) - 1
+
+                if sk_ap in aparelhos and 0 <= slot < len(aparelhos[sk_ap]["slots"]):
+                    aparelhos[sk_ap]["slots"][slot]["chip"] = chip
+
+        # ------------------------------------------------
+        # Chips livres aparecem PARA TODOS os aparelhos
+        # ------------------------------------------------
+        for ap in aparelhos.values():
+            ap["chips_sem_slot"] = chips_livres
 
         return render_template(
             "relacionamentos.html",
@@ -95,60 +106,63 @@ def relacionamentos_home():
 
 
 # ============================================================
-# 🔄 VINCULAR CHIP → APARELHO + SLOT
+# VINCULAR CHIP
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
-def relacionamentos_vincular():
-    try:
-        data = request.get_json(force=True)
+def vincular():
+    data = request.get_json(force=True)
 
-        sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET
-          sk_aparelho_atual = @aparelho,
-          slot_whatsapp     = @slot
-        WHERE sk_chip = @chip
-        """
+    sk_chip = data.get("sk_chip")
+    sk_aparelho = data.get("sk_aparelho")
+    slot = data.get("slot")
 
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("chip", "INT64", int(data["sk_chip"])),
-                bigquery.ScalarQueryParameter("aparelho", "INT64", int(data["sk_aparelho"])),
-                bigquery.ScalarQueryParameter("slot", "INT64", int(data["slot"]))
-            ]
-        )
+    if not sk_chip or not sk_aparelho or not slot:
+        return jsonify({"ok": False}), 400
 
-        bq.client.query(sql, job_config=job_config).result()
-        return jsonify({"ok": True})
+    sql = f"""
+    UPDATE `{bq.project}.marts.dim_chip`
+    SET
+        sk_aparelho_atual = @sk_aparelho,
+        slot_whatsapp     = @slot
+    WHERE sk_chip = @sk_chip
+    """
 
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    job = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("sk_chip", "INT64", int(sk_chip)),
+            bigquery.ScalarQueryParameter("sk_aparelho", "INT64", int(sk_aparelho)),
+            bigquery.ScalarQueryParameter("slot", "INT64", int(slot)),
+        ]
+    )
+
+    bq.client.query(sql, job_config=job).result()
+    return jsonify({"ok": True})
 
 
 # ============================================================
-# ❌ DESVINCULAR CHIP
+# DESVINCULAR CHIP
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
-def relacionamentos_desvincular():
-    try:
-        data = request.get_json(force=True)
+def desvincular():
+    data = request.get_json(force=True)
+    sk_chip = data.get("sk_chip")
 
-        sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET
-          sk_aparelho_atual = NULL,
-          slot_whatsapp     = NULL
-        WHERE sk_chip = @chip
-        """
+    if not sk_chip:
+        return jsonify({"ok": False}), 400
 
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("chip", "INT64", int(data["sk_chip"]))
-            ]
-        )
+    sql = f"""
+    UPDATE `{bq.project}.marts.dim_chip`
+    SET
+        sk_aparelho_atual = NULL,
+        slot_whatsapp     = NULL
+    WHERE sk_chip = @sk_chip
+    """
 
-        bq.client.query(sql, job_config=job_config).result()
-        return jsonify({"ok": True})
+    job = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("sk_chip", "INT64", int(sk_chip)),
+        ]
+    )
 
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    bq.client.query(sql, job_config=job).result()
+    return jsonify({"ok": True})

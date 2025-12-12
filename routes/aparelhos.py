@@ -4,35 +4,36 @@
 from flask import Blueprint, render_template, request, redirect
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-import os
 
 aparelhos_bp = Blueprint("aparelhos", __name__)
 bq = BigQueryClient()
 
-PROJECT = os.getenv("GCP_PROJECT_ID", "painel-universidade")
-DATASET = os.getenv("BQ_DATASET", "marts")
 
 # =======================================================
-# 📱 LISTAGEM DE APARELHOS (PAINEL)
+# LISTAGEM
 # =======================================================
 @aparelhos_bp.route("/aparelhos")
 def aparelhos_list():
-    """
-    Fonte: vw_aparelhos
-
-    Campos esperados:
-    sk_aparelho, marca, modelo, capacidade_whatsapp, status, created_at
-    """
     try:
         df = bq.get_view("vw_aparelhos")
         df = sanitize_df(df)
 
-        # 🔒 Blindagem total para Jinja / JS
-        aparelhos = (
-            df
-            .where(df.notna(), None)   # NaN → None
-            .to_dict(orient="records")
-        )
+        # 🔐 BLINDAGEM ABSOLUTA CONTRA Undefined
+        colunas_padrao = {
+            "id_aparelho": "",
+            "modelo": "",
+            "marca": "",
+            "imei": "",
+            "status": "DESCONHECIDO"
+        }
+
+        for col, default in colunas_padrao.items():
+            if col not in df.columns:
+                df[col] = default
+
+        df = df.fillna(colunas_padrao)
+
+        aparelhos = df.to_dict(orient="records")
 
         return render_template(
             "aparelhos.html",
@@ -45,29 +46,18 @@ def aparelhos_list():
 
 
 # =======================================================
-# ➕ UPSERT DE APARELHO (INSERT / UPDATE)
+# UPSERT (INSERT + UPDATE)
 # =======================================================
 @aparelhos_bp.route("/aparelhos/add", methods=["POST"])
 def aparelhos_add():
-    """
-    Upsert usando dim_aparelho
-    """
     try:
         payload = {
             "id_aparelho": request.form.get("id_aparelho"),
-            "marca": request.form.get("marca"),
             "modelo": request.form.get("modelo"),
-            "imei": request.form.get("imei"),
-            "status": request.form.get("status"),
-
-            # capacidades (opcional, se vier do form)
-            "qtd_whatsapp_total": request.form.get("qtd_whatsapp_total"),
-            "qtd_whatsapp_business": request.form.get("qtd_whatsapp_business"),
-            "qtd_whatsapp_normal": request.form.get("qtd_whatsapp_normal"),
+            "marca": request.form.get("marca"),
+            "imei": request.form.get("imei") or None,
+            "status": request.form.get("status") or "ATIVO",
         }
-
-        # remove chaves vazias
-        payload = {k: v for k, v in payload.items() if v not in ("", None)}
 
         bq.upsert_aparelho(payload)
 

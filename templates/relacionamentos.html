@@ -10,68 +10,72 @@
 
 <div class="aparelhos-container">
 
-    {% for a in aparelhos %}
-    <div class="aparelho-card">
-        
-        <div class="aparelho-header">
-            <h2>{{ a.marca }} • {{ a.modelo }}</h2>
-            <span class="tag">Capacidade: {{ a.capacidade_total }} WhatsApps</span>
-        </div>
+{% for a in aparelhos %}
+<div class="aparelho-card">
 
-        <div class="slots-grid">
+    <!-- ================= APARELHO ================= -->
+    <div class="aparelho-header">
+        <h2>{{ a.marca }} • {{ a.modelo }}</h2>
+        <span class="tag">Capacidade: {{ a.capacidade_total }} WhatsApps</span>
+    </div>
 
-            {% for slot in a.slots %}
-            <div class="slot-card" id="slot-{{ a.sk_aparelho }}-{{ slot.slot }}">
+    <!-- ================= SLOTS ================= -->
+    <div class="slots-grid">
 
-                <div class="slot-number">Slot {{ slot.slot }}</div>
+    {% for slot in a.slots %}
+    <div class="slot-card">
 
-                {% if slot.chip %}
-                <!-- SLOT OCUPADO -->
-                <div class="chip-info">
-                    <span class="chip-number">{{ slot.chip.numero }}</span>
-                    <span class="chip-operadora">{{ slot.chip.operadora }}</span>
-                    <span class="whatsapp-type">{{ slot.chip.tipo_whatsapp or "Tipo desconhecido" }}</span> <!-- Tipo WhatsApp -->
-                    <button class="btn-remove"
-                        onclick="desvincular({{ slot.chip.sk_chip }})">
-                        <i class="fas fa-times"></i> Remover
-                    </button>
-                </div>
-                {% endif %}
+        <div class="slot-number">Slot {{ slot.slot }}</div>
 
-                <!-- SELECT PARA VINCULAR OU ALTERAR -->
-                {% if a.chips_sem_slot|length > 0 %}
-                <select class="select-chip"
-                        onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
-                    <option value="">
-                        {% if slot.chip %}Alterar chip...{% else %}Selecionar chip{% endif %}
-                    </option>
-
-                    {% for c in a.chips_sem_slot %}
-                    <option value="{{ c.sk_chip }}">
-                        {{ c.numero }} ({{ c.operadora }}) - {{ c.tipo_whatsapp or "Tipo desconhecido" }}
-                    </option>
-                    {% endfor %}
-                </select>
-                {% else %}
-                    {% if not slot.chip %}
-                    <div class="chip-empty-info">Nenhum chip disponível</div>
-                    {% endif %}
-                {% endif %}
-
-                {% if not slot.chip %}
-                <div class="chip-empty">Vazio</div>
-                {% endif %}
-
+        <!-- ===== SLOT OCUPADO ===== -->
+        {% if slot.chip %}
+        <div class="chip-info">
+            <div class="chip-number">{{ slot.chip.numero }}</div>
+            <div class="chip-operadora">{{ slot.chip.operadora }}</div>
+            <div class="whatsapp-type">
+                {{ slot.chip.tipo_whatsapp or "Tipo desconhecido" }}
             </div>
+
+            <button class="btn-remove"
+                onclick="desvincular({{ slot.chip.sk_chip }})">
+                <i class="fas fa-times"></i> Remover
+            </button>
+        </div>
+        {% else %}
+        <div class="chip-empty">Slot vazio</div>
+        {% endif %}
+
+        <!-- ===== SELECT SEMPRE VISÍVEL ===== -->
+        <select class="select-chip"
+            onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
+
+            <option value="">
+                {% if slot.chip %}
+                    Trocar chip…
+                {% else %}
+                    Selecionar chip…
+                {% endif %}
+            </option>
+
+            {% for c in a.chips_sem_slot %}
+            <option value="{{ c.sk_chip }}">
+                {{ c.numero }} • {{ c.operadora }} • {{ c.tipo_whatsapp or "Tipo desconhecido" }}
+            </option>
             {% endfor %}
 
-        </div>
+        </select>
+
     </div>
     {% endfor %}
+
+    </div>
+</div>
+{% endfor %}
+
 </div>
 
 <!-- ============================================================
-     JS — FUNÇÕES VINCULAR / DESVINCULAR
+     JS — VINCULAR / DESVINCULAR
 ============================================================ -->
 <script>
 function vincular(sk_chip, sk_aparelho, slot) {
@@ -84,7 +88,7 @@ function vincular(sk_chip, sk_aparelho, slot) {
     })
     .then(r => r.json())
     .then(() => location.reload())
-    .catch(err => console.error("Erro ao vincular:", err));
+    .catch(e => console.error(e));
 }
 
 function desvincular(sk_chip) {
@@ -94,15 +98,16 @@ function desvincular(sk_chip) {
         body: JSON.stringify({ sk_chip })
     })
     .then(() => location.reload())
-    .catch(err => console.error("Erro ao desvincular:", err));
+    .catch(e => console.error(e));
 }
 </script>
 
 <!-- ============================================================
-     ESTILO PREMIUM
+     ESTILO
 ============================================================ -->
 <style>
 .page-header { margin-bottom: 2rem; }
+
 .subtitle {
     color: #94a3b8;
     font-size: 0.9rem;
@@ -139,7 +144,7 @@ function desvincular(sk_chip) {
 
 .slots-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
 }
 
@@ -149,24 +154,24 @@ function desvincular(sk_chip) {
     border-radius: 10px;
     border: 1px solid #1e3a8a33;
     text-align: center;
-    transition: .25s ease;
-    min-height: 160px;
+    min-height: 190px;
+    transition: .25s;
 }
 
 .slot-card:hover {
-    box-shadow: 0 0 10px #1e40af55;
+    box-shadow: 0 0 12px #1e40af55;
 }
 
 .slot-number {
     color: #60a5fa;
-    margin-bottom: 0.6rem;
+    margin-bottom: .6rem;
 }
 
 .chip-info {
     background: #1e40af44;
     padding: 10px;
     border-radius: 8px;
-    margin-bottom: .5rem;
+    margin-bottom: .6rem;
 }
 
 .chip-number {
@@ -182,17 +187,12 @@ function desvincular(sk_chip) {
 .whatsapp-type {
     font-size: .75rem;
     color: #a3b3d4;
-    margin-top: 0.4rem;
+    margin-top: .3rem;
 }
 
 .chip-empty {
     color: #64748b;
-    margin-top: .6rem;
-}
-
-.chip-empty-info {
-    color: #475569;
-    font-size: 0.8rem;
+    margin-bottom: .6rem;
 }
 
 .btn-remove {
@@ -209,7 +209,7 @@ function desvincular(sk_chip) {
     width: 100%;
     padding: 6px;
     border-radius: 8px;
-    margin-top: .5rem;
+    margin-top: .4rem;
 }
 </style>
 

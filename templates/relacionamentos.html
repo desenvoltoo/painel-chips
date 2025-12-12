@@ -30,7 +30,7 @@
                 <div class="chip-info">
                     <span class="chip-number">{{ slot.chip.numero }}</span>
                     <span class="chip-operadora">{{ slot.chip.operadora }}</span>
-
+                    <span class="whatsapp-type">{{ slot.chip.tipo_whatsapp or "Tipo desconhecido" }}</span> <!-- Tipo WhatsApp -->
                     <button class="btn-remove"
                         onclick="desvincular({{ slot.chip.sk_chip }})">
                         <i class="fas fa-times"></i> Remover
@@ -48,7 +48,7 @@
 
                     {% for c in a.chips_sem_slot %}
                     <option value="{{ c.sk_chip }}">
-                        {{ c.numero }} ({{ c.operadora }})
+                        {{ c.numero }} ({{ c.operadora }}) - {{ c.tipo_whatsapp or "Tipo desconhecido" }}
                     </option>
                     {% endfor %}
                 </select>
@@ -177,6 +177,12 @@ function desvincular(sk_chip) {
 .chip-operadora {
     font-size: .85rem;
     color: #cbd5e1;
+}
+
+.whatsapp-type {
+    font-size: .75rem;
+    color: #a3b3d4;
+    margin-top: 0.4rem;
 }
 
 .chip-empty {

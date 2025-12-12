@@ -3,89 +3,109 @@
 
 {% block content %}
 
-<div class="page-header">
-    <h1><i class="fas fa-link"></i> Relacionamentos WhatsApp x Chips</h1>
-    <p class="subtitle">Gerencie a ocupação dos slots de WhatsApp de cada aparelho.</p>
-</div>
+<!-- ============================================================
+     CONTAINER COM RECUO DA SIDEBAR
+============================================================ -->
+<div class="relacionamentos-wrapper">
 
-<div class="aparelhos-container">
-
-{% for a in aparelhos %}
-<div class="aparelho-card">
-
-    <!-- ================= APARELHO ================= -->
-    <div class="aparelho-header">
-        <h2>{{ a.marca }} • {{ a.modelo }}</h2>
-        <span class="tag">Capacidade: {{ a.capacidade_total }} WhatsApps</span>
+    <div class="page-header">
+        <h1><i class="fas fa-link"></i> Relacionamentos WhatsApp x Chips</h1>
+        <p class="subtitle">
+            Gerencie a ocupação dos slots de WhatsApp de cada aparelho.
+        </p>
     </div>
 
-    <!-- ================= SLOTS ================= -->
-    <div class="slots-grid">
+    <div class="aparelhos-container">
 
-    {% for slot in a.slots %}
-    <div class="slot-card">
+    {% for a in aparelhos %}
+    <div class="aparelho-card">
 
-        <div class="slot-number">Slot {{ slot.slot }}</div>
+        <!-- ================= APARELHO ================= -->
+        <div class="aparelho-header">
+            <h2>{{ a.marca }} • {{ a.modelo }}</h2>
+            <span class="tag">
+                Capacidade: {{ a.capacidade_total }} WhatsApps
+            </span>
+        </div>
 
-        <!-- ===== SLOT OCUPADO ===== -->
-        {% if slot.chip %}
-        <div class="chip-info">
-            <div class="chip-number">{{ slot.chip.numero }}</div>
-            <div class="chip-operadora">{{ slot.chip.operadora }}</div>
+        <!-- ================= SLOTS ================= -->
+        <div class="slots-grid">
 
-            {% if slot.chip.tipo_whatsapp %}
-            <div class="whatsapp-type">
-                {{ slot.chip.tipo_whatsapp }}
+        {% for slot in a.slots %}
+        <div class="slot-card">
+
+            <div class="slot-number">
+                Slot {{ slot.slot }}
+            </div>
+
+            <!-- ===== SLOT OCUPADO ===== -->
+            {% if slot.chip %}
+            <div class="chip-info">
+
+                <div class="chip-number">
+                    {{ slot.chip.numero }}
+                </div>
+
+                <div class="chip-operadora">
+                    {{ slot.chip.operadora }}
+                </div>
+
+                {% if slot.chip.tipo_whatsapp %}
+                <span class="badge {{ 'badge-business' if slot.chip.tipo_whatsapp == 'BUSINESS' else 'badge-normal' }}">
+                    {{ slot.chip.tipo_whatsapp }}
+                </span>
+                {% endif %}
+
+                <button class="btn-remove"
+                    onclick="desvincular({{ slot.chip.sk_chip }})">
+                    <i class="fas fa-times"></i> Remover
+                </button>
+
+            </div>
+            {% else %}
+            <div class="chip-empty">
+                Slot vazio
             </div>
             {% endif %}
 
-            <button class="btn-remove"
-                onclick="desvincular({{ slot.chip.sk_chip }})">
-                <i class="fas fa-times"></i> Remover
-            </button>
-        </div>
-        {% else %}
-        <div class="chip-empty">Slot vazio</div>
-        {% endif %}
+            <!-- ===== SELECT ===== -->
+            <select class="select-chip"
+                onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
 
-        <!-- ===== SELECT ===== -->
-        <select class="select-chip"
-            onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
-
-            <option value="">
-                {% if slot.chip %}
-                    Trocar chip…
-                {% else %}
-                    Selecionar chip…
-                {% endif %}
-            </option>
-
-            {% if a.chips_sem_slot %}
-                {% for c in a.chips_sem_slot %}
-                <option value="{{ c.sk_chip }}">
-                    {{ c.numero }} • {{ c.operadora }}
-                    {% if c.tipo_whatsapp %}
-                        • {{ c.tipo_whatsapp }}
+                <option value="">
+                    {% if slot.chip %}
+                        Trocar chip…
+                    {% else %}
+                        Selecionar chip…
                     {% endif %}
                 </option>
-                {% endfor %}
-            {% else %}
-                <option disabled>Nenhum chip disponível</option>
-            {% endif %}
 
-        </select>
+                {% if a.chips_sem_slot %}
+                    {% for c in a.chips_sem_slot %}
+                    <option value="{{ c.sk_chip }}">
+                        {{ c.numero }} • {{ c.operadora }}
+                    </option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>
+                        Nenhum chip disponível
+                    </option>
+                {% endif %}
 
+            </select>
+
+        </div>
+        {% endfor %}
+
+        </div>
     </div>
     {% endfor %}
 
     </div>
 </div>
-{% endfor %}
-
-</div>
 
 <!-- ============================================================
-     JS — VINCULAR / DESVINCULAR (INALTERADO)
+     JS — MANTIDO
 ============================================================ -->
 <script>
 function handleVinculo(select, sk_aparelho, slot) {
@@ -122,5 +142,170 @@ function desvincular(sk_chip) {
     .catch(() => alert("Erro ao desvincular"));
 }
 </script>
+
+<!-- ============================================================
+     ESTILO — MELHORADO + RECUO SIDEBAR
+============================================================ -->
+<style>
+/* ===============================
+   RECUO DA SIDEBAR
+=============================== */
+.relacionamentos-wrapper {
+    padding-left: 90px; /* sidebar colapsada */
+    padding-right: 24px;
+    padding-top: 24px;
+}
+
+@media (min-width: 1024px) {
+    .relacionamentos-wrapper {
+        padding-left: 260px; /* sidebar aberta */
+    }
+}
+
+/* ===============================
+   HEADER
+=============================== */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.subtitle {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+/* ===============================
+   APARELHOS
+=============================== */
+.aparelhos-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.aparelho-card {
+    background: #111827;
+    padding: 1.6rem;
+    border-radius: 16px;
+    border: 1px solid #1e3a8a55;
+    box-shadow: 0 0 18px #1e3a8a22;
+}
+
+.aparelho-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.4rem;
+}
+
+.tag {
+    background: #1e3a8a55;
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: #93c5fd;
+    font-size: 0.8rem;
+}
+
+/* ===============================
+   SLOTS
+=============================== */
+.slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1.1rem;
+}
+
+.slot-card {
+    background: #0f172a;
+    padding: 1rem;
+    border-radius: 14px;
+    border: 1px solid #1e3a8a33;
+    min-height: 210px;
+    transition: .25s;
+}
+
+.slot-card:hover {
+    box-shadow: 0 0 14px #1e40af55;
+}
+
+.slot-number {
+    color: #60a5fa;
+    font-weight: 600;
+    margin-bottom: .6rem;
+}
+
+/* ===============================
+   CHIP INFO
+=============================== */
+.chip-info {
+    background: #1e40af33;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: .6rem;
+}
+
+.chip-number {
+    font-weight: 700;
+    color: #93c5fd;
+}
+
+.chip-operadora {
+    font-size: .85rem;
+    color: #cbd5e1;
+    margin-bottom: .3rem;
+}
+
+/* ===============================
+   BADGES
+=============================== */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .7rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+}
+
+.badge-business {
+    background: #16a34a33;
+    color: #4ade80;
+    border: 1px solid #22c55e66;
+}
+
+.badge-normal {
+    background: #2563eb33;
+    color: #93c5fd;
+    border: 1px solid #3b82f666;
+}
+
+/* ===============================
+   OUTROS
+=============================== */
+.chip-empty {
+    color: #64748b;
+    margin-bottom: .6rem;
+}
+
+.btn-remove {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: .8rem;
+}
+
+.select-chip {
+    width: 100%;
+    padding: 8px;
+    border-radius: 10px;
+    margin-top: .4rem;
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid #1e3a8a55;
+}
+</style>
 
 {% endblock %}

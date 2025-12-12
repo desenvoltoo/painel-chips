@@ -25,36 +25,26 @@
 
                 <div class="slot-number">Slot {{ slot.slot }}</div>
 
-                {% if slot.chip and slot.chip.sk_chip %}
+                {% if slot.chip %}
                 <!-- SLOT OCUPADO -->
                 <div class="chip-info">
                     <span class="chip-number">{{ slot.chip.numero }}</span>
                     <span class="chip-operadora">{{ slot.chip.operadora }}</span>
 
                     <button class="btn-remove"
-                        onclick="desvincular({{ a.sk_aparelho }}, {{ slot.slot }})">
+                        onclick="desvincular({{ slot.chip.sk_chip }})">
                         <i class="fas fa-times"></i> Remover
                     </button>
                 </div>
+                {% endif %}
 
-                <!-- SELECT PARA ALTERAR -->
-                <select class="select-chip"
-                        onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
-                    <option value="">Alterar chip...</option>
-
-                    {% for c in a.chips_sem_slot %}
-                    <option value="{{ c.sk_chip }}">{{ c.numero }} ({{ c.operadora }})</option>
-                    {% endfor %}
-                </select>
-
-                {% else %}
-                <!-- SLOT VAZIO -->
-                <div class="chip-empty">Vazio</div>
-
+                <!-- SELECT PARA VINCULAR OU ALTERAR -->
                 {% if a.chips_sem_slot|length > 0 %}
                 <select class="select-chip"
                         onchange="vincular(this.value, {{ a.sk_aparelho }}, {{ slot.slot }})">
-                    <option value="">Selecionar Chip</option>
+                    <option value="">
+                        {% if slot.chip %}Alterar chip...{% else %}Selecionar chip{% endif %}
+                    </option>
 
                     {% for c in a.chips_sem_slot %}
                     <option value="{{ c.sk_chip }}">
@@ -63,9 +53,13 @@
                     {% endfor %}
                 </select>
                 {% else %}
-                <div class="chip-empty-info">Nenhum chip disponível</div>
+                    {% if not slot.chip %}
+                    <div class="chip-empty-info">Nenhum chip disponível</div>
+                    {% endif %}
                 {% endif %}
 
+                {% if not slot.chip %}
+                <div class="chip-empty">Vazio</div>
                 {% endif %}
 
             </div>
@@ -93,11 +87,11 @@ function vincular(sk_chip, sk_aparelho, slot) {
     .catch(err => console.error("Erro ao vincular:", err));
 }
 
-function desvincular(sk_aparelho, slot) {
+function desvincular(sk_chip) {
     fetch("/relacionamentos/desvincular", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sk_aparelho, slot })
+        body: JSON.stringify({ sk_chip })
     })
     .then(() => location.reload())
     .catch(err => console.error("Erro ao desvincular:", err));
@@ -156,6 +150,7 @@ function desvincular(sk_aparelho, slot) {
     border: 1px solid #1e3a8a33;
     text-align: center;
     transition: .25s ease;
+    min-height: 160px;
 }
 
 .slot-card:hover {
@@ -171,7 +166,7 @@ function desvincular(sk_aparelho, slot) {
     background: #1e40af44;
     padding: 10px;
     border-radius: 8px;
-    margin-bottom: 0.8rem;
+    margin-bottom: .5rem;
 }
 
 .chip-number {
@@ -186,7 +181,7 @@ function desvincular(sk_aparelho, slot) {
 
 .chip-empty {
     color: #64748b;
-    margin-bottom: 0.6rem;
+    margin-top: .6rem;
 }
 
 .chip-empty-info {
@@ -201,6 +196,7 @@ function desvincular(sk_aparelho, slot) {
     padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
+    margin-top: .5rem;
 }
 
 .select-chip {

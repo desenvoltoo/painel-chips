@@ -2,6 +2,36 @@
 {% block title %}Relacionamentos{% endblock %}
 {% block content %}
 
+{# ============================================================
+   MACROS — NOMES VISUAIS DOS SLOTS
+============================================================ #}
+{% macro nome_slot_motorola(slot) %}
+    {% if slot <= 4 %}
+        {% if slot == 1 %}
+            Business principal
+        {% else %}
+            Business perfil {{ slot }}
+        {% endif %}
+    {% else %}
+        {% set idx = slot - 5 %}
+        {% set perfil = (idx // 2) + 1 %}
+        {% set normal = (idx % 2) + 1 %}
+        Whats Normal {{ normal }} • Perfil {{ perfil }}
+    {% endif %}
+{% endmacro %}
+
+{% macro nome_slot_outros(slot) %}
+    {% if slot == 1 %}
+        Business
+    {% elif slot == 2 %}
+        Whats Normal 1
+    {% elif slot == 3 %}
+        Whats Normal 2
+    {% else %}
+        Slot {{ slot }}
+    {% endif %}
+{% endmacro %}
+
 <div class="relacionamentos-wrapper">
 
     <!-- ================= HEADER ================= -->
@@ -32,8 +62,13 @@
              data-sk-aparelho="{{ a.sk_aparelho }}"
              data-slot="{{ slot.slot }}">
 
+            <!-- ===== NOME VISUAL DO SLOT ===== -->
             <div class="slot-number">
-                Slot {{ slot.slot }}
+                {% if 'MOTOROLA' in a.marca|upper or 'MOTO' in a.modelo|upper %}
+                    {{ nome_slot_motorola(slot.slot) }}
+                {% else %}
+                    {{ nome_slot_outros(slot.slot) }}
+                {% endif %}
             </div>
 
             <!-- ===== SLOT OCUPADO ===== -->
@@ -58,9 +93,10 @@
                         onclick="desvincular({{ slot.chip.sk_chip }})">
                     <i class="fas fa-times"></i> Remover
                 </button>
+
             </div>
             {% else %}
-            <!-- SLOT VAZIO -->
+            <!-- ===== SLOT VAZIO ===== -->
             <div class="chip-empty drop-zone">
                 Slot vazio — selecione ou arraste um chip
             </div>
@@ -123,7 +159,7 @@ function handleVinculo(select, sk_aparelho, slot) {
             alert(resp.error || "Erro ao vincular");
             return;
         }
-        location.reload(); // depois removemos
+        location.reload();
     })
     .catch(() => alert("Erro de comunicação"));
 }
@@ -155,9 +191,7 @@ function desvincular(sk_chip) {
     }
 }
 
-.page-header {
-    margin-bottom: 2rem;
-}
+.page-header { margin-bottom: 2rem; }
 
 .subtitle {
     color: #94a3b8;

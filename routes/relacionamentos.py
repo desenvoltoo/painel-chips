@@ -17,11 +17,15 @@ def to_int(v):
         if v is None:
             return None
         v = str(v).strip()
-        if v == "":
+        if v.lower() in ["", "none", "null", "nan"]:
             return None
         return int(v)
     except:
         return None
+
+
+def is_null(v):
+    return v is None or str(v).strip().lower() in ["none", "null", "nan"]
 
 
 # ============================================================
@@ -39,36 +43,33 @@ def relacionamentos_home():
                 chips_livres=[]
             )
 
-        # --------------------------------------------------
-        # ✅ CHIPS LIVRES (REGRA CORRETA)
-        # chip livre = sk_aparelho_atual IS NULL
-        # --------------------------------------------------
-        chips_livres = [
-            {
-                "sk_chip": to_int(r["sk_chip"]),
-                "numero": r["numero"],
-                "operadora": r["operadora"],
-                "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR",
-            }
-            for _, r in df[
-                df["sk_aparelho_atual"].isna()
-                & df["sk_chip"].notna()
-            ].iterrows()
-            if to_int(r["sk_chip"]) is not None
-        ]
+        # =====================================================
+        # 🔹 CHIPS LIVRES (BLINDADO)
+        # regra real: sk_chip existe E sk_aparelho_atual é NULL
+        # =====================================================
+        chips_livres = []
 
+        for _, r in df.iterrows():
+            sk_chip = to_int(r.get("sk_chip"))
+            sk_aparelho_atual = r.get("sk_aparelho_atual")
+
+            if sk_chip and is_null(sk_aparelho_atual):
+                chips_livres.append({
+                    "sk_chip": sk_chip,
+                    "numero": r.get("numero"),
+                    "operadora": r.get("operadora"),
+                    "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR",
+                })
+
+        # =====================================================
+        # 🔹 AGRUPA POR APARELHO (IGNORA LINHAS SEM APARELHO)
+        # =====================================================
         aparelhos = []
 
-        # --------------------------------------------------
-        # 🔹 AGRUPA POR APARELHO
-        # --------------------------------------------------
-        for sk_aparelho, g in df[
-            df["sk_aparelho"].notna()
-        ].groupby("sk_aparelho"):
-
+        for sk_aparelho, g in df.groupby("sk_aparelho"):
             sk_aparelho = to_int(sk_aparelho)
-            if sk_aparelho is None:
-                continue
+            if not sk_aparelho:
+                continue  # ignora chips livres
 
             marca = g["marca"].iloc[0]
             modelo = g["modelo"].iloc[0]
@@ -80,23 +81,20 @@ def relacionamentos_home():
             # Cria slots vazios
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
-            # Chips vinculados ao aparelho
-            vinculados = g[
-                g["sk_chip"].notna()
-                & g["slot_whatsapp"].notna()
-            ]
+            # Chips vinculados
+            for _, r in g.iterrows():
+                sk_chip = to_int(r.get("sk_chip"))
+                slot = to_int(r.get("slot_whatsapp"))
 
-            for _, r in vinculados.iterrows():
-                slot = to_int(r["slot_whatsapp"])
-                if slot not in slots:
+                if not sk_chip or not slot or slot not in slots:
                     continue
 
                 tipo = "BUSINESS" if slot <= cap_bus else "NORMAL"
 
                 slots[slot] = {
-                    "sk_chip": to_int(r["sk_chip"]),
-                    "numero": r["numero"],
-                    "operadora": r["operadora"],
+                    "sk_chip": sk_chip,
+                    "numero": r.get("numero"),
+                    "operadora": r.get("operadora"),
                     "tipo_whatsapp": tipo,
                 }
 
@@ -113,10 +111,13 @@ def relacionamentos_home():
                 ],
             })
 
+        # DEBUG (pode remover depois)
+        print(f"✅ CHIPS LIVRES CARREGADOS: {len(chips_livres)}")
+
         return render_template(
             "relacionamentos.html",
             aparelhos=aparelhos,
-            chips_livres=chips_livres   # 🔥 ESSENCIAL
+            chips_livres=chips_livres
         )
 
     except Exception as e:
@@ -139,10 +140,8 @@ def relacionamentos_vincular():
         if not sk_chip or not sk_aparelho or not slot:
             return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
-        tabela = f"`{bq.project}.marts.dim_chip`"
-
         sql = f"""
-        UPDATE {tabela}
+        UPDATE `{bq.project}.marts.dim_chip`
         SET sk_aparelho_atual = @sk_aparelho,
             slot_whatsapp = @slot
         WHERE sk_chip = @sk_chip
@@ -178,10 +177,8 @@ def relacionamentos_desvincular():
         if not sk_chip:
             return jsonify({"ok": False, "error": "sk_chip inválido"}), 400
 
-        tabela = f"`{bq.project}.marts.dim_chip`"
-
         sql = f"""
-        UPDATE {tabela}
+        UPDATE `{bq.project}.marts.dim_chip`
         SET sk_aparelho_atual = NULL,
             slot_whatsapp = NULL
         WHERE sk_chip = @sk_chip

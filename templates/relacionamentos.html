@@ -32,9 +32,12 @@
         <div class="chip-info">
             <div class="chip-number">{{ slot.chip.numero }}</div>
             <div class="chip-operadora">{{ slot.chip.operadora }}</div>
+
+            {% if slot.chip.tipo_whatsapp %}
             <div class="whatsapp-type">
-                {{ slot.chip.tipo_whatsapp or "NORMAL" }}
+                {{ slot.chip.tipo_whatsapp }}
             </div>
+            {% endif %}
 
             <button class="btn-remove"
                 onclick="desvincular({{ slot.chip.sk_chip }})">
@@ -49,15 +52,26 @@
         <select class="select-chip"
             onchange="handleVinculo(this, {{ a.sk_aparelho }}, {{ slot.slot }})">
 
-            <option value="">Selecionar chip…</option>
-
-            {% for c in a.chips_sem_slot %}
-                {% if not slot.chip or c.sk_chip != slot.chip.sk_chip %}
-                <option value="{{ c.sk_chip }}">
-                    {{ c.numero }} • {{ c.operadora }} • {{ c.tipo_whatsapp or "NORMAL" }}
-                </option>
+            <option value="">
+                {% if slot.chip %}
+                    Trocar chip…
+                {% else %}
+                    Selecionar chip…
                 {% endif %}
-            {% endfor %}
+            </option>
+
+            {% if a.chips_sem_slot %}
+                {% for c in a.chips_sem_slot %}
+                <option value="{{ c.sk_chip }}">
+                    {{ c.numero }} • {{ c.operadora }}
+                    {% if c.tipo_whatsapp %}
+                        • {{ c.tipo_whatsapp }}
+                    {% endif %}
+                </option>
+                {% endfor %}
+            {% else %}
+                <option disabled>Nenhum chip disponível</option>
+            {% endif %}
 
         </select>
 
@@ -71,7 +85,7 @@
 </div>
 
 <!-- ============================================================
-     JS — VINCULAR / DESVINCULAR (ROBUSTO)
+     JS — VINCULAR / DESVINCULAR (INALTERADO)
 ============================================================ -->
 <script>
 function handleVinculo(select, sk_aparelho, slot) {
@@ -95,10 +109,7 @@ function handleVinculo(select, sk_aparelho, slot) {
         }
         location.reload();
     })
-    .catch(err => {
-        console.error(err);
-        alert("Erro de comunicação");
-    });
+    .catch(() => alert("Erro de comunicação"));
 }
 
 function desvincular(sk_chip) {
@@ -108,119 +119,8 @@ function desvincular(sk_chip) {
         body: JSON.stringify({ sk_chip: Number(sk_chip) })
     })
     .then(() => location.reload())
-    .catch(e => console.error(e));
+    .catch(() => alert("Erro ao desvincular"));
 }
 </script>
-
-<!-- ============================================================
-     ESTILO (INALTERADO)
-============================================================ -->
-<style>
-.page-header { margin-bottom: 2rem; }
-
-.subtitle {
-    color: #94a3b8;
-    font-size: 0.9rem;
-}
-
-.aparelhos-container {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-
-.aparelho-card {
-    background: #111827;
-    padding: 1.5rem;
-    border-radius: 14px;
-    border: 1px solid #1e3a8a55;
-    box-shadow: 0 0 15px #1e3a8a33;
-}
-
-.aparelho-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.2rem;
-}
-
-.tag {
-    background: #1e3a8a55;
-    padding: 6px 12px;
-    border-radius: 20px;
-    color: #93c5fd;
-    font-size: 0.8rem;
-}
-
-.slots-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.slot-card {
-    background: #0f172a;
-    padding: 1rem;
-    border-radius: 10px;
-    border: 1px solid #1e3a8a33;
-    text-align: center;
-    min-height: 190px;
-    transition: .25s;
-}
-
-.slot-card:hover {
-    box-shadow: 0 0 12px #1e40af55;
-}
-
-.slot-number {
-    color: #60a5fa;
-    margin-bottom: .6rem;
-}
-
-.chip-info {
-    background: #1e40af44;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: .6rem;
-}
-
-.chip-number {
-    font-weight: bold;
-    color: #93c5fd;
-}
-
-.chip-operadora {
-    font-size: .85rem;
-    color: #cbd5e1;
-}
-
-.whatsapp-type {
-    font-size: .75rem;
-    color: #a3b3d4;
-    margin-top: .3rem;
-}
-
-.chip-empty {
-    color: #64748b;
-    margin-bottom: .6rem;
-}
-
-.btn-remove {
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: .5rem;
-}
-
-.select-chip {
-    width: 100%;
-    padding: 6px;
-    border-radius: 8px;
-    margin-top: .4rem;
-}
-</style>
 
 {% endblock %}

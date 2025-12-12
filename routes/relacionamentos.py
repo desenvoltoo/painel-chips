@@ -25,7 +25,15 @@ def to_int(v):
 
 
 def is_null(v):
-    return v is None or str(v).strip().lower() in ["none", "null", "nan"]
+    """
+    Trata TODOS os casos que o sanitize_df gera:
+    None, "", "None", "null", "nan"
+    """
+    return (
+        v is None
+        or str(v).strip() == ""
+        or str(v).strip().lower() in ["none", "null", "nan"]
+    )
 
 
 # ============================================================
@@ -44,8 +52,8 @@ def relacionamentos_home():
             )
 
         # =====================================================
-        # 🔹 CHIPS LIVRES (BLINDADO)
-        # regra real: sk_chip existe E sk_aparelho_atual é NULL
+        # 🔹 CHIPS LIVRES (REGRA REAL)
+        # chip livre = tem sk_chip E sk_aparelho_atual é NULL
         # =====================================================
         chips_livres = []
 
@@ -62,7 +70,7 @@ def relacionamentos_home():
                 })
 
         # =====================================================
-        # 🔹 AGRUPA POR APARELHO (IGNORA LINHAS SEM APARELHO)
+        # 🔹 AGRUPA APARELHOS (IGNORA LINHAS SEM APARELHO)
         # =====================================================
         aparelhos = []
 
@@ -111,7 +119,9 @@ def relacionamentos_home():
                 ],
             })
 
-        # DEBUG (pode remover depois)
+        # =====================================================
+        # 🔹 LOG DE VALIDAÇÃO (PODE REMOVER DEPOIS)
+        # =====================================================
         print(f"✅ CHIPS LIVRES CARREGADOS: {len(chips_livres)}")
 
         return render_template(

@@ -11,6 +11,21 @@ bq = BigQueryClient()
 
 
 # ============================
+# Utilitário seguro
+# ============================
+def to_int(v):
+    try:
+        if v is None:
+            return None
+        v = str(v).strip()
+        if v == "":
+            return None
+        return int(v)
+    except:
+        return None
+
+
+# ============================
 # Normalização WhatsApp
 # ============================
 def norm_tipo_whatsapp(v):
@@ -43,10 +58,14 @@ def relacionamentos_home():
             ]
 
             for _, c in livres_df.iterrows():
+                sk_chip = to_int(c.get("sk_chip"))
+                if sk_chip is None:
+                    continue
+
                 chips_livres.append({
-                    "sk_chip": int(c["sk_chip"]),
-                    "numero": c["numero"],
-                    "operadora": c["operadora"],
+                    "sk_chip": sk_chip,
+                    "numero": c.get("numero"),
+                    "operadora": c.get("operadora"),
                     "tipo_whatsapp": norm_tipo_whatsapp(c.get("tipo_whatsapp")),
                 })
 
@@ -57,30 +76,35 @@ def relacionamentos_home():
         # -----------------------------
         for _, a in aparelhos_df.iterrows():
 
-            sk_aparelho = int(a["sk_aparelho"])
-            marca = a["marca"]
-            modelo = a["modelo"]
-            capacidade = int(a["capacidade_whatsapp"])
+            sk_aparelho = to_int(a.get("sk_aparelho"))
+            capacidade = to_int(a.get("capacidade_whatsapp"))
+
+            # ignora registros inválidos
+            if sk_aparelho is None or capacidade is None:
+                continue
+
+            marca = a.get("marca")
+            modelo = a.get("modelo")
 
             # cria slots vazios
             slots = [{"slot": i, "chip": None} for i in range(1, capacidade + 1)]
 
             # chips vinculados a este aparelho
             vinculados = chips_df[
-                chips_df["sk_aparelho"] == sk_aparelho
+                chips_df["sk_aparelho"].astype(str).str.strip() == str(sk_aparelho)
             ]
 
             for _, c in vinculados.iterrows():
-                slot = c.get("slot_whatsapp")
-                if pd.isna(slot):
+                slot = to_int(c.get("slot_whatsapp"))
+                if slot is None:
                     continue
 
-                idx = int(slot) - 1
+                idx = slot - 1
                 if 0 <= idx < len(slots):
                     slots[idx]["chip"] = {
-                        "sk_chip": int(c["sk_chip"]),
-                        "numero": c["numero"],
-                        "operadora": c["operadora"],
+                        "sk_chip": to_int(c.get("sk_chip")),
+                        "numero": c.get("numero"),
+                        "operadora": c.get("operadora"),
                         "tipo_whatsapp": norm_tipo_whatsapp(c.get("tipo_whatsapp")),
                     }
 
@@ -109,11 +133,14 @@ def relacionamentos_home():
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
     try:
-        data = request.get_json(force=True)
+        data = request.get_json(force=True) or {}
 
-        sk_chip = int(data["sk_chip"])
-        sk_aparelho = int(data["sk_aparelho"])
-        slot = int(data["slot"])
+        sk_chip = to_int(data.get("sk_chip"))
+        sk_aparelho = to_int(data.get("sk_aparelho"))
+        slot = to_int(data.get("slot"))
+
+        if not sk_chip or not sk_aparelho or not slot:
+            return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
         tabela = f"`{bq.project}.marts.dim_chip`"
 
@@ -124,7 +151,7 @@ def relacionamentos_vincular():
         WHERE sk_chip = @sk_chip
         """
 
-        job = bq.client.query(
+        bq.client.query(
             sql,
             job_config=bigquery.QueryJobConfig(
                 query_parameters=[
@@ -133,8 +160,7 @@ def relacionamentos_vincular():
                     bigquery.ScalarQueryParameter("slot", "INT64", slot),
                 ]
             )
-        )
-        job.result()
+        ).result()
 
         return jsonify({"ok": True})
 
@@ -149,8 +175,11 @@ def relacionamentos_vincular():
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
     try:
-        data = request.get_json(force=True)
-        sk_chip = int(data["sk_chip"])
+        data = request.get_json(force=True) or {}
+        sk_chip = to_int(data.get("sk_chip"))
+
+        if not sk_chip:
+            return jsonify({"ok": False, "error": "sk_chip inválido"}), 400
 
         tabela = f"`{bq.project}.marts.dim_chip`"
 

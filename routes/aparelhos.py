@@ -9,11 +9,10 @@ bq = BigQueryClient()
 # =======================================================
 # LISTAGEM
 # =======================================================
-@aparelhos_bp.route("/aparelhos") 
+@aparelhos_bp.route("/aparelhos")
 def aparelhos_list():
     try:
-        df = bq.get_view("vw_aparelhos")
-        df = sanitize_df(df)
+        df = sanitize_df(bq.get_view("vw_aparelhos"))
 
         return render_template(
             "aparelhos.html",
@@ -32,11 +31,24 @@ def aparelhos_list():
 def aparelhos_add():
     try:
         payload = {
+            # Identificação
             "id_aparelho": request.form.get("id_aparelho"),
             "modelo": request.form.get("modelo"),
             "marca": request.form.get("marca"),
             "imei": request.form.get("imei"),
+
+            # Status
             "status": request.form.get("status"),
+            "ativo": True,
+
+            # Capacidades (defaults seguros)
+            "qtd_whatsapp_total": request.form.get("qtd_whatsapp_total") or None,
+            "qtd_whatsapp_business": request.form.get("qtd_whatsapp_business") or None,
+            "qtd_whatsapp_normal": request.form.get("qtd_whatsapp_normal") or None,
+
+            "capacidade_whatsapp": request.form.get("capacidade_whatsapp") or None,
+            "cap_whats_business": request.form.get("cap_whats_business") or None,
+            "cap_whats_normal": request.form.get("cap_whats_normal") or None,
         }
 
         bq.upsert_aparelho(payload)

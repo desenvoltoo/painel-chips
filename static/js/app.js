@@ -15,13 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================================================
-   RECEBE DADOS DO BACKEND
+   DADOS DO BACKEND
 ============================================================ */
-const chipsData = window.chipsData || [];
-const aparelhosData = window.aparelhosData || [];
+const chipsData = Array.isArray(window.chipsData) ? window.chipsData : [];
+const aparelhosData = Array.isArray(window.aparelhosData) ? window.aparelhosData : [];
 
 /* ============================================================
-   LISTA PADRÃO DE STATUS
+   STATUS
 ============================================================ */
 const STATUS_LIST = [
     "DISPONIVEL",
@@ -38,34 +38,23 @@ const STATUS_LIST = [
 ];
 
 /* ============================================================
-   FORMATAR DATA (BIGQUERY SAFE)
+   FORMATAR DATA (DATE BigQuery)
 ============================================================ */
 function formatDate(value) {
     if (!value) return "-";
 
-    try {
-        // Se vier como timestamp ou string ISO
-        if (typeof value === "string" && value.includes("T")) {
-            return value.split("T")[0];
-        }
-
-        // Se vier como YYYY-MM-DD
-        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            return value;
-        }
-
-        // Fallback para Date
-        const d = new Date(value);
-        if (isNaN(d)) return "-";
-
-        return d.toISOString().split("T")[0];
-    } catch {
-        return "-";
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
     }
+
+    const d = new Date(value);
+    if (isNaN(d)) return "-";
+
+    return d.toISOString().split("T")[0];
 }
 
 /* ============================================================
-   SETTER UNIVERSAL
+   SET VALUE
 ============================================================ */
 function setValue(id, value) {
     const el = document.getElementById(id);
@@ -73,24 +62,24 @@ function setValue(id, value) {
 }
 
 /* ============================================================
-   PREENCHE SELECT DE STATUS
+   STATUS SELECT
 ============================================================ */
-function preencherStatus(valorAtual) {
+function preencherStatus(atual) {
     const select = document.getElementById("modal_status");
     if (!select) return;
 
     select.innerHTML = "";
-    STATUS_LIST.forEach(status => {
-        const opt = document.createElement("option");
-        opt.value = status;
-        opt.textContent = status;
-        if (status === valorAtual) opt.selected = true;
-        select.appendChild(opt);
+    STATUS_LIST.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s;
+        o.textContent = s;
+        if (s === atual) o.selected = true;
+        select.appendChild(o);
     });
 }
 
 /* ============================================================
-   RENDERIZA TABELA DE CHIPS
+   RENDER TABELA
 ============================================================ */
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
@@ -101,15 +90,21 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="13" class="empty-message">Nenhum chip encontrado.</td>
+                <td colspan="13" class="empty-message">
+                    Nenhum chip encontrado.
+                </td>
             </tr>`;
         return;
     }
 
     lista.forEach(c => {
+        const aparelho = c.aparelho_modelo
+            ? `${c.aparelho_modelo}${c.aparelho_marca ? " (" + c.aparelho_marca + ")" : ""}`
+            : "-";
+
         tbody.innerHTML += `
             <tr>
-                <td>${c.id_chip ?? "-"}</td>
+                <td>${c.id_chip ?? c.sk_chip ?? "-"}</td>
                 <td>${c.numero ?? "-"}</td>
                 <td>${c.operadora ?? "-"}</td>
                 <td>${c.operador ?? "-"}</td>
@@ -124,23 +119,24 @@ function renderRows(lista) {
                 <td>${formatDate(c.ultima_recarga_data)}</td>
                 <td>${c.ultima_recarga_valor ?? "-"}</td>
                 <td>${c.total_gasto ?? "-"}</td>
-                <td>${c.aparelho_modelo ?? "-"}</td>
-                <td>${formatDate(c.dt_inicio)}</td>
-                <td>${c.observacao ?? "-"}</td>
+                <td>${aparelho}</td>
+                <td>${formatDate(c.data_inicio)}</td>
 
                 <td>
-                    <button class="btn btn-primary btn-sm edit-btn" data-sk="${c.sk_chip}">
+                    <button class="btn btn-primary btn-sm edit-btn"
+                        data-sk="${c.sk_chip}">
                         Editar
                     </button>
                 </td>
-            </tr>`;
+            </tr>
+        `;
     });
 
     bindEditButtons();
 }
 
 /* ============================================================
-   BOTÃO EDITAR
+   EDIT BUTTON
 ============================================================ */
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
@@ -167,33 +163,32 @@ function abrirModalEdicao(chip) {
     setValue("modal_operadora", chip.operadora);
     setValue("modal_operador", chip.operador);
     setValue("modal_plano", chip.plano);
-    setValue("modal_observacao", chip.observacao);
 
     preencherStatus(chip.status);
 
-    setValue("modal_dt_inicio", formatDate(chip.dt_inicio));
+    setValue("modal_data_inicio", formatDate(chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
 
-    preencherSelectAparelhos(chip.sk_aparelho_atual);
+    preencherSelectAparelhos(chip.sk_aparelho);
 }
 
 /* ============================================================
    SELECT APARELHOS
 ============================================================ */
 function preencherSelectAparelhos(selecionado) {
-    const select = document.getElementById("modal_sk_aparelho_atual");
+    const select = document.getElementById("modal_sk_aparelho");
     if (!select) return;
 
     select.innerHTML = `<option value="">— Nenhum —</option>`;
 
     aparelhosData.forEach(ap => {
-        const opt = document.createElement("option");
-        opt.value = ap.sk_aparelho;
-        opt.textContent = `${ap.modelo} (${ap.marca})`;
-        if (String(selecionado) === String(ap.sk_aparelho)) opt.selected = true;
-        select.appendChild(opt);
+        const o = document.createElement("option");
+        o.value = ap.sk_aparelho;
+        o.textContent = `${ap.modelo} (${ap.marca})`;
+        if (String(selecionado) === String(ap.sk_aparelho)) o.selected = true;
+        select.appendChild(o);
     });
 }
 
@@ -205,7 +200,9 @@ document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
 });
 
 document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
-    const data = Object.fromEntries(new FormData(document.getElementById("modalForm")));
+    const data = Object.fromEntries(
+        new FormData(document.getElementById("modalForm"))
+    );
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
@@ -235,4 +232,3 @@ document.getElementById("searchInput")?.addEventListener("input", e => {
    INIT
 ============================================================ */
 renderRows(chipsData);
- 

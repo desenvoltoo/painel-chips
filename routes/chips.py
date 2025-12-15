@@ -19,11 +19,10 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 @chips_bp.route("/chips")
 def chips_list():
     """
-    Template chips.html espera:
-    - chips
-    - aparelhos
+    chips.html espera:
+    - chips  -> vw_chips_painel
+    - aparelhos -> vw_aparelhos
     """
-
     try:
         chips_df = sanitize_df(
             bq.get_view("vw_chips_painel")
@@ -56,6 +55,11 @@ def chips_add():
         if "id_chip" in data and data["id_chip"] is not None:
             data["id_chip"] = str(data["id_chip"])
 
+        # normaliza campos vazios
+        for k, v in data.items():
+            if v == "":
+                data[k] = None
+
         bq.upsert_chip(data)
 
         return """
@@ -71,7 +75,7 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA MODAL
+# BUSCAR CHIP PARA MODAL (SEMPRE VIA VIEW)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -85,13 +89,14 @@ def chips_get_by_sk(sk_chip):
                 operador,
                 status,
                 plano,
-                dt_inicio,
+                data_inicio,
                 ultima_recarga_data,
                 ultima_recarga_valor,
                 total_gasto,
-                observacao,
-                sk_aparelho_atual
-            FROM `{PROJECT}.{DATASET}.dim_chip`
+                sk_aparelho,
+                aparelho_marca,
+                aparelho_modelo
+            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
             LIMIT 1
         """
@@ -118,8 +123,14 @@ def chips_update_json():
     try:
         data = request.json or {}
 
+        # garante string
         if "id_chip" in data and data["id_chip"] is not None:
             data["id_chip"] = str(data["id_chip"])
+
+        # normaliza campos vazios
+        for k, v in data.items():
+            if v == "":
+                data[k] = None
 
         bq.upsert_chip(data)
 

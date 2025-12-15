@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# LISTAR CHIPS (PAINEL PRINCIPAL)
+# LISTAGEM PRINCIPAL
 # ============================================================
 @chips_bp.route("/chips")
 def chips_list():
@@ -24,92 +24,129 @@ def chips_list():
     - aparelhos
     """
 
-    chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+    try:
+        chips_df = sanitize_df(
+            bq.get_view("vw_chips_painel")
+        )
 
-    # ⚠️ IMPORTANTE: garantir que aparelhos SEMPRE exista
-    aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
+        aparelhos_df = sanitize_df(
+            bq.get_view("vw_aparelhos")
+        )
 
-    return render_template(
-        "chips.html",
-        chips=chips_df.to_dict(orient="records"),
-        aparelhos=aparelhos_df.to_dict(orient="records"),  # 👈 ISSO CORRIGE O ERRO
-    )
+        return render_template(
+            "chips.html",
+            chips=chips_df.to_dict(orient="records"),
+            aparelhos=aparelhos_df.to_dict(orient="records")
+        )
+
+    except Exception as e:
+        print("🚨 Erro ao carregar chips:", e)
+        return "Erro ao carregar chips", 500
 
 
 # ============================================================
-# CADASTRAR CHIP (UPSERT COMPLETO)
+# CADASTRAR CHIP (UPSERT)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
-    form = request.form.to_dict()
-    bq.upsert_chip(form)
+    try:
+        data = request.form.to_dict()
 
-    return """
-        <script>
-            alert('Chip cadastrado com sucesso!');
-            window.location.href='/chips';
-        </script>
-    """
+        # garante string
+        if "id_chip" in data and data["id_chip"] is not None:
+            data["id_chip"] = str(data["id_chip"])
+
+        bq.upsert_chip(data)
+
+        return """
+            <script>
+                alert('Chip cadastrado com sucesso!');
+                window.location.href='/chips';
+            </script>
+        """
+
+    except Exception as e:
+        print("🚨 Erro ao cadastrar chip:", e)
+        return "Erro ao cadastrar chip", 500
 
 
 # ============================================================
-# BUSCAR CHIP PARA EDIÇÃO (MODAL)
+# BUSCAR CHIP PARA MODAL
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
-    query = f"""
-        SELECT
-            sk_chip,
-            id_chip,
-            numero,
-            operadora,
-            tipo_whatsapp,
-            slot_whatsapp,
-            status,
-            plano,
-            operador,
-            dt_inicio,
-            ultima_recarga_data,
-            ultima_recarga_valor,
-            total_gasto,
-            observacao
-        FROM `{PROJECT}.{DATASET}.dim_chip`
-        WHERE sk_chip = {sk_chip}
-        LIMIT 1
-    """
+    try:
+        query = f"""
+            SELECT
+                sk_chip,
+                id_chip,
+                numero,
+                operadora,
+                operador,
+                status,
+                plano,
+                dt_inicio,
+                ultima_recarga_data,
+                ultima_recarga_valor,
+                total_gasto,
+                observacao,
+                sk_aparelho_atual
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE sk_chip = {sk_chip}
+            LIMIT 1
+        """
 
-    df = bq._run(query)
+        df = bq._run(query)
 
-    if df.empty:
-        return jsonify({"error": "Chip não encontrado"}), 404
+        if df.empty:
+            return jsonify({"error": "Chip não encontrado"}), 404
 
-    return jsonify(df.to_dict(orient="records")[0])
+        return jsonify(
+            sanitize_df(df).to_dict(orient="records")[0]
+        )
+
+    except Exception as e:
+        print("🚨 Erro ao buscar chip:", e)
+        return jsonify({"error": "Erro interno"}), 500
 
 
 # ============================================================
-# SALVAR EDIÇÃO (UPSERT COM HISTÓRICO)
+# SALVAR EDIÇÃO (UPSERT VIA JSON)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
-    data = request.json or {}
+    try:
+        data = request.json or {}
 
-    if "id_chip" in data and data["id_chip"] is not None:
-        data["id_chip"] = str(data["id_chip"])
+        if "id_chip" in data and data["id_chip"] is not None:
+            data["id_chip"] = str(data["id_chip"])
 
-    bq.upsert_chip(data)
-    return jsonify({"success": True})
+        bq.upsert_chip(data)
+
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print("🚨 Erro ao atualizar chip:", e)
+        return jsonify({"error": "Erro ao salvar"}), 500
 
 
 # ============================================================
-# TIMELINE / HISTÓRICO DO CHIP
+# TIMELINE / HISTÓRICO
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
-    df = bq._run(f"""
-        SELECT *
-        FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
-        WHERE sk_chip = {sk_chip}
-        ORDER BY data_evento DESC
-    """)
+    try:
+        df = bq._run(f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
+            WHERE sk_chip = {sk_chip}
+            ORDER BY data_evento DESC
+        """)
 
-    return jsonify(df.to_dict(orient="records"))
+        return jsonify(
+            sanitize_df(df).to_dict(orient="records")
+        )
+
+    except Exception as e:
+        print("🚨 Erro ao carregar timeline:", e)
+        return jsonify([]), 500

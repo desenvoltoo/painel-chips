@@ -235,3 +235,4 @@ document.getElementById("searchInput")?.addEventListener("input", e => {
    INIT
 ============================================================ */
 renderRows(chipsData);
+ 

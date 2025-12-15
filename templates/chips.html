@@ -173,6 +173,8 @@
         <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
+
+            <!-- 🔑 ESSENCIAL -->
             <input type="hidden" id="modal_sk_chip" name="sk_chip">
 
             <div class="form-group">
@@ -233,6 +235,7 @@
     </div>
 </div>
 
+<!-- ========================= DATA ========================= -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
     window.aparelhosData = {{ aparelhos | tojson | safe }};

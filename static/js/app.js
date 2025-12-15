@@ -15,13 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ============================================================
-   DADOS DO BACKEND
+   DADOS DO BACKEND (SEGUROS)
 ============================================================ */
 const chipsData = Array.isArray(window.chipsData) ? window.chipsData : [];
 const aparelhosData = Array.isArray(window.aparelhosData) ? window.aparelhosData : [];
 
 /* ============================================================
-   STATUS
+   LISTAS FIXAS
 ============================================================ */
 const STATUS_LIST = [
     "DISPONIVEL",
@@ -37,8 +37,10 @@ const STATUS_LIST = [
     "BLOQUEADO"
 ];
 
+const OPERADORAS_LIST = ["VIVO", "TIM", "CLARO", "OI", "OUTRA"];
+
 /* ============================================================
-   FORMATAR DATA (DATE BigQuery)
+   FORMATAR DATA (BigQuery DATE)
 ============================================================ */
 function formatDate(value) {
     if (!value) return "-";
@@ -47,14 +49,16 @@ function formatDate(value) {
         return value;
     }
 
-    const d = new Date(value);
-    if (isNaN(d)) return "-";
-
-    return d.toISOString().split("T")[0];
+    try {
+        const d = new Date(value);
+        return isNaN(d) ? "-" : d.toISOString().split("T")[0];
+    } catch {
+        return "-";
+    }
 }
 
 /* ============================================================
-   SET VALUE
+   SET VALUE SEGURO
 ============================================================ */
 function setValue(id, value) {
     const el = document.getElementById(id);
@@ -62,7 +66,7 @@ function setValue(id, value) {
 }
 
 /* ============================================================
-   STATUS SELECT
+   SELECT STATUS
 ============================================================ */
 function preencherStatus(atual) {
     const select = document.getElementById("modal_status");
@@ -79,7 +83,24 @@ function preencherStatus(atual) {
 }
 
 /* ============================================================
-   RENDER TABELA
+   SELECT OPERADORAS
+============================================================ */
+function preencherOperadoras(atual) {
+    const select = document.getElementById("modal_operadora");
+    if (!select) return;
+
+    select.innerHTML = "";
+    OPERADORAS_LIST.forEach(op => {
+        const o = document.createElement("option");
+        o.value = op;
+        o.textContent = op;
+        if (op === atual) o.selected = true;
+        select.appendChild(o);
+    });
+}
+
+/* ============================================================
+   RENDERIZA TABELA
 ============================================================ */
 function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
@@ -90,7 +111,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="13" class="empty-message">
+                <td colspan="12" class="empty-message">
                     Nenhum chip encontrado.
                 </td>
             </tr>`;
@@ -104,7 +125,7 @@ function renderRows(lista) {
 
         tbody.innerHTML += `
             <tr>
-                <td>${c.id_chip ?? c.sk_chip ?? "-"}</td>
+                <td>${c.id_chip ?? "-"}</td>
                 <td>${c.numero ?? "-"}</td>
                 <td>${c.operadora ?? "-"}</td>
                 <td>${c.operador ?? "-"}</td>
@@ -128,15 +149,14 @@ function renderRows(lista) {
                         Editar
                     </button>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     });
 
     bindEditButtons();
 }
 
 /* ============================================================
-   EDIT BUTTON
+   BOTÃO EDITAR
 ============================================================ */
 function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
@@ -153,24 +173,33 @@ function bindEditButtons() {
 }
 
 /* ============================================================
-   MODAL
+   ABRIR MODAL (MAPEADO)
 ============================================================ */
 function abrirModalEdicao(chip) {
     document.getElementById("editModal").style.display = "flex";
 
+    // 🔑 CHAVE (ESSENCIAL PARA NÃO CRIAR NOVO)
     setValue("modal_sk_chip", chip.sk_chip);
+
+    // BÁSICOS
     setValue("modal_numero", chip.numero);
-    setValue("modal_operadora", chip.operadora);
     setValue("modal_operador", chip.operador);
     setValue("modal_plano", chip.plano);
+    setValue("modal_observacao", chip.observacao);
 
+    // SELECTS
+    preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
+    // DATAS
     setValue("modal_data_inicio", formatDate(chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
+
+    // NÚMEROS
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
 
+    // APARELHO
     preencherSelectAparelhos(chip.sk_aparelho);
 }
 
@@ -204,9 +233,12 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
         new FormData(document.getElementById("modalForm"))
     );
 
+    // 🔥 GARANTIA: edição, não insert
+    data.sk_chip = document.getElementById("modal_sk_chip").value;
+
     const res = await fetch("/chips/update-json", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
 

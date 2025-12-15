@@ -14,7 +14,7 @@
             </div>
             <div class="header-text">
                 <h1 class="chip-title">Gestão de Chips</h1>
-                <p class="chip-subtitle">Cadastro, edição e monitoramento em tempo real</p>
+                <p class="chip-subtitle">Cadastro, edição e monitoramento</p>
             </div>
         </div>
     </div>
@@ -22,234 +22,226 @@
 
 <main class="container chip-container">
 
-    <!-- ============================================================
-         CARD: NOVO CHIP
-    ============================================================ -->
-    <section class="chip-card">
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fas fa-plus"></i></div>
-            <h2 class="card-title">Novo Chip</h2>
-        </div>
+<!-- ============================================================
+     NOVO CHIP
+============================================================ -->
+<section class="chip-card">
+    <div class="chip-card-header">
+        <div class="card-icon"><i class="fas fa-plus"></i></div>
+        <h2 class="card-title">Novo Chip</h2>
+    </div>
 
-        <div class="card-content">
-            <form action="/chips/add" method="POST" class="chip-form">
+    <div class="card-content">
+        <form action="/chips/add" method="POST" class="chip-form">
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID do Chip *</label>
-                        <input type="text" name="id_chip" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Número *</label>
-                        <input type="text" name="numero" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Operadora</label>
-                        <select name="operadora">
-                            <option value="VIVO">VIVO</option>
-                            <option value="TIM">TIM</option>
-                            <option value="CLARO">CLARO</option>
-                            <option value="OI">OI</option>
-                            <option value="OUTRA">OUTRA</option>
-                        </select>
-                    </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ID do Chip *</label>
+                    <input type="text" name="id_chip" required>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Operador</label>
-                        <input type="text" name="operador">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="status">
-                            <option>DISPONIVEL</option>
-                            <option>MATURANDO</option>
-                            <option>MATURADO</option>
-                            <option>DESCANSO_1</option>
-                            <option>DESCANSO_2</option>
-                            <option>PRONTO_PARA_MATURAR</option>
-                            <option>DISPARANDO</option>
-                            <option>BANIDO</option>
-                            <option>RESTRINGIDO</option>
-                            <option>ATIVO</option>
-                            <option>BLOQUEADO</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Plano</label>
-                        <input type="text" name="plano">
-                    </div>
+                <div class="form-group">
+                    <label>Número *</label>
+                    <input type="text" name="numero" required>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Data Status</label>
-                        <input type="date" name="dt_inicio">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Valor Última Recarga</label>
-                        <input type="number" step="0.01" name="ultima_recarga_valor">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Data Última Recarga</label>
-                        <input type="date" name="ultima_recarga_data">
-                    </div>
+                <div class="form-group">
+                    <label>Operadora</label>
+                    <select name="operadora">
+                        <option value="VIVO">VIVO</option>
+                        <option value="TIM">TIM</option>
+                        <option value="CLARO">CLARO</option>
+                        <option value="OI">OI</option>
+                        <option value="OUTRA">OUTRA</option>
+                    </select>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Total Gasto</label>
-                        <input type="number" step="0.01" name="total_gasto">
-                    </div>
-
-                    <div class="form-group full">
-                        <label>Aparelho Vinculado</label>
-                        <select name="sk_aparelho_atual">
-                            <option value="">— Nenhum —</option>
-                            {% for ap in aparelhos %}
-                                <option value="{{ ap.sk_aparelho }}">
-                                    {{ ap.modelo }} ({{ ap.marca }})
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group full">
-                        <label>Observação</label>
-                        <textarea name="observacao"></textarea>
-                    </div>
-                </div>
-
-                <button type="submit" class="chip-btn">
-                    <i class="fas fa-plus"></i> Cadastrar Chip
-                </button>
-
-            </form>
-        </div>
-    </section>
-
-    <!-- ============================================================
-         TABELA DE CHIPS
-    ============================================================ -->
-    <section class="chip-card">
-        <div class="chip-card-header">
-            <div class="card-icon"><i class="fas fa-list"></i></div>
-            <h2 class="card-title">Chips Cadastrados</h2>
-        </div>
-
-        <div class="card-content">
-
-            <div class="search-wrapper">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
             </div>
 
-            <div class="chip-table-wrapper">
-                <table class="chip-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Número</th>
-                            <th>Operadora</th>
-                            <th>Operador</th>
-                            <th>Status</th>
-                            <th>Plano</th>
-                            <th>Últ. Recarga</th>
-                            <th>Valor</th>
-                            <th>Total Gasto</th>
-                            <th>Aparelho</th>
-                            <th>Data Status</th>
-                            <th>Obs</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Operador</label>
+                    <input type="text" name="operador">
+                </div>
 
-                    <tbody id="tableBody"></tbody>
-                </table>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        <option>DISPONIVEL</option>
+                        <option>MATURANDO</option>
+                        <option>MATURADO</option>
+                        <option>DESCANSO_1</option>
+                        <option>DESCANSO_2</option>
+                        <option>PRONTO_PARA_MATURAR</option>
+                        <option>DISPARANDO</option>
+                        <option>BANIDO</option>
+                        <option>RESTRINGIDO</option>
+                        <option>ATIVO</option>
+                        <option>BLOQUEADO</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Plano</label>
+                    <input type="text" name="plano">
+                </div>
             </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Data Início</label>
+                    <input type="date" name="dt_inicio">
+                </div>
+
+                <div class="form-group">
+                    <label>Valor Última Recarga</label>
+                    <input type="number" step="0.01" name="ultima_recarga_valor">
+                </div>
+
+                <div class="form-group">
+                    <label>Data Última Recarga</label>
+                    <input type="date" name="ultima_recarga_data">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Total Gasto</label>
+                    <input type="number" step="0.01" name="total_gasto">
+                </div>
+
+                <div class="form-group full">
+                    <label>Aparelho Vinculado</label>
+                    <select name="sk_aparelho_atual">
+                        <option value="">— Nenhum —</option>
+                        {% for ap in aparelhos %}
+                            <option value="{{ ap.sk_aparelho }}">
+                                {{ ap.modelo }} ({{ ap.marca }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>Observação</label>
+                    <textarea name="observacao"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="chip-btn">
+                <i class="fas fa-plus"></i> Cadastrar Chip
+            </button>
+
+        </form>
+    </div>
+</section>
+
+<!-- ============================================================
+     LISTAGEM
+============================================================ -->
+<section class="chip-card">
+    <div class="chip-card-header">
+        <div class="card-icon"><i class="fas fa-list"></i></div>
+        <h2 class="card-title">Chips Cadastrados</h2>
+    </div>
+
+    <div class="card-content">
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
         </div>
-    </section>
+
+        <div class="chip-table-wrapper">
+            <table class="chip-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Número</th>
+                        <th>Operadora</th>
+                        <th>Operador</th>
+                        <th>Status</th>
+                        <th>Plano</th>
+                        <th>Últ. Recarga</th>
+                        <th>Valor</th>
+                        <th>Total</th>
+                        <th>Aparelho</th>
+                        <th>Data Início</th>
+                        <th>Obs</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
 
 </main>
 
 <!-- ============================================================
-     MODAL DE EDIÇÃO
+     MODAL EDIÇÃO
 ============================================================ -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
         <h2>Editar Chip</h2>
 
         <form id="modalForm" class="modal-grid">
-            <input type="hidden" name="sk_chip" id="modal_sk_chip">
+            <input type="hidden" id="modal_sk_chip">
 
             <div class="form-group">
                 <label>Número</label>
-                <input type="text" name="numero" id="modal_numero">
+                <input type="text" id="modal_numero">
             </div>
 
             <div class="form-group">
                 <label>Operadora</label>
-                <select name="operadora" id="modal_operadora">
-                    <option value="VIVO">VIVO</option>
-                    <option value="TIM">TIM</option>
-                    <option value="CLARO">CLARO</option>
-                    <option value="OI">OI</option>
-                    <option value="OUTRA">OUTRA</option>
-                </select>
+                <select id="modal_operadora"></select>
             </div>
 
             <div class="form-group">
                 <label>Operador</label>
-                <input type="text" name="operador" id="modal_operador">
+                <input type="text" id="modal_operador">
             </div>
 
             <div class="form-group">
                 <label>Status</label>
-                <select name="status" id="modal_status"></select>
+                <select id="modal_status"></select>
             </div>
 
             <div class="form-group">
                 <label>Plano</label>
-                <input type="text" name="plano" id="modal_plano">
+                <input type="text" id="modal_plano">
             </div>
 
             <div class="form-group">
-                <label>Data Status</label>
-                <input type="date" name="dt_inicio" id="modal_dt_inicio">
+                <label>Data Início</label>
+                <input type="date" id="modal_dt_inicio">
             </div>
 
             <div class="form-group">
-                <label>Data Última Recarga</label>
-                <input type="date" name="ultima_recarga_data" id="modal_ultima_recarga_data">
+                <label>Última Recarga</label>
+                <input type="date" id="modal_ultima_recarga_data">
             </div>
 
             <div class="form-group">
-                <label>Valor Última Recarga</label>
-                <input type="number" step="0.01" name="ultima_recarga_valor" id="modal_ultima_recarga_valor">
+                <label>Valor Recarga</label>
+                <input type="number" step="0.01" id="modal_ultima_recarga_valor">
             </div>
 
             <div class="form-group">
                 <label>Total Gasto</label>
-                <input type="number" step="0.01" name="total_gasto" id="modal_total_gasto">
+                <input type="number" step="0.01" id="modal_total_gasto">
             </div>
 
             <div class="form-group full">
-                <label>Aparelho Vinculado</label>
-                <select name="sk_aparelho_atual" id="modal_sk_aparelho_atual"></select>
+                <label>Aparelho</label>
+                <select id="modal_sk_aparelho_atual"></select>
             </div>
 
             <div class="form-group full">
                 <label>Observação</label>
-                <textarea name="observacao" id="modal_observacao"></textarea>
+                <textarea id="modal_observacao"></textarea>
             </div>
 
             <div class="modal-actions full">
@@ -261,7 +253,7 @@
 </div>
 
 <!-- ============================================================
-     DADOS PARA O JS
+     DADOS PARA JS
 ============================================================ -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
@@ -271,4 +263,3 @@
 <script src="/static/js/app.js"></script>
 
 {% endblock %}
- 

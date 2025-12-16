@@ -10,13 +10,14 @@ bq = BigQueryClient()
 
 
 # ============================================================
-# 📌 PÁGINA PRINCIPAL — Movimentação + Timeline
+# 📌 PÁGINA PRINCIPAL — MOVIMENTAÇÃO
 # ============================================================
 @mov_bp.route("/movimentacao")
 def movimentacao_home():
-
     try:
-        chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+        chips_df = sanitize_df(
+            bq.get_view("vw_chips_painel")
+        )
 
         return render_template(
             "movimentacao.html",
@@ -29,56 +30,53 @@ def movimentacao_home():
 
 
 # ============================================================
-# 🔍 AUTOCOMPLETE — Buscar chip digitando
+# 🔍 AUTOCOMPLETE — BUSCAR CHIP
 # ============================================================
 @mov_bp.route("/movimentacao/buscar")
 def buscar_chip():
-
     try:
         termo = request.args.get("q", "").strip().lower()
 
         if len(termo) < 2:
             return jsonify([])
 
-        df = sanitize_df(bq.get_view("vw_chips_painel"))
+        df = sanitize_df(
+            bq.get_view("vw_chips_painel")
+        )
 
-        # Filtra número ou operadora
         filtrado = df[
             df["numero"].astype(str).str.contains(termo, case=False, na=False)
         ]
 
         return jsonify(
-            filtrado[["sk_chip", "numero", "operadora"]].to_dict(orient="records")
+            filtrado[["sk_chip", "numero", "operadora"]]
+            .drop_duplicates()
+            .to_dict(orient="records")
         )
 
     except Exception as e:
         print("🚨 Erro no autocomplete:", e)
-        return jsonify([])
+        return jsonify([]), 500
 
 
 # ============================================================
-# 📜 API — HISTÓRICO DO CHIP (Eventos DO PAINEL)
+# 📜 HISTÓRICO / TIMELINE DO CHIP
 # ============================================================
-@mov_bp.route("/movimentacao/historico/<sk_chip>")
+@mov_bp.route("/movimentacao/historico/<int:sk_chip>")
 def historico_chip(sk_chip):
-
     try:
-        # Garante que sk_chip seja inteiro
-        sk_chip_int = int(sk_chip)
-
-        # SQL seguro com parâmetros para filtrar apenas eventos do Painel
         sql = f"""
             SELECT
-              sk_chip,
-              categoria,
-              tipo_evento,
-              campo,
-              valor_antigo,
-              valor_novo,
-              origem,
-              observacao,
-              data_evento,
-              data_fmt
+                sk_chip,
+                categoria,
+                tipo_evento,
+                campo,
+                valor_antigo,
+                valor_novo,
+                origem,
+                observacao,
+                data_evento,
+                data_fmt
             FROM `{bq.project}.{bq.dataset}.vw_chip_timeline`
             WHERE sk_chip = @sk_chip
               AND origem = @origem
@@ -87,31 +85,36 @@ def historico_chip(sk_chip):
 
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip_int),
-                bigquery.ScalarQueryParameter("origem", "STRING", "Painel")
+                bigquery.ScalarQueryParameter(
+                    "sk_chip", "INT64", sk_chip
+                ),
+                bigquery.ScalarQueryParameter(
+                    "origem", "STRING", "Painel"
+                )
             ]
         )
 
-        query_job = bq.client.query(sql, job_config=job_config)
-        rows = query_job.result()
+        rows = bq.client.query(sql, job_config=job_config).result()
 
-        # Converte para JSON manualmente (sem pandas) mantendo todos os campos
-        events = []
-        for row in rows:
-            events.append({
-                "sk_chip": row.sk_chip,
-                "categoria": row.categoria,
-                "tipo_evento": row.tipo_evento,
-                "campo": row.campo,
-                "valor_antigo": row.valor_antigo,
-                "valor_novo": row.valor_novo,
-                "origem": row.origem,
-                "observacao": row.observacao,
-                "data_evento": str(row.data_evento),
-                "data_fmt": row.data_fmt
+        eventos = []
+        for r in rows:
+            eventos.append({
+                "sk_chip": r.sk_chip,
+                "categoria": r.categoria,
+                "tipo_evento": r.tipo_evento,
+                "campo": r.campo,
+                "valor_antigo": r.valor_antigo,
+                "valor_novo": r.valor_novo,
+                "origem": r.origem,
+                "observacao": r.observacao,
+                "data_evento": (
+                    r.data_evento.isoformat()
+                    if r.data_evento else None
+                ),
+                "data_fmt": r.data_fmt
             })
 
-        return jsonify(events)
+        return jsonify(eventos)
 
     except Exception as e:
         print("🚨 Erro ao buscar histórico:", e)

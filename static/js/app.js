@@ -145,6 +145,8 @@ function renderRows(lista) {
                    onclick="abrirObs(${c.sk_chip})"></i>`
             : `<span class="obs-empty">—</span>`;
 
+        const dataStatus = c.dt_inicio || c.data_inicio;
+
         tbody.innerHTML += `
             <tr>
                 <td>${c.id_chip ?? "-"}</td>
@@ -161,7 +163,7 @@ function renderRows(lista) {
                 <td>${c.ultima_recarga_valor ?? "-"}</td>
                 <td>${c.total_gasto ?? "-"}</td>
                 <td>${aparelho}</td>
-                <td>${formatDate(c.dt_inicio)}</td>
+                <td>${formatDate(dataStatus)}</td>
                 <td>${obsIcon}</td>
                 <td>
                     <button class="btn btn-primary btn-sm edit-btn"
@@ -225,9 +227,12 @@ function abrirModalEdicao(chip) {
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
-    setValue("modal_data_inicio", formatDate(chip.dt_inicio));
-    setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
+    setValue(
+        "modal_data_inicio",
+        formatDate(chip.dt_inicio || chip.data_inicio)
+    );
 
+    setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
 
@@ -246,12 +251,9 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const form = new FormData(document.getElementById("modalForm"));
     const data = Object.fromEntries(form);
 
-    // 🔑 MAPEAMENTO CORRETO
+    // 🔑 converte UX → modelo físico
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
-
-    data.sk_aparelho_atual = data.sk_aparelho || null;
-    delete data.sk_aparelho;
 
     data.sk_chip = document.getElementById("modal_sk_chip").value;
 

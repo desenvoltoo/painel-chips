@@ -227,11 +227,7 @@ function abrirModalEdicao(chip) {
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
-    setValue(
-        "modal_data_inicio",
-        formatDate(chip.dt_inicio || chip.data_inicio)
-    );
-
+    setValue("modal_data_inicio", formatDate(chip.dt_inicio || chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
@@ -241,7 +237,7 @@ function abrirModalEdicao(chip) {
 
 
 /* ============================================================
-   FECHAR / SALVAR
+   FECHAR / SALVAR (CORRIGIDO)
 ============================================================ */
 document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
@@ -251,11 +247,22 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const form = new FormData(document.getElementById("modalForm"));
     const data = Object.fromEntries(form);
 
-    // UX → modelo físico
+    // ============================
+    // NORMALIZAÇÃO CORRETA
+    // ============================
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
 
-    data.sk_chip = document.getElementById("modal_sk_chip").value;
+    if (!data.sk_aparelho_atual) {
+        data.sk_aparelho_atual = null;
+    } else {
+        data.sk_aparelho_atual = Number(data.sk_aparelho_atual);
+    }
+
+    if (data.ultima_recarga_valor === "") data.ultima_recarga_valor = null;
+    if (data.total_gasto === "") data.total_gasto = null;
+
+    data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
 
     const res = await fetch("/chips/update-json", {
         method: "POST",

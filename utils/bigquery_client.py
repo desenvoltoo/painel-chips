@@ -3,7 +3,6 @@
 import os
 import pandas as pd
 from google.cloud import bigquery
-from datetime import datetime
 
 PROJECT  = os.getenv("GCP_PROJECT_ID", "painel-universidade")
 DATASET  = os.getenv("BQ_DATASET", "marts")
@@ -62,7 +61,6 @@ class BigQueryClient:
         self.dataset = DATASET
 
 
-    # --------------------------------------------------------
     def _run(self, sql: str):
         print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "=" * 60)
         job = self.client.query(sql)
@@ -70,7 +68,6 @@ class BigQueryClient:
         return df.astype(object).where(pd.notnull(df), None)
 
 
-    # --------------------------------------------------------
     def get_view(self, view_name: str):
         return self._run(f"""
             SELECT *
@@ -98,14 +95,17 @@ class BigQueryClient:
             is_new = False
 
             antigo_df = self._run(f"""
-                SELECT *
+                SELECT
+                    status,
+                    ultima_recarga_data,
+                    ultima_recarga_valor
                 FROM `{self.project}.{self.dataset}.dim_chip`
                 WHERE sk_chip = {sk_chip}
                 LIMIT 1
             """)
             antigo = antigo_df.iloc[0].to_dict() if not antigo_df.empty else {}
 
-        # ---------- CAMPOS ----------
+        # ---------- NORMALIZA CAMPOS ----------
         numero   = q(form.get("numero"))
         operadora = q(form.get("operadora"))
         operador  = q(form.get("operador"))
@@ -121,14 +121,16 @@ class BigQueryClient:
         ultima_recarga_valor = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto          = normalize_number(form.get("total_gasto"))
 
-        sk_aparelho_atual = form.get("sk_aparelho_atual")
         sk_aparelho_atual = (
-            int(sk_aparelho_atual) if sk_aparelho_atual not in [None, "", "None"] else "NULL"
+            int(form.get("sk_aparelho_atual"))
+            if form.get("sk_aparelho_atual") not in [None, "", "None"]
+            else "NULL"
         )
 
-        slot_whatsapp = form.get("slot_whatsapp")
         slot_whatsapp = (
-            int(slot_whatsapp) if slot_whatsapp not in [None, "", "None"] else "NULL"
+            int(form.get("slot_whatsapp"))
+            if form.get("slot_whatsapp") not in [None, "", "None"]
+            else "NULL"
         )
 
         # ====================================================
@@ -202,15 +204,10 @@ class BigQueryClient:
         self._run(sql)
 
         # ====================================================
-        # REGISTRA EVENTOS AUTOMÁTICOS
+        # EVENTOS — SOMENTE O QUE O PAINEL PRECISA
         # ====================================================
-        for campo in [
-            "status",
-            "sk_aparelho_atual",
-            "slot_whatsapp",
-            "ultima_recarga_valor",
-            "ultima_recarga_data"
-        ]:
+        for campo in ["status", "ultima_recarga_data", "ultima_recarga_valor"]:
+
             novo = form.get(campo)
             antigo_val = antigo.get(campo)
 

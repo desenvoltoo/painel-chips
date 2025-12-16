@@ -251,7 +251,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const form = new FormData(document.getElementById("modalForm"));
     const data = Object.fromEntries(form);
 
-    // 🔑 converte UX → modelo físico
+    // UX → modelo físico
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
 

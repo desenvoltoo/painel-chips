@@ -18,11 +18,6 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 # ============================================================
 @chips_bp.route("/chips")
 def chips_list():
-    """
-    chips.html espera:
-    - chips      -> vw_chips_painel
-    - aparelhos  -> vw_aparelhos
-    """
     try:
         chips_df = sanitize_df(
             bq.get_view("vw_chips_painel")
@@ -51,16 +46,13 @@ def chips_add():
     try:
         data = request.form.to_dict()
 
-        # normaliza vazios
         for k, v in data.items():
             if v == "":
                 data[k] = None
 
-        # garante id como string
         if data.get("id_chip"):
             data["id_chip"] = str(data["id_chip"])
 
-        # IMPORTANTE: não existe sk_chip aqui → INSERT
         data.pop("sk_chip", None)
 
         bq.upsert_chip(data)
@@ -78,13 +70,10 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA MODAL (VIEW = CONTRATO DO FRONT)
+# BUSCAR CHIP PARA MODAL (CONTRATO DO FRONT)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
-    """
-    Retorna EXATAMENTE os campos usados no modal
-    """
     try:
         query = f"""
             SELECT
@@ -95,11 +84,18 @@ def chips_get_by_sk(sk_chip):
                 operador,
                 status,
                 plano,
+
+                -- 🔧 VIEW EXPÕE data_inicio PARA O FRONT
                 data_inicio,
+
                 ultima_recarga_data,
                 ultima_recarga_valor,
                 total_gasto,
-                sk_aparelho
+                sk_aparelho,
+
+                -- 🔧 FALTAVA ISSO
+                observacao
+
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
             LIMIT 1
@@ -120,26 +116,26 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# SALVAR EDIÇÃO (UPDATE GARANTIDO)
+# SALVAR EDIÇÃO (UPDATE)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
         data = request.json or {}
 
-        # 🔒 REGRA DE OURO:
-        # sem sk_chip → NÃO ATUALIZA
         if not data.get("sk_chip"):
             return jsonify({"error": "sk_chip não informado"}), 400
 
-        # normaliza vazios
         for k, v in data.items():
             if v == "":
                 data[k] = None
 
-        # garante id como string
         if data.get("id_chip"):
             data["id_chip"] = str(data["id_chip"])
+
+        # 🔧 GARANTIA EXTRA (se vier do JS)
+        if data.get("dt_inicio"):
+            data["dt_inicio"] = data["dt_inicio"]
 
         bq.upsert_chip(data)
 

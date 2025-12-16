@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+<!-- ========================= HEADER ========================= -->
 <header class="chip-header">
     <div class="container">
         <div class="chip-header-content">
@@ -120,11 +121,11 @@
                 </div>
             </div>
 
-            <!-- ✅ NOVO -->
             <div class="form-row">
                 <div class="form-group full">
                     <label>Observação</label>
-                    <textarea name="observacao"></textarea>
+                    <textarea name="observacao" rows="3"
+                        placeholder="Observações gerais sobre o chip..."></textarea>
                 </div>
             </div>
 
@@ -144,6 +145,7 @@
     </div>
 
     <div class="card-content">
+
         <div class="search-wrapper">
             <i class="fas fa-search search-icon"></i>
             <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
@@ -164,18 +166,20 @@
                         <th>Total</th>
                         <th>Aparelho</th>
                         <th>Data Início</th>
+                        <th>Obs</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
+
     </div>
 </section>
 
 </main>
 
-<!-- ========================= MODAL ========================= -->
+<!-- ========================= MODAL EDIÇÃO ========================= -->
 <div id="editModal" class="modal-overlay">
     <div class="modal-content modal-chip">
         <h2>Editar Chip</h2>
@@ -234,20 +238,39 @@
                 <select id="modal_sk_aparelho" name="sk_aparelho"></select>
             </div>
 
-            <!-- ✅ NOVO -->
             <div class="form-group full">
                 <label>Observação</label>
-                <textarea id="modal_observacao" name="observacao"></textarea>
+                <textarea id="modal_observacao" name="observacao" rows="3"></textarea>
             </div>
 
             <div class="modal-actions full">
                 <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
                 <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
             </div>
+
         </form>
     </div>
 </div>
 
+<!-- ========================= MODAL OBSERVAÇÃO ========================= -->
+<div id="obsModal" class="modal-overlay">
+    <div class="modal-content modal-chip">
+        <h2>
+            <i class="fas fa-comment-dots"></i>
+            Observação
+        </h2>
+
+        <div id="obsModalContent" class="obs-content"></div>
+
+        <div class="modal-actions">
+            <button type="button" id="obsModalClose" class="chip-btn cancel">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================= DATA PARA JS ========================= -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
     window.aparelhosData = {{ aparelhos | tojson | safe }};

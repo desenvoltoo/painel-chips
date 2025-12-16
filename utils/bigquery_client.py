@@ -2,7 +2,6 @@
 
 import os
 import pandas as pd
-from datetime import datetime
 from google.cloud import bigquery
 
 # ============================================================
@@ -117,7 +116,7 @@ class BigQueryClient:
                     operador,
                     plano,
                     status,
-                    data_inicio,
+                    dt_inicio,                     -- 🔧 nome físico
                     ultima_recarga_data,
                     ultima_recarga_valor,
                     total_gasto,
@@ -139,7 +138,7 @@ class BigQueryClient:
             "operador": str(form.get("operador") or ""),
             "plano": str(form.get("plano") or ""),
             "status": str(form.get("status") or ""),
-            "data_inicio": str(form.get("data_inicio") or ""),
+            "dt_inicio": str(form.get("dt_inicio") or ""),   # 🔧
             "sk_aparelho": str(form.get("sk_aparelho") or ""),
         }
 
@@ -187,7 +186,7 @@ class BigQueryClient:
         status      = q(form.get("status"))
         observacao  = q(form.get("observacao"))
 
-        data_inicio = normalize_date(form.get("data_inicio"))
+        dt_inicio   = normalize_date(form.get("dt_inicio"))  # 🔧
         rec_data    = normalize_date(form.get("ultima_recarga_data"))
         rec_valor   = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto = normalize_number(form.get("total_gasto"))
@@ -211,7 +210,7 @@ class BigQueryClient:
             plano = {plano},
             status = {status},
             observacao = {observacao},
-            data_inicio = {data_inicio},
+            dt_inicio = {dt_inicio},                 -- 🔧
             ultima_recarga_data = {rec_data},
             ultima_recarga_valor = {rec_valor},
             total_gasto = {total_gasto},
@@ -220,14 +219,14 @@ class BigQueryClient:
 
         WHEN NOT MATCHED THEN INSERT (
             sk_chip, numero, operadora, operador, plano, status,
-            observacao, data_inicio,
+            observacao, dt_inicio,                   -- 🔧
             ultima_recarga_data, ultima_recarga_valor,
             total_gasto, sk_aparelho,
             ativo, created_at, updated_at
         )
         VALUES (
             {sk_chip}, {numero}, {operadora}, {operador}, {plano}, {status},
-            {observacao}, {data_inicio},
+            {observacao}, {dt_inicio},
             {rec_data}, {rec_valor},
             {total_gasto}, {sk_ap_sql},
             TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()

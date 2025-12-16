@@ -127,7 +127,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="12" class="empty-message">
+                <td colspan="13" class="empty-message">
                     Nenhum chip encontrado.
                 </td>
             </tr>`;
@@ -138,6 +138,12 @@ function renderRows(lista) {
         const aparelho = c.aparelho_modelo
             ? `${c.aparelho_modelo}${c.aparelho_marca ? " (" + c.aparelho_marca + ")" : ""}`
             : "-";
+
+        const obsIcon = c.observacao
+            ? `<i class="fas fa-comment-dots obs-icon"
+                   title="Ver observação"
+                   onclick="abrirObs(${c.sk_chip})"></i>`
+            : `<span class="obs-empty">—</span>`;
 
         tbody.innerHTML += `
             <tr>
@@ -156,6 +162,7 @@ function renderRows(lista) {
                 <td>${c.total_gasto ?? "-"}</td>
                 <td>${aparelho}</td>
                 <td>${formatDate(c.data_inicio)}</td>
+                <td>${obsIcon}</td>
                 <td>
                     <button class="btn btn-primary btn-sm edit-btn"
                         data-sk="${c.sk_chip}">
@@ -167,6 +174,22 @@ function renderRows(lista) {
 
     bindEditButtons();
 }
+
+
+/* ============================================================
+   MODAL OBSERVAÇÃO
+============================================================ */
+function abrirObs(sk_chip) {
+    const chip = chipsData.find(c => c.sk_chip === sk_chip);
+    if (!chip || !chip.observacao) return;
+
+    document.getElementById("obsModalContent").innerText = chip.observacao;
+    document.getElementById("obsModal").style.display = "flex";
+}
+
+document.getElementById("obsModalClose")?.addEventListener("click", () => {
+    document.getElementById("obsModal").style.display = "none";
+});
 
 
 /* ============================================================
@@ -193,28 +216,21 @@ function bindEditButtons() {
 function abrirModalEdicao(chip) {
     document.getElementById("editModal").style.display = "flex";
 
-    // 🔑 chave (impede INSERT)
     setValue("modal_sk_chip", chip.sk_chip);
-
-    // campos simples
     setValue("modal_numero", chip.numero);
     setValue("modal_operador", chip.operador);
     setValue("modal_plano", chip.plano);
     setValue("modal_observacao", chip.observacao);
 
-    // selects
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
-    // datas
     setValue("modal_data_inicio", formatDate(chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
 
-    // números
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
 
-    // aparelho
     preencherSelectAparelhos(chip.sk_aparelho);
 }
 
@@ -227,11 +243,13 @@ document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
 });
 
 document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
-    const data = Object.fromEntries(
-        new FormData(document.getElementById("modalForm"))
-    );
+    const form = new FormData(document.getElementById("modalForm"));
+    const data = Object.fromEntries(form);
 
-    // 🔥 força edição
+    // 🔥 correção de nomes p/ BigQuery
+    data.dt_inicio = data.data_inicio || null;
+    delete data.data_inicio;
+
     data.sk_chip = document.getElementById("modal_sk_chip").value;
 
     const res = await fetch("/chips/update-json", {

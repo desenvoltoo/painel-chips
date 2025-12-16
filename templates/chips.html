@@ -110,7 +110,7 @@
 
                 <div class="form-group full">
                     <label>Aparelho Vinculado</label>
-                    <select name="sk_aparelho">
+                    <select name="sk_aparelho_atual">
                         <option value="">— Nenhum —</option>
                         {% for ap in aparelhos %}
                         <option value="{{ ap.sk_aparelho }}">
@@ -235,7 +235,7 @@
 
             <div class="form-group full">
                 <label>Aparelho</label>
-                <select id="modal_sk_aparelho" name="sk_aparelho"></select>
+                <select id="modal_sk_aparelho" name="sk_aparelho_atual"></select>
             </div>
 
             <div class="form-group full">
@@ -270,7 +270,6 @@
     </div>
 </div>
 
-<!-- ========================= DATA PARA JS ========================= -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
     window.aparelhosData = {{ aparelhos | tojson | safe }};

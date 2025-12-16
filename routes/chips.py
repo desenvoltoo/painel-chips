@@ -19,13 +19,8 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 @chips_bp.route("/chips")
 def chips_list():
     try:
-        chips_df = sanitize_df(
-            bq.get_view("vw_chips_painel")
-        )
-
-        aparelhos_df = sanitize_df(
-            bq.get_view("vw_aparelhos")
-        )
+        chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
+        aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
 
         return render_template(
             "chips.html",
@@ -46,12 +41,17 @@ def chips_add():
     try:
         data = request.form.to_dict()
 
+        # normaliza vazios
         for k, v in data.items():
             if v == "":
                 data[k] = None
 
-        if data.get("id_chip"):
-            data["id_chip"] = str(data["id_chip"])
+        # 🔧 conversões VIEW → DIM
+        if "data_inicio" in data:
+            data["dt_inicio"] = data.pop("data_inicio")
+
+        if "sk_aparelho" in data:
+            data["sk_aparelho_atual"] = data.pop("sk_aparelho")
 
         data.pop("sk_chip", None)
 
@@ -70,7 +70,7 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA MODAL (CONTRATO DO FRONT)
+# BUSCAR CHIP PARA MODAL (VIEW → FRONT)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -84,18 +84,12 @@ def chips_get_by_sk(sk_chip):
                 operador,
                 status,
                 plano,
-
-                -- 🔧 VIEW EXPÕE data_inicio PARA O FRONT
                 data_inicio,
-
                 ultima_recarga_data,
                 ultima_recarga_valor,
                 total_gasto,
                 sk_aparelho,
-
-                -- 🔧 FALTAVA ISSO
                 observacao
-
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
             LIMIT 1
@@ -106,9 +100,7 @@ def chips_get_by_sk(sk_chip):
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        return jsonify(
-            sanitize_df(df).to_dict(orient="records")[0]
-        )
+        return jsonify(sanitize_df(df).iloc[0].to_dict())
 
     except Exception as e:
         print("🚨 Erro ao buscar chip:", e)
@@ -126,16 +118,17 @@ def chips_update_json():
         if not data.get("sk_chip"):
             return jsonify({"error": "sk_chip não informado"}), 400
 
+        # normaliza vazios
         for k, v in data.items():
             if v == "":
                 data[k] = None
 
-        if data.get("id_chip"):
-            data["id_chip"] = str(data["id_chip"])
+        # 🔧 conversões VIEW → DIM
+        if "data_inicio" in data:
+            data["dt_inicio"] = data.pop("data_inicio")
 
-        # 🔧 GARANTIA EXTRA (se vier do JS)
-        if data.get("dt_inicio"):
-            data["dt_inicio"] = data["dt_inicio"]
+        if "sk_aparelho" in data:
+            data["sk_aparelho_atual"] = data.pop("sk_aparelho")
 
         bq.upsert_chip(data)
 
@@ -159,9 +152,7 @@ def chips_timeline(sk_chip):
             ORDER BY data_evento DESC
         """)
 
-        return jsonify(
-            sanitize_df(df).to_dict(orient="records")
-        )
+        return jsonify(sanitize_df(df).to_dict(orient="records"))
 
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)

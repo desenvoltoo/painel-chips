@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# LISTAGEM PRINCIPAL
+# 📌 LISTAGEM PRINCIPAL
 # ============================================================
 @chips_bp.route("/chips")
 def chips_list():
@@ -34,7 +34,7 @@ def chips_list():
 
 
 # ============================================================
-# CADASTRAR CHIP (INSERT)
+# ➕ CADASTRAR CHIP
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -42,17 +42,18 @@ def chips_add():
         data = request.form.to_dict()
 
         # normaliza vazios
-        for k, v in data.items():
-            if v == "":
+        for k in list(data.keys()):
+            if data[k] == "":
                 data[k] = None
 
-        # 🔁 FRONT → DIM
+        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        if "sk_aparelho" in data:
-            data["sk_aparelho_atual"] = data.pop("sk_aparelho")
+        if "sk_aparelho_atual" in data and not data["sk_aparelho_atual"]:
+            data["sk_aparelho_atual"] = None
 
+        # garante que não venha SK
         data.pop("sk_chip", None)
 
         bq.upsert_chip(data)
@@ -70,7 +71,7 @@ def chips_add():
 
 
 # ============================================================
-# BUSCAR CHIP PARA MODAL (VIEW → FRONT)
+# 🔍 BUSCAR CHIP (MODAL EDIÇÃO)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -85,14 +86,14 @@ def chips_get_by_sk(sk_chip):
                 status,
                 plano,
 
-                -- alias da view
+                -- view já expõe
                 data_inicio,
 
                 ultima_recarga_data,
                 ultima_recarga_valor,
                 total_gasto,
 
-                -- alias da view
+                -- alias padronizado
                 sk_aparelho AS sk_aparelho_atual,
 
                 observacao
@@ -116,7 +117,7 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# SALVAR EDIÇÃO (UPDATE)
+# 💾 SALVAR EDIÇÃO (JSON)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -127,15 +128,15 @@ def chips_update_json():
             return jsonify({"error": "sk_chip não informado"}), 400
 
         # normaliza vazios
-        for k, v in data.items():
-            if v == "":
+        for k in list(data.keys()):
+            if data[k] == "":
                 data[k] = None
 
-        # 🔁 FRONT → DIM
+        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        # sk_aparelho_atual JÁ VEM CORRETO DO JS
+        # sk_aparelho_atual já vem correto do JS
         bq.upsert_chip(data)
 
         return jsonify({"success": True})
@@ -146,7 +147,7 @@ def chips_update_json():
 
 
 # ============================================================
-# TIMELINE / HISTÓRICO
+# 🧵 TIMELINE / HISTÓRICO
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):

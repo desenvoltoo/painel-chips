@@ -13,9 +13,11 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # HELPERS
 # ============================================================
 def q(value):
+    """STRING segura para SQL"""
     if value in [None, "", "None"]:
         return "NULL"
-    return f"'{str(value).strip().replace('\'', '\'\'')}'"
+    value = str(value).strip().replace("'", "''")
+    return f"'{value}'"
 
 
 def normalize_number(value):
@@ -33,9 +35,11 @@ def normalize_date(value):
 
     value = str(value)
 
+    # yyyy-mm-dd
     if len(value) == 10 and value[4] == "-" and value[7] == "-":
         return f"DATE('{value}')"
 
+    # dd/mm/yyyy
     if "/" in value:
         try:
             d, m, y = value.split("/")
@@ -43,6 +47,7 @@ def normalize_date(value):
         except:
             return "NULL"
 
+    # ISO
     if "T" in value:
         return f"DATE('{value.split('T')[0]}')"
 
@@ -61,7 +66,7 @@ class BigQueryClient:
 
 
     def _run(self, sql: str):
-        print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "="*50)
+        print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "=" * 50)
         job = self.client.query(sql)
         df = job.result().to_dataframe(create_bqstorage_client=False)
         return df.astype(object).where(pd.notnull(df), None)
@@ -82,7 +87,7 @@ class BigQueryClient:
         # ---------------- IDENTIFICA CHIP ----------------
         sk_chip = form.get("sk_chip")
 
-        if sk_chip in [None, "", "None"]:
+        if not sk_chip:
             sk_chip = int(self._run(f"""
                 SELECT COALESCE(MAX(sk_chip),0) + 1 AS sk
                 FROM `{self.project}.{self.dataset}.dim_chip`
@@ -113,15 +118,15 @@ class BigQueryClient:
             antigo = antigo_df.iloc[0].to_dict() if not antigo_df.empty else None
 
 
-        # ---------------- NOVOS VALORES (HISTÓRICO) ----------------
+        # ---------------- NOVOS VALORES (PARA HISTÓRICO) ----------------
         novos = {
             "numero": str(form.get("numero") or ""),
             "operadora": str(form.get("operadora") or ""),
             "operador": str(form.get("operador") or ""),
             "plano": str(form.get("plano") or ""),
             "status": str(form.get("status") or ""),
-            "dt_inicio": str(form.get("data_inicio") or ""),
-            "sk_aparelho_atual": str(form.get("sk_aparelho") or ""),
+            "dt_inicio": str(form.get("dt_inicio") or ""),
+            "sk_aparelho_atual": str(form.get("sk_aparelho_atual") or ""),
         }
 
 
@@ -162,15 +167,14 @@ class BigQueryClient:
         status      = q(form.get("status"))
         observacao  = q(form.get("observacao"))
 
-        dt_inicio   = normalize_date(form.get("data_inicio"))
+        dt_inicio   = normalize_date(form.get("dt_inicio"))
         rec_data    = normalize_date(form.get("ultima_recarga_data"))
         rec_valor   = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto = normalize_number(form.get("total_gasto"))
 
-        sk_aparelho_atual = form.get("sk_aparelho")
-        sk_ap_sql = (
-            sk_aparelho_atual
-            if sk_aparelho_atual not in [None, "", "None"]
+        sk_aparelho_atual = (
+            form.get("sk_aparelho_atual")
+            if form.get("sk_aparelho_atual") not in [None, "", "None"]
             else "NULL"
         )
 
@@ -192,7 +196,7 @@ class BigQueryClient:
             ultima_recarga_data = {rec_data},
             ultima_recarga_valor = {rec_valor},
             total_gasto = {total_gasto},
-            sk_aparelho_atual = {sk_ap_sql},
+            sk_aparelho_atual = {sk_aparelho_atual},
             updated_at = CURRENT_TIMESTAMP()
 
         WHEN NOT MATCHED THEN INSERT (
@@ -206,7 +210,7 @@ class BigQueryClient:
             {sk_chip}, {numero}, {operadora}, {operador}, {plano}, {status},
             {observacao}, {dt_inicio},
             {rec_data}, {rec_valor},
-            {total_gasto}, {sk_ap_sql},
+            {total_gasto}, {sk_aparelho_atual},
             TRUE, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()
         )
         """

@@ -46,7 +46,7 @@ def chips_add():
             if v == "":
                 data[k] = None
 
-        # 🔧 conversões VIEW → DIM
+        # 🔁 FRONT → DIM
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
@@ -84,11 +84,17 @@ def chips_get_by_sk(sk_chip):
                 operador,
                 status,
                 plano,
+
+                -- alias da view
                 data_inicio,
+
                 ultima_recarga_data,
                 ultima_recarga_valor,
                 total_gasto,
-                sk_aparelho,
+
+                -- alias da view
+                sk_aparelho AS sk_aparelho_atual,
+
                 observacao
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
@@ -100,7 +106,9 @@ def chips_get_by_sk(sk_chip):
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        return jsonify(sanitize_df(df).iloc[0].to_dict())
+        return jsonify(
+            sanitize_df(df).iloc[0].to_dict()
+        )
 
     except Exception as e:
         print("🚨 Erro ao buscar chip:", e)
@@ -123,13 +131,11 @@ def chips_update_json():
             if v == "":
                 data[k] = None
 
-        # 🔧 conversões VIEW → DIM
+        # 🔁 FRONT → DIM
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        if "sk_aparelho" in data:
-            data["sk_aparelho_atual"] = data.pop("sk_aparelho")
-
+        # sk_aparelho_atual JÁ VEM CORRETO DO JS
         bq.upsert_chip(data)
 
         return jsonify({"success": True})
@@ -152,7 +158,9 @@ def chips_timeline(sk_chip):
             ORDER BY data_evento DESC
         """)
 
-        return jsonify(sanitize_df(df).to_dict(orient="records"))
+        return jsonify(
+            sanitize_df(df).to_dict(orient="records")
+        )
 
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)

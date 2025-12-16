@@ -4,9 +4,6 @@ import os
 import pandas as pd
 from google.cloud import bigquery
 
-# ============================================================
-# VARIÁVEIS DE AMBIENTE
-# ============================================================
 PROJECT  = os.getenv("GCP_PROJECT_ID", "painel-universidade")
 DATASET  = os.getenv("BQ_DATASET", "marts")
 LOCATION = os.getenv("BQ_LOCATION", "us")
@@ -16,11 +13,9 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # HELPERS
 # ============================================================
 def q(value):
-    """STRING segura para SQL"""
     if value in [None, "", "None"]:
         return "NULL"
-    value = str(value).strip().replace("'", "''")
-    return f"'{value}'"
+    return f"'{str(value).strip().replace('\'', '\'\'')}'"
 
 
 def normalize_number(value):
@@ -38,11 +33,9 @@ def normalize_date(value):
 
     value = str(value)
 
-    # yyyy-mm-dd
     if len(value) == 10 and value[4] == "-" and value[7] == "-":
         return f"DATE('{value}')"
 
-    # dd/mm/yyyy
     if "/" in value:
         try:
             d, m, y = value.split("/")
@@ -50,7 +43,6 @@ def normalize_date(value):
         except:
             return "NULL"
 
-    # ISO
     if "T" in value:
         return f"DATE('{value.split('T')[0]}')"
 
@@ -68,9 +60,6 @@ class BigQueryClient:
         self.dataset = DATASET
 
 
-    # ========================================================
-    # EXECUTAR SQL
-    # ========================================================
     def _run(self, sql: str):
         print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "="*50)
         job = self.client.query(sql)
@@ -78,9 +67,6 @@ class BigQueryClient:
         return df.astype(object).where(pd.notnull(df), None)
 
 
-    # ========================================================
-    # GET VIEW
-    # ========================================================
     def get_view(self, view_name: str):
         return self._run(f"""
             SELECT *
@@ -89,13 +75,11 @@ class BigQueryClient:
 
 
     # ========================================================
-    # UPSERT CHIP — DEFINITIVO
+    # UPSERT CHIP — DEFINITIVO (ALINHADO AO SCHEMA REAL)
     # ========================================================
     def upsert_chip(self, form: dict):
 
-        # ----------------------------------------------------
-        # IDENTIFICA CHIP
-        # ----------------------------------------------------
+        # ---------------- IDENTIFICA CHIP ----------------
         sk_chip = form.get("sk_chip")
 
         if sk_chip in [None, "", "None"]:
@@ -116,11 +100,11 @@ class BigQueryClient:
                     operador,
                     plano,
                     status,
-                    dt_inicio,                     -- 🔧 nome físico
+                    dt_inicio,
                     ultima_recarga_data,
                     ultima_recarga_valor,
                     total_gasto,
-                    sk_aparelho
+                    sk_aparelho_atual
                 FROM `{self.project}.{self.dataset}.dim_chip`
                 WHERE sk_chip = {sk_chip}
                 LIMIT 1
@@ -129,23 +113,19 @@ class BigQueryClient:
             antigo = antigo_df.iloc[0].to_dict() if not antigo_df.empty else None
 
 
-        # ----------------------------------------------------
-        # NOVOS VALORES (PARA HISTÓRICO)
-        # ----------------------------------------------------
+        # ---------------- NOVOS VALORES (HISTÓRICO) ----------------
         novos = {
             "numero": str(form.get("numero") or ""),
             "operadora": str(form.get("operadora") or ""),
             "operador": str(form.get("operador") or ""),
             "plano": str(form.get("plano") or ""),
             "status": str(form.get("status") or ""),
-            "dt_inicio": str(form.get("dt_inicio") or ""),   # 🔧
-            "sk_aparelho": str(form.get("sk_aparelho") or ""),
+            "dt_inicio": str(form.get("data_inicio") or ""),
+            "sk_aparelho_atual": str(form.get("sk_aparelho") or ""),
         }
 
 
-        # ----------------------------------------------------
-        # EVENTO CRIAÇÃO
-        # ----------------------------------------------------
+        # ---------------- EVENTO CRIAÇÃO ----------------
         if is_new:
             self.registrar_evento_chip(
                 sk_chip,
@@ -157,9 +137,7 @@ class BigQueryClient:
             )
 
 
-        # ----------------------------------------------------
-        # EVENTOS ALTERAÇÃO
-        # ----------------------------------------------------
+        # ---------------- EVENTOS ALTERAÇÃO ----------------
         if antigo:
             for campo, novo_val in novos.items():
                 old_val = antigo.get(campo)
@@ -176,9 +154,7 @@ class BigQueryClient:
                     )
 
 
-        # ----------------------------------------------------
-        # NORMALIZAÇÃO SQL
-        # ----------------------------------------------------
+        # ---------------- NORMALIZAÇÃO SQL ----------------
         numero      = q(form.get("numero"))
         operadora   = q(form.get("operadora"))
         operador    = q(form.get("operador"))
@@ -186,18 +162,20 @@ class BigQueryClient:
         status      = q(form.get("status"))
         observacao  = q(form.get("observacao"))
 
-        dt_inicio   = normalize_date(form.get("dt_inicio"))  # 🔧
+        dt_inicio   = normalize_date(form.get("data_inicio"))
         rec_data    = normalize_date(form.get("ultima_recarga_data"))
         rec_valor   = normalize_number(form.get("ultima_recarga_valor"))
         total_gasto = normalize_number(form.get("total_gasto"))
 
-        sk_aparelho = form.get("sk_aparelho")
-        sk_ap_sql   = sk_aparelho if sk_aparelho not in [None, "", "None"] else "NULL"
+        sk_aparelho_atual = form.get("sk_aparelho")
+        sk_ap_sql = (
+            sk_aparelho_atual
+            if sk_aparelho_atual not in [None, "", "None"]
+            else "NULL"
+        )
 
 
-        # ----------------------------------------------------
-        # MERGE FINAL
-        # ----------------------------------------------------
+        # ---------------- MERGE FINAL ----------------
         sql = f"""
         MERGE `{self.project}.{self.dataset}.dim_chip` T
         USING (SELECT {sk_chip} AS sk_chip) S
@@ -210,18 +188,18 @@ class BigQueryClient:
             plano = {plano},
             status = {status},
             observacao = {observacao},
-            dt_inicio = {dt_inicio},                 -- 🔧
+            dt_inicio = {dt_inicio},
             ultima_recarga_data = {rec_data},
             ultima_recarga_valor = {rec_valor},
             total_gasto = {total_gasto},
-            sk_aparelho = {sk_ap_sql},
+            sk_aparelho_atual = {sk_ap_sql},
             updated_at = CURRENT_TIMESTAMP()
 
         WHEN NOT MATCHED THEN INSERT (
             sk_chip, numero, operadora, operador, plano, status,
-            observacao, dt_inicio,                   -- 🔧
+            observacao, dt_inicio,
             ultima_recarga_data, ultima_recarga_valor,
-            total_gasto, sk_aparelho,
+            total_gasto, sk_aparelho_atual,
             ativo, created_at, updated_at
         )
         VALUES (
@@ -238,7 +216,7 @@ class BigQueryClient:
 
 
     # ========================================================
-    # REGISTRAR EVENTO CHIP (SP)
+    # REGISTRAR EVENTO CHIP
     # ========================================================
     def registrar_evento_chip(self, sk_chip, tipo_evento, old, new, origem, obs):
 

@@ -10,7 +10,7 @@ bq = BigQueryClient()
 
 
 # ============================================================
-# Utils
+# HELPERS
 # ============================================================
 def to_int(v):
     try:
@@ -25,10 +25,6 @@ def to_int(v):
 
 
 def is_null(v):
-    """
-    Trata TODOS os casos que o sanitize_df gera:
-    None, "", "None", "null", "nan"
-    """
     return (
         v is None
         or str(v).strip() == ""
@@ -37,12 +33,14 @@ def is_null(v):
 
 
 # ============================================================
-# HOME
+# HOME — RELACIONAMENTOS
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
     try:
-        df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
+        df = sanitize_df(
+            bq.get_view("vw_relacionamentos_whatsapp")
+        )
 
         if df.empty:
             return render_template(
@@ -52,8 +50,8 @@ def relacionamentos_home():
             )
 
         # =====================================================
-        # 🔹 CHIPS LIVRES (REGRA REAL)
-        # chip livre = tem sk_chip E sk_aparelho_atual é NULL
+        # 🔹 CHIPS LIVRES
+        # regra: tem sk_chip e NÃO tem sk_aparelho_atual
         # =====================================================
         chips_livres = []
 
@@ -66,18 +64,23 @@ def relacionamentos_home():
                     "sk_chip": sk_chip,
                     "numero": r.get("numero"),
                     "operadora": r.get("operadora"),
-                    "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR",
+                    "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR"
                 })
 
+        # remove duplicados
+        chips_livres = {
+            c["sk_chip"]: c for c in chips_livres
+        }.values()
+
         # =====================================================
-        # 🔹 AGRUPA APARELHOS (IGNORA LINHAS SEM APARELHO)
+        # 🔹 AGRUPA APARELHOS
         # =====================================================
         aparelhos = []
 
         for sk_aparelho, g in df.groupby("sk_aparelho"):
             sk_aparelho = to_int(sk_aparelho)
             if not sk_aparelho:
-                continue  # ignora chips livres
+                continue
 
             marca = g["marca"].iloc[0]
             modelo = g["modelo"].iloc[0]
@@ -86,10 +89,10 @@ def relacionamentos_home():
             cap_norm = to_int(g["cap_whats_normal"].iloc[0]) or 0
             capacidade_total = cap_bus + cap_norm
 
-            # Cria slots vazios
+            # cria slots vazios
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
-            # Chips vinculados
+            # chips vinculados
             for _, r in g.iterrows():
                 sk_chip = to_int(r.get("sk_chip"))
                 slot = to_int(r.get("slot_whatsapp"))
@@ -103,7 +106,7 @@ def relacionamentos_home():
                     "sk_chip": sk_chip,
                     "numero": r.get("numero"),
                     "operadora": r.get("operadora"),
-                    "tipo_whatsapp": tipo,
+                    "tipo_whatsapp": tipo
                 }
 
             aparelhos.append({
@@ -116,22 +119,19 @@ def relacionamentos_home():
                 "slots": [
                     {"slot": s, "chip": slots[s]}
                     for s in range(1, capacidade_total + 1)
-                ],
+                ]
             })
 
-        # =====================================================
-        # 🔹 LOG DE VALIDAÇÃO (PODE REMOVER DEPOIS)
-        # =====================================================
-        print(f"✅ CHIPS LIVRES CARREGADOS: {len(chips_livres)}")
+        print(f"✅ RELACIONAMENTOS OK | chips livres: {len(list(chips_livres))}")
 
         return render_template(
             "relacionamentos.html",
             aparelhos=aparelhos,
-            chips_livres=chips_livres
+            chips_livres=list(chips_livres)
         )
 
     except Exception as e:
-        print("🚨 ERRO AO CARREGAR RELACIONAMENTOS:", e)
+        print("🚨 ERRO RELACIONAMENTOS:", e)
         return "Erro ao carregar relacionamentos", 500
 
 
@@ -151,10 +151,12 @@ def relacionamentos_vincular():
             return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
         sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET sk_aparelho_atual = @sk_aparelho,
-            slot_whatsapp = @slot
-        WHERE sk_chip = @sk_chip
+            UPDATE `{bq.project}.marts.dim_chip`
+            SET
+                sk_aparelho_atual = @sk_aparelho,
+                slot_whatsapp = @slot,
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE sk_chip = @sk_chip
         """
 
         bq.client.query(
@@ -163,7 +165,7 @@ def relacionamentos_vincular():
                 query_parameters=[
                     bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
                     bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
-                    bigquery.ScalarQueryParameter("slot", "INT64", slot),
+                    bigquery.ScalarQueryParameter("slot", "INT64", slot)
                 ]
             )
         ).result()
@@ -188,10 +190,12 @@ def relacionamentos_desvincular():
             return jsonify({"ok": False, "error": "sk_chip inválido"}), 400
 
         sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET sk_aparelho_atual = NULL,
-            slot_whatsapp = NULL
-        WHERE sk_chip = @sk_chip
+            UPDATE `{bq.project}.marts.dim_chip`
+            SET
+                sk_aparelho_atual = NULL,
+                slot_whatsapp = NULL,
+                updated_at = CURRENT_TIMESTAMP()
+            WHERE sk_chip = @sk_chip
         """
 
         bq.client.query(

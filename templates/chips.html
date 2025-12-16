@@ -120,6 +120,14 @@
                 </div>
             </div>
 
+            <!-- ✅ NOVO -->
+            <div class="form-row">
+                <div class="form-group full">
+                    <label>Observação</label>
+                    <textarea name="observacao"></textarea>
+                </div>
+            </div>
+
             <button type="submit" class="chip-btn">
                 <i class="fas fa-plus"></i> Cadastrar Chip
             </button>
@@ -174,7 +182,6 @@
 
         <form id="modalForm" class="modal-grid">
 
-            <!-- 🔑 ESSENCIAL -->
             <input type="hidden" id="modal_sk_chip" name="sk_chip">
 
             <div class="form-group">
@@ -227,6 +234,12 @@
                 <select id="modal_sk_aparelho" name="sk_aparelho"></select>
             </div>
 
+            <!-- ✅ NOVO -->
+            <div class="form-group full">
+                <label>Observação</label>
+                <textarea id="modal_observacao" name="observacao"></textarea>
+            </div>
+
             <div class="modal-actions full">
                 <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
                 <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
@@ -235,7 +248,6 @@
     </div>
 </div>
 
-<!-- ========================= DATA ========================= -->
 <script>
     window.chipsData = {{ chips | tojson | safe }};
     window.aparelhosData = {{ aparelhos | tojson | safe }};

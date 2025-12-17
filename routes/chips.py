@@ -99,7 +99,7 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# 💾 SALVAR EDIÇÃO
+# 💾 SALVAR EDIÇÃO + EVENTOS
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -112,7 +112,7 @@ def chips_update_json():
         sk_chip = payload["sk_chip"]
 
         # ----------------------------------------------------
-        # 🔎 BUSCAR ESTADO ATUAL
+        # 🔎 ESTADO ATUAL
         # ----------------------------------------------------
         df_atual = bq.run_df(f"""
             SELECT *
@@ -131,53 +131,84 @@ def chips_update_json():
                 payload[k] = None
 
         # ----------------------------------------------------
-        # 🔹 DADOS BÁSICOS (SEM STATUS)
+        # 🔹 ALTERAÇÃO DE DADOS (NUMERO / OPERADORA / PLANO)
         # ----------------------------------------------------
         if (
             payload.get("numero") != atual.get("numero") or
             payload.get("operadora") != atual.get("operadora") or
             payload.get("plano") != atual.get("plano")
         ):
-            sql = f"""
-            CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-                '{id_chip}',
-                {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
-                {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
-                {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
-                '{atual.get("status")}'
-            )
-            """
-            call_sp(sql)
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+                    '{id_chip}',
+                    {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
+                    {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
+                    {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
+                    '{atual.get("status")}'
+                )
+            """)
+
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+                    {sk_chip},
+                    'ALTERACAO_DADOS',
+                    'DADOS_ANTERIORES',
+                    'DADOS_ATUALIZADOS',
+                    'Painel',
+                    'Alteração de dados do chip'
+                )
+            """)
 
         # ----------------------------------------------------
-        # 🔹 STATUS (SÓ SE MUDOU)
+        # 🔹 ALTERAÇÃO DE STATUS
         # ----------------------------------------------------
         if payload.get("status") and payload["status"] != atual.get("status"):
-            sql = f"""
-            CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
-                {sk_chip},
-                '{payload["status"]}',
-                CURRENT_DATE(),
-                'Painel',
-                'Alteração via painel'
-            )
-            """
-            call_sp(sql)
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
+                    {sk_chip},
+                    '{payload["status"]}',
+                    CURRENT_DATE(),
+                    'Painel',
+                    'Alteração via painel'
+                )
+            """)
+
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+                    {sk_chip},
+                    'ALTERACAO_STATUS',
+                    '{atual.get("status")}',
+                    '{payload["status"]}',
+                    'Painel',
+                    'Status alterado via painel'
+                )
+            """)
 
         # ----------------------------------------------------
-        # 🔹 APARELHO (SÓ SE VEIO NO PAYLOAD)
+        # 🔹 ALTERAÇÃO DE APARELHO
         # ----------------------------------------------------
         if "sk_aparelho_atual" in payload:
             if payload["sk_aparelho_atual"] != atual.get("sk_aparelho_atual"):
-                sql = f"""
-                CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
-                    {sk_chip},
-                    {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] is not None else "NULL"},
-                    'Painel',
-                    'Vinculação via painel'
-                )
-                """
-                call_sp(sql)
+
+                call_sp(f"""
+                    CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
+                        {sk_chip},
+                        {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] is not None else "NULL"},
+                        'Painel',
+                        'Vinculação via painel'
+                    )
+                """)
+
+                call_sp(f"""
+                    CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+                        {sk_chip},
+                        'ALTERACAO_APARELHO',
+                        {f"'{atual.get('sk_aparelho_atual')}'" if atual.get("sk_aparelho_atual") else "NULL"},
+                        {f"'{payload['sk_aparelho_atual']}'" if payload.get("sk_aparelho_atual") else "NULL"},
+                        'Painel',
+                        'Troca de aparelho'
+                    )
+                """)
 
         return jsonify({"success": True})
 

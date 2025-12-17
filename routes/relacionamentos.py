@@ -38,16 +38,9 @@ def is_null(v):
 @relacionamentos_bp.route("/relacionamentos")
 def relacionamentos_home():
     try:
-        # -----------------------------------------------------
-        # 1) APARELHOS + CHIPS VINCULADOS (vem da VIEW)
-        # -----------------------------------------------------
         df = sanitize_df(bq.get_view("vw_relacionamentos_whatsapp"))
 
-        # -----------------------------------------------------
-        # 2) CHIPS LIVRES (vem DIRETO da DIM)
-        #    (isso resolve seu dropdown vazio após zerar)
-        # -----------------------------------------------------
-        chips_livres_df = bq._run(f"""
+        chips_livres_df = bq.run_df(f"""
             SELECT
                 sk_chip,
                 numero,
@@ -59,8 +52,6 @@ def relacionamentos_home():
             ORDER BY numero
         """)
 
-        chips_livres_df = sanitize_df(chips_livres_df)
-
         chips_livres = []
         if not chips_livres_df.empty:
             for _, r in chips_livres_df.iterrows():
@@ -71,9 +62,6 @@ def relacionamentos_home():
                     "tipo_whatsapp": r.get("tipo_whatsapp") or "A DEFINIR",
                 })
 
-        # -----------------------------------------------------
-        # Se a view vier vazia (improvável), ainda renderiza
-        # -----------------------------------------------------
         if df.empty:
             return render_template(
                 "relacionamentos.html",
@@ -81,9 +69,6 @@ def relacionamentos_home():
                 chips_livres=chips_livres
             )
 
-        # =====================================================
-        # AGRUPA APARELHOS
-        # =====================================================
         aparelhos = []
 
         for sk_aparelho, g in df.groupby("sk_aparelho"):
@@ -94,15 +79,12 @@ def relacionamentos_home():
             marca = g["marca"].iloc[0]
             modelo = g["modelo"].iloc[0]
 
-            # OBS: na sua view você já calcula capacidade_total
             cap_bus = to_int(g.get("cap_whats_business").iloc[0]) if "cap_whats_business" in g.columns else 0
             cap_norm = to_int(g.get("cap_whats_normal").iloc[0]) if "cap_whats_normal" in g.columns else 0
             capacidade_total = (cap_bus or 0) + (cap_norm or 0)
 
-            # Cria slots vazios
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
-            # Chips vinculados (se existirem)
             for _, r in g.iterrows():
                 sk_chip = to_int(r.get("sk_chip"))
                 slot = to_int(r.get("slot_whatsapp"))
@@ -110,7 +92,6 @@ def relacionamentos_home():
                 if not sk_chip or not slot or slot not in slots:
                     continue
 
-                # tipo_whatsapp: se tiver na dim_chip, usa; senão infere por capacidade
                 tipo = r.get("tipo_whatsapp")
                 if is_null(tipo):
                     tipo = "BUSINESS" if (cap_bus and slot <= cap_bus) else "NORMAL"
@@ -132,8 +113,6 @@ def relacionamentos_home():
                 "slots": [{"slot": s, "chip": slots[s]} for s in range(1, capacidade_total + 1)],
             })
 
-        print(f"✅ CHIPS LIVRES (DIM): {len(chips_livres)} | APARELHOS: {len(aparelhos)}")
-
         return render_template(
             "relacionamentos.html",
             aparelhos=aparelhos,
@@ -146,7 +125,7 @@ def relacionamentos_home():
 
 
 # ============================================================
-# VINCULAR CHIP
+# VINCULAR CHIP (USANDO SPs)
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
@@ -160,25 +139,25 @@ def relacionamentos_vincular():
         if not sk_chip or not sk_aparelho or not slot:
             return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
-        sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET
-            sk_aparelho_atual = @sk_aparelho,
-            slot_whatsapp = @slot,
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = @sk_chip
-        """
-
-        bq.client.query(
-            sql,
-            job_config=bigquery.QueryJobConfig(
-                query_parameters=[
-                    bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                    bigquery.ScalarQueryParameter("sk_aparelho", "INT64", sk_aparelho),
-                    bigquery.ScalarQueryParameter("slot", "INT64", slot),
-                ]
+        # Vincula aparelho
+        bq.run(f"""
+            CALL `{bq.project}.{bq.dataset}.sp_vincular_aparelho_chip`(
+                {sk_chip},
+                {sk_aparelho},
+                'Painel',
+                'Vínculo WhatsApp slot {slot}'
             )
-        ).result()
+        """)
+
+        # Registra movimentação
+        bq.run(f"""
+            CALL `{bq.project}.{bq.dataset}.sp_registrar_movimento_chip`(
+                {sk_chip},
+                'VINCULO',
+                'Painel',
+                'Vinculado ao aparelho {sk_aparelho} no slot {slot}'
+            )
+        """)
 
         return jsonify({"ok": True})
 
@@ -188,7 +167,7 @@ def relacionamentos_vincular():
 
 
 # ============================================================
-# DESVINCULAR CHIP
+# DESVINCULAR CHIP (USANDO SPs)
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():
@@ -199,23 +178,23 @@ def relacionamentos_desvincular():
         if not sk_chip:
             return jsonify({"ok": False, "error": "sk_chip inválido"}), 400
 
-        sql = f"""
-        UPDATE `{bq.project}.marts.dim_chip`
-        SET
-            sk_aparelho_atual = NULL,
-            slot_whatsapp = NULL,
-            updated_at = CURRENT_TIMESTAMP()
-        WHERE sk_chip = @sk_chip
-        """
-
-        bq.client.query(
-            sql,
-            job_config=bigquery.QueryJobConfig(
-                query_parameters=[
-                    bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)
-                ]
+        bq.run(f"""
+            CALL `{bq.project}.{bq.dataset}.sp_vincular_aparelho_chip`(
+                {sk_chip},
+                NULL,
+                'Painel',
+                'Desvinculação de aparelho'
             )
-        ).result()
+        """)
+
+        bq.run(f"""
+            CALL `{bq.project}.{bq.dataset}.sp_registrar_movimento_chip`(
+                {sk_chip},
+                'DESVINCULO',
+                'Painel',
+                'Chip desvinculado do aparelho'
+            )
+        """)
 
         return jsonify({"ok": True})
 

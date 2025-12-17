@@ -69,8 +69,7 @@ def historico_chip(sk_chip):
             SELECT
                 sk_chip,
                 categoria,
-                tipo_evento,
-                campo,
+                tipo,
                 valor_antigo,
                 valor_novo,
                 origem,
@@ -101,8 +100,7 @@ def historico_chip(sk_chip):
             eventos.append({
                 "sk_chip": r.sk_chip,
                 "categoria": r.categoria,
-                "tipo_evento": r.tipo_evento,
-                "campo": r.campo,
+                "tipo": r.tipo,
                 "valor_antigo": r.valor_antigo,
                 "valor_novo": r.valor_novo,
                 "origem": r.origem,

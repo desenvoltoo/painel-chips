@@ -14,7 +14,6 @@ from routes.recargas import recargas_bp
 from routes.relacionamentos import relacionamentos_bp
 from routes.movimentacao import mov_bp
 
-
 # ================================
 # CONFIGURAÇÃO GERAL
 # ================================
@@ -24,7 +23,6 @@ PORT = int(os.getenv("PORT", 8080))
 
 app = Flask(__name__)
 bq = BigQueryClient()
-
 
 # ================================
 # DASHBOARD PRINCIPAL
@@ -40,15 +38,15 @@ def dashboard():
 
     # 2 — KPIs
     total_chips = len(tabela)
-    chips_ativos = sum(x["status"] and x["status"].upper() == "ATIVO" for x in tabela)
-    disparando = sum(x["status"] and x["status"].upper() == "DISPARANDO" for x in tabela)
-    banidos = sum(x["status"] and x["status"].upper() == "BANIDO" for x in tabela)
+    chips_ativos = sum(1 for x in tabela if (x.get("status") or "").upper() == "ATIVO")
+    disparando = sum(1 for x in tabela if (x.get("status") or "").upper() == "DISPARANDO")
+    banidos = sum(1 for x in tabela if (x.get("status") or "").upper() == "BANIDO")
 
     # 3 — Filtros
-    lista_status = sorted({(x["status"] or "").upper() for x in tabela if x["status"]})
-    lista_operadora = sorted({x["operadora"] for x in tabela if x["operadora"]})
+    lista_status = sorted({(x.get("status") or "").upper() for x in tabela if x.get("status")})
+    lista_operadora = sorted({x["operadora"] for x in tabela if x.get("operadora")})
 
-    # 4 — Alertas de recarga
+    # 4 — ALERTAS DE RECARGA (SEM _run ❌)
     alerta_sql = f"""
         SELECT
             numero,
@@ -62,9 +60,10 @@ def dashboard():
         ORDER BY dias_sem_recarga DESC
     """
 
-    alerta_recarga = bq._run(alerta_sql).to_dict(orient="records")
+    alerta_df = bq.run_df(alerta_sql)
+    alerta_df = sanitize_df(alerta_df)
+    alerta_recarga = alerta_df.to_dict(orient="records")
 
-    # Renderização
     return render_template(
         "dashboard.html",
         tabela=tabela,
@@ -80,7 +79,6 @@ def dashboard():
         alerta_recarga=alerta_recarga,
         qtd_alerta=len(alerta_recarga),
     )
-
 
 # ================================
 # REGISTRO DOS BLUEPRINTS

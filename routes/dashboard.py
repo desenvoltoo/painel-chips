@@ -6,12 +6,10 @@ import os
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
-
 # ===============================================================
 # BLUEPRINT
 # ===============================================================
 bp_dashboard = Blueprint("dashboard", __name__)
-
 
 # ===============================================================
 # CONFIGURAÇÕES
@@ -21,7 +19,6 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 bq = BigQueryClient()
 
-
 # ===============================================================
 # ROTA DO DASHBOARD
 # ===============================================================
@@ -30,9 +27,23 @@ bq = BigQueryClient()
 def dashboard():
 
     # ===========================================================
-    # 1) CARREGA VIEW BASE (SEGURA)
+    # 1) VIEW PRINCIPAL DO DASHBOARD (SEM LOOP)
     # ===========================================================
-    df = bq.get_view("vw_chips_painel_base")
+    df = bq.run_df(f"""
+        SELECT
+            sk_chip,
+            numero,
+            operadora,
+            operador,
+            status,
+            ultima_recarga_data,
+            total_gasto,
+            sk_aparelho_atual,
+            aparelho_marca,
+            aparelho_modelo
+        FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel_dashboard`
+    """)
+
     df = sanitize_df(df)
     tabela = df.to_dict(orient="records")
 
@@ -78,20 +89,22 @@ def dashboard():
     })
 
     # ===========================================================
-    # 4) ALERTAS — +80 DIAS SEM RECARGA
+    # 4) ALERTAS — CHIPS > 80 DIAS SEM RECARGA
     # ===========================================================
-    alerta_sql = f"""
+    alerta_df = bq.run_df(f"""
         SELECT
             numero,
             status,
             operadora,
+            aparelho_marca,
+            aparelho_modelo,
             ultima_recarga_data,
             DATE_DIFF(
                 CURRENT_DATE(),
                 DATE(ultima_recarga_data),
                 DAY
             ) AS dias_sem_recarga
-        FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel_base`
+        FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel_dashboard`
         WHERE ultima_recarga_data IS NOT NULL
           AND DATE_DIFF(
                 CURRENT_DATE(),
@@ -99,9 +112,8 @@ def dashboard():
                 DAY
           ) > 80
         ORDER BY dias_sem_recarga DESC
-    """
+    """)
 
-    alerta_df = bq.run_df(alerta_sql)
     alerta_df = sanitize_df(alerta_df)
     alerta = alerta_df.to_dict(orient="records")
 
@@ -111,7 +123,7 @@ def dashboard():
     return render_template(
         "dashboard.html",
 
-        # tabela
+        # tabela principal
         tabela=tabela,
 
         # KPIs

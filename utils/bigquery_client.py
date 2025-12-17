@@ -32,12 +32,28 @@ class BigQueryClient:
 
 
     # ========================================================
-    # EXECUÇÃO COM DATAFRAME (LEITURA)
+    # EXECUÇÃO COM DATAFRAME (LEITURA) — AGORA COM PARAMS
     # ========================================================
-    def run_df(self, sql: str):
+    def run_df(self, sql: str, params: dict | None = None):
         print("\n🔥 EXECUTANDO SQL (DF):\n", sql, "\n" + "=" * 80)
-        job = self.client.query(sql)
+
+        job_config = None
+
+        if params:
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter(
+                        name=k,
+                        type_="STRING" if isinstance(v, str) else "INT64",
+                        value=v
+                    )
+                    for k, v in params.items()
+                ]
+            )
+
+        job = self.client.query(sql, job_config=job_config)
         df = job.result().to_dataframe(create_bqstorage_client=False)
+
         return df.astype(object).where(pd.notnull(df), None)
 
 

@@ -30,9 +30,9 @@ bq = BigQueryClient()
 def dashboard():
 
     # ===========================================================
-    # 1) CARREGA VIEW PRINCIPAL
+    # 1) CARREGA VIEW BASE (SEGURA)
     # ===========================================================
-    df = bq.get_view("vw_chips_painel")
+    df = bq.get_view("vw_chips_painel_base")
     df = sanitize_df(df)
     tabela = df.to_dict(orient="records")
 
@@ -40,18 +40,24 @@ def dashboard():
     # 2) KPIs
     # ===========================================================
     total_chips = len(tabela)
+
     chips_ativos = sum(
-        1 for x in tabela if (x.get("status") or "").upper() == "ATIVO"
+        1 for x in tabela
+        if (x.get("status") or "").upper() == "ATIVO"
     )
+
     disparando = sum(
-        1 for x in tabela if (x.get("status") or "").upper() == "DISPARANDO"
+        1 for x in tabela
+        if (x.get("status") or "").upper() == "DISPARANDO"
     )
+
     banidos = sum(
-        1 for x in tabela if (x.get("status") or "").upper() == "BANIDO"
+        1 for x in tabela
+        if (x.get("status") or "").upper() == "BANIDO"
     )
 
     # ===========================================================
-    # 3) FILTROS / GRÁFICOS
+    # 3) FILTROS
     # ===========================================================
     lista_status = sorted({
         (x.get("status") or "").upper()
@@ -72,7 +78,7 @@ def dashboard():
     })
 
     # ===========================================================
-    # 4) ALERTAS — CHIPS > 80 DIAS SEM RECARGA
+    # 4) ALERTAS — +80 DIAS SEM RECARGA
     # ===========================================================
     alerta_sql = f"""
         SELECT
@@ -85,7 +91,7 @@ def dashboard():
                 DATE(ultima_recarga_data),
                 DAY
             ) AS dias_sem_recarga
-        FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel`
+        FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel_base`
         WHERE ultima_recarga_data IS NOT NULL
           AND DATE_DIFF(
                 CURRENT_DATE(),
@@ -104,6 +110,8 @@ def dashboard():
     # ===========================================================
     return render_template(
         "dashboard.html",
+
+        # tabela
         tabela=tabela,
 
         # KPIs

@@ -32,23 +32,45 @@ class BigQueryClient:
 
 
     # ========================================================
-    # EXECUÇÃO COM DATAFRAME (LEITURA) — AGORA COM PARAMS
+    # EXECUÇÃO COM DATAFRAME (LEITURA) — SUPORTE TOTAL A PARAMS
     # ========================================================
-    def run_df(self, sql: str, params: dict | None = None):
+    def run_df(self, sql: str, params=None):
         print("\n🔥 EXECUTANDO SQL (DF):\n", sql, "\n" + "=" * 80)
 
         job_config = None
 
-        if params:
+        # --------------------------------------------
+        # params como LISTA de ScalarQueryParameter
+        # --------------------------------------------
+        if isinstance(params, list):
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=params
+            )
+
+        # --------------------------------------------
+        # params como DICT simples
+        # --------------------------------------------
+        elif isinstance(params, dict):
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[
                     bigquery.ScalarQueryParameter(
                         name=k,
-                        type_="STRING" if isinstance(v, str) else "INT64",
+                        type_="INT64" if isinstance(v, int) else "STRING",
                         value=v
                     )
                     for k, v in params.items()
                 ]
+            )
+
+        # --------------------------------------------
+        # params None → query simples
+        # --------------------------------------------
+        elif params is None:
+            job_config = None
+
+        else:
+            raise TypeError(
+                "params deve ser dict, list[ScalarQueryParameter] ou None"
             )
 
         job = self.client.query(sql, job_config=job_config)

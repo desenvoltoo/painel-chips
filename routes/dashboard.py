@@ -1,3 +1,27 @@
+# -*- coding: utf-8 -*-
+
+from flask import Blueprint, render_template
+import os
+
+from utils.bigquery_client import BigQueryClient
+from utils.sanitizer import sanitize_df
+
+# ===============================================================
+# BLUEPRINT (TEM QUE VIR ANTES DOS DECORATORS)
+# ===============================================================
+bp_dashboard = Blueprint("dashboard", __name__)
+
+# ===============================================================
+# CONFIGURAÇÕES
+# ===============================================================
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "painel-universidade")
+DATASET = os.getenv("BQ_DATASET", "marts")
+
+bq = BigQueryClient()
+
+# ===============================================================
+# ROTA DO DASHBOARD
+# ===============================================================
 @bp_dashboard.route("/")
 @bp_dashboard.route("/dashboard")
 def dashboard():
@@ -23,25 +47,23 @@ def dashboard():
     df = sanitize_df(df)
 
     # ===========================================================
-    # 🔁 ADAPTAÇÃO PARA O FRONT (PONTO-CHAVE)
+    # ADAPTAÇÃO PARA O FRONT
     # ===========================================================
     tabela = []
     for r in df.to_dict(orient="records"):
 
-        # nome amigável do aparelho
         if r.get("aparelho_marca") and r.get("aparelho_modelo"):
-            nome_aparelho = f"{r['aparelho_marca']} • {r['aparelho_modelo']}"
+            r["aparelho"] = f"{r['aparelho_marca']} • {r['aparelho_modelo']}"
         else:
-            nome_aparelho = "—"
+            r["aparelho"] = "—"
 
-        r["aparelho"] = nome_aparelho     # 👈 o front costuma usar isso
-        r["modelo"] = r.get("aparelho_modelo")
         r["marca"] = r.get("aparelho_marca")
+        r["modelo"] = r.get("aparelho_modelo")
 
         tabela.append(r)
 
     # ===========================================================
-    # 2) KPIs
+    # KPIs
     # ===========================================================
     total_chips = len(tabela)
 
@@ -58,7 +80,7 @@ def dashboard():
     )
 
     # ===========================================================
-    # 3) FILTROS
+    # FILTROS
     # ===========================================================
     lista_status = sorted({
         (x.get("status") or "").upper()
@@ -79,7 +101,7 @@ def dashboard():
     })
 
     # ===========================================================
-    # 4) ALERTAS
+    # ALERTAS — > 80 DIAS SEM RECARGA
     # ===========================================================
     alerta_df = bq.run_df(f"""
         SELECT
@@ -107,7 +129,7 @@ def dashboard():
         alerta.append(r)
 
     # ===========================================================
-    # 5) RENDER
+    # RENDER
     # ===========================================================
     return render_template(
         "dashboard.html",

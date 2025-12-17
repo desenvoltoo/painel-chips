@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔐 REGISTRO DE HISTÓRICO / EVENTOS DO CHIP
+# 🔐 REGISTRAR HISTÓRICO / EVENTOS DO CHIP
 # ============================================================
 def registrar_evento_chip(
     sk_chip,
@@ -22,7 +22,6 @@ def registrar_evento_chip(
     campo=None,
     valor_antigo=None,
     valor_novo=None,
-    categoria="CHIP",
     origem="Painel",
     observacao=None
 ):
@@ -30,7 +29,6 @@ def registrar_evento_chip(
     INSERT INTO `{PROJECT}.{DATASET}.f_chip_evento`
     (
         sk_chip,
-        categoria,
         tipo_evento,
         campo,
         valor_antigo,
@@ -42,7 +40,6 @@ def registrar_evento_chip(
     )
     VALUES (
         {sk_chip},
-        '{categoria}',
         '{tipo_evento}',
         {f"'{campo}'" if campo else "NULL"},
         {f"'{valor_antigo}'" if valor_antigo is not None else "NULL"},
@@ -53,7 +50,7 @@ def registrar_evento_chip(
         CURRENT_TIMESTAMP()
     )
     """
-    # EXECUÇÃO CORRETA PARA O SEU BigQueryClient
+    # execução correta no seu BigQueryClient
     bq.client.query(sql).result()
 
 
@@ -97,12 +94,13 @@ def chips_add():
         if "sk_aparelho_atual" in data and not data["sk_aparelho_atual"]:
             data["sk_aparelho_atual"] = None
 
+        # garante que não venha SK
         data.pop("sk_chip", None)
 
         # grava chip
         bq.upsert_chip(data)
 
-        # recupera SK criado
+        # recupera sk_chip criado
         df = bq._run(f"""
             SELECT sk_chip
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -224,7 +222,9 @@ def chips_timeline(sk_chip):
             ORDER BY data_evento DESC
         """)
 
-        return jsonify(sanitize_df(df).to_dict(orient="records"))
+        return jsonify(
+            sanitize_df(df).to_dict(orient="records")
+        )
 
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)

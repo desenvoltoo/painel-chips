@@ -34,6 +34,7 @@ def chips_list():
             chips=chips_df.to_dict(orient="records"),
             aparelhos=aparelhos_df.to_dict(orient="records")
         )
+
     except Exception as e:
         print("🚨 Erro ao carregar chips:", e)
         return "Erro ao carregar chips", 500
@@ -54,11 +55,11 @@ def chips_add():
 
         sql = f"""
         CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-            {data.get("id_chip") and f"'{data['id_chip']}'" or "NULL"},
-            {data.get("numero") and f"'{data['numero']}'" or "NULL"},
-            {data.get("operadora") and f"'{data['operadora']}'" or "NULL"},
-            {data.get("plano") and f"'{data['plano']}'" or "NULL"},
-            {data.get("status") and f"'{data['status']}'" or "NULL"}
+            {f"'{data['id_chip']}'" if data.get("id_chip") else "NULL"},
+            {f"'{data['numero']}'" if data.get("numero") else "NULL"},
+            {f"'{data['operadora']}'" if data.get("operadora") else "NULL"},
+            {f"'{data['plano']}'" if data.get("plano") else "NULL"},
+            {f"'{data['status']}'" if data.get("status") else "NULL"}
         )
         """
         call_sp(sql)
@@ -69,6 +70,7 @@ def chips_add():
                 window.location.href='/chips';
             </script>
         """
+
     except Exception as e:
         print("🚨 Erro ao cadastrar chip:", e)
         return "Erro ao cadastrar chip", 500
@@ -91,6 +93,7 @@ def chips_get_by_sk(sk_chip):
             return jsonify({"error": "Chip não encontrado"}), 404
 
         return jsonify(sanitize_df(df).iloc[0].to_dict())
+
     except Exception as e:
         print("🚨 Erro ao buscar chip:", e)
         return jsonify({"error": "Erro interno"}), 500
@@ -98,42 +101,65 @@ def chips_get_by_sk(sk_chip):
 
 # ============================================================
 # 💾 SALVAR EDIÇÃO
-# - sp_upsert_chip  → dados básicos
-# - sp_alterar_status_chip → se status mudou
-# - sp_vincular_aparelho_chip → se aparelho veio
+# Regras:
+# - Front envia SOMENTE sk_chip
+# - id_chip é resolvido no backend
+# - Status só altera se mudar
+# - Aparelho só altera se vier no payload
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
         payload = request.json or {}
 
-        if not payload.get("sk_chip") or not payload.get("id_chip"):
-            return jsonify({"error": "sk_chip ou id_chip ausente"}), 400
+        if not payload.get("sk_chip"):
+            return jsonify({"error": "sk_chip ausente"}), 400
 
         sk_chip = payload["sk_chip"]
 
+        # ----------------------------------------------------
+        # 🔎 BUSCAR ESTADO ATUAL
+        # ----------------------------------------------------
+        df_atual = bq._run(f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE sk_chip = {sk_chip}
+        """)
+
+        if df_atual.empty:
+            return jsonify({"error": "Chip não encontrado"}), 404
+
+        atual = df_atual.iloc[0].to_dict()
+        id_chip = atual["id_chip"]
+
+        # normaliza payload
         for k in list(payload.keys()):
             if payload[k] == "":
                 payload[k] = None
 
-        # ====================================================
-        # 🔹 ATUALIZA DADOS BÁSICOS
-        # ====================================================
-        sql = f"""
-        CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-            '{payload["id_chip"]}',
-            {payload.get("numero") and f"'{payload['numero']}'" or "NULL"},
-            {payload.get("operadora") and f"'{payload['operadora']}'" or "NULL"},
-            {payload.get("plano") and f"'{payload['plano']}'" or "NULL"},
-            {payload.get("status") and f"'{payload['status']}'" or "NULL"}
-        )
-        """
-        call_sp(sql)
+        # ----------------------------------------------------
+        # 🔹 DADOS BÁSICOS (SEM STATUS)
+        # ----------------------------------------------------
+        if (
+            payload.get("numero") != atual.get("numero") or
+            payload.get("operadora") != atual.get("operadora") or
+            payload.get("plano") != atual.get("plano")
+        ):
+            sql = f"""
+            CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+                '{id_chip}',
+                {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
+                {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
+                {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
+                '{atual.get("status")}'
+            )
+            """
+            call_sp(sql)
 
-        # ====================================================
-        # 🔹 STATUS (se enviado explicitamente)
-        # ====================================================
-        if payload.get("status"):
+        # ----------------------------------------------------
+        # 🔹 STATUS (SÓ SE MUDOU)
+        # ----------------------------------------------------
+        if payload.get("status") and payload["status"] != atual.get("status"):
             sql = f"""
             CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                 {sk_chip},
@@ -145,19 +171,20 @@ def chips_update_json():
             """
             call_sp(sql)
 
-        # ====================================================
-        # 🔹 VINCULAR APARELHO (se veio)
-        # ====================================================
-        if payload.get("sk_aparelho_atual") is not None:
-            sql = f"""
-            CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
-                {sk_chip},
-                {payload["sk_aparelho_atual"]},
-                'Painel',
-                'Vinculação via painel'
-            )
-            """
-            call_sp(sql)
+        # ----------------------------------------------------
+        # 🔹 APARELHO (SÓ SE VEIO NO PAYLOAD)
+        # ----------------------------------------------------
+        if "sk_aparelho_atual" in payload:
+            if payload["sk_aparelho_atual"] != atual.get("sk_aparelho_atual"):
+                sql = f"""
+                CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
+                    {sk_chip},
+                    {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] is not None else "NULL"},
+                    'Painel',
+                    'Vinculação via painel'
+                )
+                """
+                call_sp(sql)
 
         return jsonify({"success": True})
 
@@ -167,7 +194,7 @@ def chips_update_json():
 
 
 # ============================================================
-# 🧵 TIMELINE / HISTÓRICO (LEITURA)
+# 🧵 TIMELINE / HISTÓRICO
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
@@ -180,6 +207,7 @@ def chips_timeline(sk_chip):
         """)
 
         return jsonify(sanitize_df(df).to_dict(orient="records"))
+
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)
         return jsonify([]), 500

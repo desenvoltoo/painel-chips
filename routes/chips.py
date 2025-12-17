@@ -4,7 +4,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-from google.cloud import bigquery
 import os
 
 chips_bp = Blueprint("chips", __name__)
@@ -15,11 +14,11 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔧 EXECUTAR SP COM PARÂMETROS
+# 🔧 EXECUTAR STORED PROCEDURE
 # ============================================================
-def call_sp(sql: str, params: list):
-    job_config = bigquery.QueryJobConfig(query_parameters=params)
-    bq.client.query(sql, job_config=job_config).result()
+def call_sp(sql: str):
+    print("🔥 CALL SP:\n", sql)
+    return bq.client.query(sql).result()
 
 
 # ============================================================
@@ -38,30 +37,25 @@ def chips_list():
 
 
 # ============================================================
-# ➕ CADASTRAR CHIP (INSERT REAL)
+# ➕ CADASTRAR CHIP
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     data = request.form.to_dict()
 
-    sql = f"""
-        INSERT INTO `{PROJECT}.{DATASET}.dim_chip`
-        (id_chip, numero, operadora, plano, status, observacao, created_at, updated_at, ativo)
-        VALUES
-        (@id_chip, @numero, @operadora, @plano, @status, @observacao,
-         CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), TRUE)
-    """
+    for k in data:
+        if data[k] == "":
+            data[k] = None
 
-    params = [
-        bigquery.ScalarQueryParameter("id_chip", "STRING", data.get("id_chip")),
-        bigquery.ScalarQueryParameter("numero", "STRING", data.get("numero")),
-        bigquery.ScalarQueryParameter("operadora", "STRING", data.get("operadora")),
-        bigquery.ScalarQueryParameter("plano", "STRING", data.get("plano")),
-        bigquery.ScalarQueryParameter("status", "STRING", data.get("status")),
-        bigquery.ScalarQueryParameter("observacao", "STRING", data.get("observacao")),
-    ]
-
-    call_sp(sql, params)
+    call_sp(f"""
+        CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+            {f"'{data['id_chip']}'" if data.get("id_chip") else "NULL"},
+            {f"'{data['numero']}'" if data.get("numero") else "NULL"},
+            {f"'{data['operadora']}'" if data.get("operadora") else "NULL"},
+            {f"'{data['plano']}'" if data.get("plano") else "NULL"},
+            {f"'{data['status']}'" if data.get("status") else "NULL"}
+        )
+    """)
 
     return """
         <script>
@@ -72,14 +66,16 @@ def chips_add():
 
 
 # ============================================================
-# 🔍 BUSCAR CHIP (MODAL)
+# 🔍 BUSCAR CHIP POR SK
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
-    df = bq.run_df(
-        f"SELECT * FROM `{PROJECT}.{DATASET}.vw_chips_painel` WHERE sk_chip = @sk_chip",
-        params=[bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)]
-    )
+    df = bq.run_df(f"""
+        SELECT *
+        FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+        WHERE sk_chip = {sk_chip}
+        LIMIT 1
+    """)
 
     if df.empty:
         return jsonify({"error": "Chip não encontrado"}), 404
@@ -88,113 +84,79 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# 💾 SALVAR EDIÇÃO (COM AUDITORIA REAL)
+# 💾 SALVAR EDIÇÃO (ARQUITETURA BLINDADA)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
+
     payload = request.json or {}
     sk_chip = payload.get("sk_chip")
 
     if not sk_chip:
         return jsonify({"error": "sk_chip ausente"}), 400
 
-    df_atual = bq.run_df(
-        f"SELECT * FROM `{PROJECT}.{DATASET}.dim_chip` WHERE sk_chip = @sk_chip",
-        params=[bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)]
-    )
+    df_atual = bq.run_df(f"""
+        SELECT *
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        WHERE sk_chip = {sk_chip}
+    """)
 
     if df_atual.empty:
         return jsonify({"error": "Chip não encontrado"}), 404
 
     atual = df_atual.iloc[0].to_dict()
 
-    # ================================
-    # 🔹 ATUALIZA DADOS BÁSICOS
-    # ================================
-    campos = ["numero", "operadora", "plano", "observacao"]
-    houve_alteracao = any(payload.get(c) != atual.get(c) for c in campos)
+    # Normalização
+    for k in payload:
+        if payload[k] == "":
+            payload[k] = None
 
-    if houve_alteracao:
-        sql = f"""
+    # ========================================================
+    # 🔹 ALTERAÇÃO DE DADOS BÁSICOS
+    # ========================================================
+    if (
+        payload.get("numero") != atual.get("numero") or
+        payload.get("operadora") != atual.get("operadora") or
+        payload.get("plano") != atual.get("plano")
+    ):
+        call_sp(f"""
             CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-                @sk_chip,
-                @numero,
-                @operadora,
-                @plano,
-                @observacao
+                '{atual["id_chip"]}',
+                {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
+                {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
+                {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
+                '{atual["status"]}'
             )
-        """
+        """)
 
-        params = [
-            bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-            bigquery.ScalarQueryParameter("numero", "STRING", payload.get("numero")),
-            bigquery.ScalarQueryParameter("operadora", "STRING", payload.get("operadora")),
-            bigquery.ScalarQueryParameter("plano", "STRING", payload.get("plano")),
-            bigquery.ScalarQueryParameter("observacao", "STRING", payload.get("observacao")),
-        ]
-
-        call_sp(sql, params)
-
-        for campo in campos:
-            if payload.get(campo) != atual.get(campo):
-                call_sp(
-                    f"""
-                    CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
-                        @sk_chip,
-                        'DADOS',
-                        'ALTERACAO_CAMPO',
-                        @campo,
-                        @valor_antigo,
-                        @valor_novo,
-                        'Painel',
-                        'Alteração via painel'
-                    )
-                    """,
-                    [
-                        bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                        bigquery.ScalarQueryParameter("campo", "STRING", campo),
-                        bigquery.ScalarQueryParameter("valor_antigo", "STRING", str(atual.get(campo))),
-                        bigquery.ScalarQueryParameter("valor_novo", "STRING", str(payload.get(campo))),
-                    ]
-                )
-
-    # ================================
-    # 🔹 STATUS
-    # ================================
+    # ========================================================
+    # 🔹 STATUS — CORREÇÃO DEFINITIVA (5 PARÂMETROS)
+    # ========================================================
     if payload.get("status") and payload["status"] != atual.get("status"):
-        call_sp(
-            f"""
+        call_sp(f"""
             CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
-                @sk_chip,
-                @status,
+                {sk_chip},
+                '{payload["status"]}',
                 'Painel',
-                'Alteração via painel'
+                'Alteração via painel',
+                'sistema'
             )
-            """,
-            [
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("status", "STRING", payload.get("status")),
-            ]
-        )
+        """)
 
-    # ================================
+    # ========================================================
     # 🔹 APARELHO
-    # ================================
-    if payload.get("sk_aparelho_atual") != atual.get("sk_aparelho_atual"):
-        call_sp(
-            f"""
-            CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
-                @sk_chip,
-                @sk_aparelho,
-                'Painel',
-                'Troca de aparelho'
-            )
-            """,
-            [
-                bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip),
-                bigquery.ScalarQueryParameter("sk_aparelho", "INT64", payload.get("sk_aparelho_atual")),
-            ]
-        )
+    # ========================================================
+    if "sk_aparelho_atual" in payload:
+        if payload["sk_aparelho_atual"] != atual.get("sk_aparelho_atual"):
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
+                    {sk_chip},
+                    {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] else "NULL"},
+                    'Painel',
+                    'Troca de aparelho',
+                    'sistema'
+                )
+            """)
 
     return jsonify({"success": True})
 
@@ -204,14 +166,11 @@ def chips_update_json():
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
-    df = bq.run_df(
-        f"""
+    df = bq.run_df(f"""
         SELECT *
         FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
-        WHERE sk_chip = @sk_chip
+        WHERE sk_chip = {sk_chip}
         ORDER BY data_evento DESC
-        """,
-        params=[bigquery.ScalarQueryParameter("sk_chip", "INT64", sk_chip)]
-    )
+    """)
 
     return jsonify(sanitize_df(df).to_dict(orient="records"))

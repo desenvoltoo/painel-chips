@@ -14,43 +14,9 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔐 REGISTRAR HISTÓRICO / EVENTOS DO CHIP
+# 🔧 UTIL — EXECUTAR STORED PROCEDURE
 # ============================================================
-def registrar_evento_chip(
-    sk_chip,
-    tipo_evento,
-    campo=None,
-    valor_antigo=None,
-    valor_novo=None,
-    origem="Painel",
-    observacao=None
-):
-    sql = f"""
-    INSERT INTO `{PROJECT}.{DATASET}.f_chip_evento`
-    (
-        sk_chip,
-        tipo_evento,
-        campo,
-        valor_antigo,
-        valor_novo,
-        origem,
-        observacao,
-        data_evento,
-        created_at
-    )
-    VALUES (
-        {sk_chip},
-        '{tipo_evento}',
-        {f"'{campo}'" if campo else "NULL"},
-        {f"'{valor_antigo}'" if valor_antigo is not None else "NULL"},
-        {f"'{valor_novo}'" if valor_novo is not None else "NULL"},
-        '{origem}',
-        {f"'{observacao}'" if observacao else "NULL"},
-        CURRENT_TIMESTAMP(),
-        CURRENT_TIMESTAMP()
-    )
-    """
-    # execução correta no seu BigQueryClient
+def call_sp(sql: str):
     bq.client.query(sql).result()
 
 
@@ -75,7 +41,7 @@ def chips_list():
 
 
 # ============================================================
-# ➕ CADASTRAR CHIP
+# ➕ CADASTRAR CHIP (SP: sp_upsert_chip)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -87,34 +53,22 @@ def chips_add():
             if data[k] == "":
                 data[k] = None
 
-        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        if "sk_aparelho_atual" in data and not data["sk_aparelho_atual"]:
-            data["sk_aparelho_atual"] = None
-
-        # garante que não venha SK
-        data.pop("sk_chip", None)
-
-        # grava chip
-        bq.upsert_chip(data)
-
-        # recupera sk_chip criado
-        df = bq._run(f"""
-            SELECT sk_chip
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE numero = '{data.get("numero")}'
-            ORDER BY created_at DESC
-            LIMIT 1
-        """)
-
-        if not df.empty:
-            registrar_evento_chip(
-                sk_chip=int(df.iloc[0]["sk_chip"]),
-                tipo_evento="CRIACAO",
-                observacao="Chip cadastrado via painel"
-            )
+        sql = f"""
+        CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+            NULL,
+            {data.get("numero") and f"'{data['numero']}'" or "NULL"},
+            {data.get("operadora") and f"'{data['operadora']}'" or "NULL"},
+            {data.get("operador") and f"'{data['operador']}'" or "NULL"},
+            {data.get("status") and f"'{data['status']}'" or "NULL"},
+            {data.get("plano") and f"'{data['plano']}'" or "NULL"},
+            {data.get("dt_inicio") and f"DATE('{data['dt_inicio']}')" or "NULL"},
+            {data.get("observacao") and f"'{data['observacao']}'" or "NULL"}
+        )
+        """
+        call_sp(sql)
 
         return """
             <script>
@@ -153,54 +107,54 @@ def chips_get_by_sk(sk_chip):
 
 # ============================================================
 # 💾 SALVAR EDIÇÃO (JSON)
+# SP: sp_upsert_chip + sp_vincular_aparelho_chip
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
-        data = request.json or {}
+        payload = request.json or {}
 
-        if not data.get("sk_chip"):
+        if not payload.get("sk_chip"):
             return jsonify({"error": "sk_chip não informado"}), 400
 
-        sk_chip = data["sk_chip"]
+        sk_chip = payload["sk_chip"]
 
-        # normaliza vazios
-        for k in list(data.keys()):
-            if data[k] == "":
-                data[k] = None
+        for k in list(payload.keys()):
+            if payload[k] == "":
+                payload[k] = None
 
-        if "data_inicio" in data:
-            data["dt_inicio"] = data.pop("data_inicio")
+        if "data_inicio" in payload:
+            payload["dt_inicio"] = payload.pop("data_inicio")
 
-        # estado ANTES
-        antes = bq._run(f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE sk_chip = {sk_chip}
-        """).iloc[0].to_dict()
+        # ==============================
+        # 🔹 ATUALIZA DADOS DO CHIP
+        # ==============================
+        sql = f"""
+        CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+            {sk_chip},
+            {payload.get("numero") and f"'{payload['numero']}'" or "NULL"},
+            {payload.get("operadora") and f"'{payload['operadora']}'" or "NULL"},
+            {payload.get("operador") and f"'{payload['operador']}'" or "NULL"},
+            {payload.get("status") and f"'{payload['status']}'" or "NULL"},
+            {payload.get("plano") and f"'{payload['plano']}'" or "NULL"},
+            {payload.get("dt_inicio") and f"DATE('{payload['dt_inicio']}')" or "NULL"},
+            {payload.get("observacao") and f"'{payload['observacao']}'" or "NULL"}
+        )
+        """
+        call_sp(sql)
 
-        # atualiza chip
-        bq.upsert_chip(data)
-
-        # estado DEPOIS
-        depois = bq._run(f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE sk_chip = {sk_chip}
-        """).iloc[0].to_dict()
-
-        # registra diferenças
-        for campo, valor_novo in depois.items():
-            valor_antigo = antes.get(campo)
-            if str(valor_antigo) != str(valor_novo):
-                registrar_evento_chip(
-                    sk_chip=sk_chip,
-                    tipo_evento="ALTERACAO",
-                    campo=campo,
-                    valor_antigo=str(valor_antigo),
-                    valor_novo=str(valor_novo),
-                    observacao="Atualização via painel"
-                )
+        # ==============================
+        # 🔹 VINCULA APARELHO (SE VEIO)
+        # ==============================
+        if payload.get("sk_aparelho_atual") is not None:
+            sql = f"""
+            CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
+                {sk_chip},
+                {payload["sk_aparelho_atual"]},
+                'Painel'
+            )
+            """
+            call_sp(sql)
 
         return jsonify({"success": True})
 
@@ -210,7 +164,7 @@ def chips_update_json():
 
 
 # ============================================================
-# 🧵 TIMELINE / HISTÓRICO
+# 🧵 TIMELINE / HISTÓRICO (LEITURA)
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
@@ -222,9 +176,7 @@ def chips_timeline(sk_chip):
             ORDER BY data_evento DESC
         """)
 
-        return jsonify(
-            sanitize_df(df).to_dict(orient="records")
-        )
+        return jsonify(sanitize_df(df).to_dict(orient="records"))
 
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)

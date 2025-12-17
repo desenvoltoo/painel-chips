@@ -113,13 +113,8 @@ function renderRows(lista) {
     }
 
     lista.forEach(c => {
-        const modelo = typeof c.aparelho_modelo === "string"
-            ? c.aparelho_modelo.trim()
-            : "";
-
-        const marca = typeof c.aparelho_marca === "string"
-            ? c.aparelho_marca.trim()
-            : "";
+        const modelo = typeof c.aparelho_modelo === "string" ? c.aparelho_modelo.trim() : "";
+        const marca = typeof c.aparelho_marca === "string" ? c.aparelho_marca.trim() : "";
 
         const aparelho = modelo
             ? `${modelo}${marca ? " (" + marca + ")" : ""}`
@@ -221,22 +216,34 @@ function abrirModalEdicao(chip) {
 
 
 /* ============================================================
-   FECHAR / SALVAR
+   FECHAR / SALVAR  ✅ CORRIGIDO
 ============================================================ */
 document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
 });
 
 document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
-    const form = new FormData(document.getElementById("modalForm"));
-    const data = Object.fromEntries(form);
+    const formEl = document.getElementById("modalForm");
+    const formData = new FormData(formEl);
+    const data = {};
+
+    formData.forEach((value, key) => {
+        data[key] = value === "" ? null : value;
+    });
 
     data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
+    data.status = document.getElementById("modal_status").value;
+
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
 
-    if (data.ultima_recarga_valor === "") data.ultima_recarga_valor = null;
-    if (data.total_gasto === "") data.total_gasto = null;
+    if (data.ultima_recarga_valor !== null)
+        data.ultima_recarga_valor = Number(data.ultima_recarga_valor);
+
+    if (data.total_gasto !== null)
+        data.total_gasto = Number(data.total_gasto);
+
+    console.log("📤 Payload enviado:", data);
 
     const res = await fetch("/chips/update-json", {
         method: "POST",
@@ -245,7 +252,12 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     });
 
     const r = await res.json();
-    r.success ? location.reload() : alert(r.error || "Erro ao salvar");
+
+    if (r.success) {
+        location.reload();
+    } else {
+        alert(r.error || "Erro ao salvar");
+    }
 });
 
 
@@ -258,7 +270,7 @@ document.getElementById("searchInput")?.addEventListener("input", e => {
     if (!termo) {
         chipsView = [...ALL_CHIPS];
     } else {
-        chipsView = chipsView.filter(c =>
+        chipsView = ALL_CHIPS.filter(c =>
             Object.values(c).some(v =>
                 String(v ?? "").toLowerCase().includes(termo)
             )

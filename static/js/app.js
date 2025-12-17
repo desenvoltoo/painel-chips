@@ -242,18 +242,20 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
 
 /* ============================================================
-   BUSCA (CORRIGIDA)
+   BUSCA (COMPORTAMENTO CORRIGIDO)
 ============================================================ */
 document.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase().trim();
 
-    chipsView = !termo
-        ? [...ALL_CHIPS]
-        : ALL_CHIPS.filter(c =>
+    if (!termo) {
+        chipsView = [...ALL_CHIPS];
+    } else {
+        chipsView = chipsView.filter(c =>
             Object.values(c).some(v =>
                 String(v ?? "").toLowerCase().includes(termo)
             )
         );
+    }
 
     renderRows(chipsView);
 });

@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔐 REGISTRAR EVENTO / HISTÓRICO
+# 🔐 REGISTRO DE HISTÓRICO / EVENTOS DO CHIP
 # ============================================================
 def registrar_evento_chip(
     sk_chip,
@@ -53,7 +53,8 @@ def registrar_evento_chip(
         CURRENT_TIMESTAMP()
     )
     """
-    bq.execute(sql)
+    # EXECUÇÃO CORRETA PARA O SEU BigQueryClient
+    bq.client.query(sql).result()
 
 
 # ============================================================
@@ -89,6 +90,7 @@ def chips_add():
             if data[k] == "":
                 data[k] = None
 
+        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
@@ -100,7 +102,7 @@ def chips_add():
         # grava chip
         bq.upsert_chip(data)
 
-        # recupera sk_chip criado
+        # recupera SK criado
         df = bq._run(f"""
             SELECT sk_chip
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -164,6 +166,7 @@ def chips_update_json():
 
         sk_chip = data["sk_chip"]
 
+        # normaliza vazios
         for k in list(data.keys()):
             if data[k] == "":
                 data[k] = None
@@ -171,17 +174,17 @@ def chips_update_json():
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        # estado antes
+        # estado ANTES
         antes = bq._run(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
             WHERE sk_chip = {sk_chip}
         """).iloc[0].to_dict()
 
-        # atualiza
+        # atualiza chip
         bq.upsert_chip(data)
 
-        # estado depois
+        # estado DEPOIS
         depois = bq._run(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -198,7 +201,7 @@ def chips_update_json():
                     campo=campo,
                     valor_antigo=str(valor_antigo),
                     valor_novo=str(valor_novo),
-                    observacao="Alteração via painel"
+                    observacao="Atualização via painel"
                 )
 
         return jsonify({"success": True})

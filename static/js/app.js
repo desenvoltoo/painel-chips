@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
    DADOS DO BACKEND
 ============================================================ */
 const chipsData = Array.isArray(window.chipsData) ? window.chipsData : [];
-const aparelhosData = Array.isArray(window.aparelhosData) ? window.aparelhosData : [];
 
 
 /* ============================================================
@@ -47,11 +46,6 @@ const OPERADORAS_LIST = ["VIVO", "TIM", "CLARO", "OI", "OUTRA"];
 ============================================================ */
 function formatDate(value) {
     if (!value) return "";
-
-    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value;
-    }
-
     try {
         const d = new Date(value);
         return isNaN(d) ? "" : d.toISOString().split("T")[0];
@@ -93,23 +87,6 @@ function preencherOperadoras(atual) {
         o.value = op;
         o.textContent = op;
         if (op === atual) o.selected = true;
-        select.appendChild(o);
-    });
-}
-
-function preencherSelectAparelhos(selecionado) {
-    const select = document.getElementById("modal_sk_aparelho");
-    if (!select) return;
-
-    select.innerHTML = `<option value="">— Nenhum —</option>`;
-
-    aparelhosData.forEach(ap => {
-        const o = document.createElement("option");
-        o.value = ap.sk_aparelho;
-        o.textContent = `${ap.modelo} (${ap.marca})`;
-        if (String(selecionado) === String(ap.sk_aparelho)) {
-            o.selected = true;
-        }
         select.appendChild(o);
     });
 }
@@ -189,7 +166,7 @@ function abrirObs(sk_chip) {
     document.getElementById("obsModal").style.display = "flex";
 }
 
-document.getElementById("obsModalClose")?.addEventListener("click", () => {
+document.getElementById("modalCloseObs")?.addEventListener("click", () => {
     document.getElementById("obsModal").style.display = "none";
 });
 
@@ -213,7 +190,7 @@ function bindEditButtons() {
 
 
 /* ============================================================
-   MODAL DE EDIÇÃO
+   MODAL DE EDIÇÃO (SEM APARELHO)
 ============================================================ */
 function abrirModalEdicao(chip) {
     document.getElementById("editModal").style.display = "flex";
@@ -231,13 +208,11 @@ function abrirModalEdicao(chip) {
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
-
-    preencherSelectAparelhos(chip.sk_aparelho_atual);
 }
 
 
 /* ============================================================
-   FECHAR / SALVAR (CORRIGIDO)
+   FECHAR / SALVAR
 ============================================================ */
 document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
@@ -247,22 +222,13 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const form = new FormData(document.getElementById("modalForm"));
     const data = Object.fromEntries(form);
 
-    // ============================
-    // NORMALIZAÇÃO CORRETA
-    // ============================
+    // normalizações
+    data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
 
-    if (!data.sk_aparelho_atual) {
-        data.sk_aparelho_atual = null;
-    } else {
-        data.sk_aparelho_atual = Number(data.sk_aparelho_atual);
-    }
-
     if (data.ultima_recarga_valor === "") data.ultima_recarga_valor = null;
     if (data.total_gasto === "") data.total_gasto = null;
-
-    data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
 
     const res = await fetch("/chips/update-json", {
         method: "POST",

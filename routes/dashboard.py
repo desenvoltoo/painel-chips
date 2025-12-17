@@ -1,33 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from flask import Blueprint, render_template
-import os
-
-from utils.bigquery_client import BigQueryClient
-from utils.sanitizer import sanitize_df
-
-# ===============================================================
-# BLUEPRINT
-# ===============================================================
-bp_dashboard = Blueprint("dashboard", __name__)
-
-# ===============================================================
-# CONFIGURAÇÕES
-# ===============================================================
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "painel-universidade")
-DATASET = os.getenv("BQ_DATASET", "marts")
-
-bq = BigQueryClient()
-
-# ===============================================================
-# ROTA DO DASHBOARD
-# ===============================================================
 @bp_dashboard.route("/")
 @bp_dashboard.route("/dashboard")
 def dashboard():
 
     # ===========================================================
-    # 1) VIEW PRINCIPAL DO DASHBOARD (SEM LOOP)
+    # 1) VIEW PRINCIPAL (SEM LOOP DE VIEW)
     # ===========================================================
     df = bq.run_df(f"""
         SELECT
@@ -45,7 +21,24 @@ def dashboard():
     """)
 
     df = sanitize_df(df)
-    tabela = df.to_dict(orient="records")
+
+    # ===========================================================
+    # 🔁 ADAPTAÇÃO PARA O FRONT (PONTO-CHAVE)
+    # ===========================================================
+    tabela = []
+    for r in df.to_dict(orient="records"):
+
+        # nome amigável do aparelho
+        if r.get("aparelho_marca") and r.get("aparelho_modelo"):
+            nome_aparelho = f"{r['aparelho_marca']} • {r['aparelho_modelo']}"
+        else:
+            nome_aparelho = "—"
+
+        r["aparelho"] = nome_aparelho     # 👈 o front costuma usar isso
+        r["modelo"] = r.get("aparelho_modelo")
+        r["marca"] = r.get("aparelho_marca")
+
+        tabela.append(r)
 
     # ===========================================================
     # 2) KPIs
@@ -53,18 +46,15 @@ def dashboard():
     total_chips = len(tabela)
 
     chips_ativos = sum(
-        1 for x in tabela
-        if (x.get("status") or "").upper() == "ATIVO"
+        1 for x in tabela if (x.get("status") or "").upper() == "ATIVO"
     )
 
     disparando = sum(
-        1 for x in tabela
-        if (x.get("status") or "").upper() == "DISPARANDO"
+        1 for x in tabela if (x.get("status") or "").upper() == "DISPARANDO"
     )
 
     banidos = sum(
-        1 for x in tabela
-        if (x.get("status") or "").upper() == "BANIDO"
+        1 for x in tabela if (x.get("status") or "").upper() == "BANIDO"
     )
 
     # ===========================================================
@@ -89,7 +79,7 @@ def dashboard():
     })
 
     # ===========================================================
-    # 4) ALERTAS — CHIPS > 80 DIAS SEM RECARGA
+    # 4) ALERTAS
     # ===========================================================
     alerta_df = bq.run_df(f"""
         SELECT
@@ -99,45 +89,39 @@ def dashboard():
             aparelho_marca,
             aparelho_modelo,
             ultima_recarga_data,
-            DATE_DIFF(
-                CURRENT_DATE(),
-                DATE(ultima_recarga_data),
-                DAY
-            ) AS dias_sem_recarga
+            DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) AS dias_sem_recarga
         FROM `{PROJECT_ID}.{DATASET}.vw_chips_painel_dashboard`
         WHERE ultima_recarga_data IS NOT NULL
-          AND DATE_DIFF(
-                CURRENT_DATE(),
-                DATE(ultima_recarga_data),
-                DAY
-          ) > 80
+          AND DATE_DIFF(CURRENT_DATE(), DATE(ultima_recarga_data), DAY) > 80
         ORDER BY dias_sem_recarga DESC
     """)
 
     alerta_df = sanitize_df(alerta_df)
-    alerta = alerta_df.to_dict(orient="records")
+
+    alerta = []
+    for r in alerta_df.to_dict(orient="records"):
+        if r.get("aparelho_marca") and r.get("aparelho_modelo"):
+            r["aparelho"] = f"{r['aparelho_marca']} • {r['aparelho_modelo']}"
+        else:
+            r["aparelho"] = "—"
+        alerta.append(r)
 
     # ===========================================================
     # 5) RENDER
     # ===========================================================
     return render_template(
         "dashboard.html",
-
-        # tabela principal
         tabela=tabela,
 
-        # KPIs
         total_chips=total_chips,
         chips_ativos=chips_ativos,
         disparando=disparando,
         banidos=banidos,
 
-        # filtros
         lista_status=lista_status,
         lista_operadora=lista_operadora,
         lista_operadores=lista_operadores,
 
-        # alertas
         alerta_recarga=alerta,
         qtd_alerta=len(alerta),
     )

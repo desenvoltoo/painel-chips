@@ -113,8 +113,16 @@ function renderRows(lista) {
     }
 
     lista.forEach(c => {
-        const aparelho = c.aparelho_modelo
-            ? `${c.aparelho_modelo}${c.aparelho_marca ? " (" + c.aparelho_marca + ")" : ""}`
+        const modelo = typeof c.aparelho_modelo === "string"
+            ? c.aparelho_modelo.trim()
+            : "";
+
+        const marca = typeof c.aparelho_marca === "string"
+            ? c.aparelho_marca.trim()
+            : "";
+
+        const aparelho = modelo
+            ? `${modelo}${marca ? " (" + marca + ")" : ""}`
             : "-";
 
         const obsIcon = c.observacao
@@ -242,7 +250,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
 
 /* ============================================================
-   BUSCA (COMPORTAMENTO CORRIGIDO)
+   BUSCA
 ============================================================ */
 document.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase().trim();

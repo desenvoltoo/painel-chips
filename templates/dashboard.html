@@ -346,17 +346,26 @@
     });
 
     /* ===================== FILTRO ===================== */
-    document.getElementById("filtroStatus").addEventListener("change", function() {
-        const filtro = this.value.toUpperCase();
-        const linhas = document.querySelectorAll("#tabelaChips tbody tr");
+ document.getElementById("filtroStatus").addEventListener("change", function () {
+    const filtro = this.value.toUpperCase();
+    const linhas = document.querySelectorAll("#tabelaChips tbody tr");
 
-        linhas.forEach(l => {
-            const status = l.children[3].innerText.toUpperCase();
-            l.style.display = (filtro === "" || filtro === status) ? "" : "none";
-        });
+    // 🔥 RESET TOTAL (ESSENCIAL)
+    linhas.forEach(l => {
+        l.style.display = "";
     });
 
-</script>
+    // Se for "Todos", não filtra
+    if (!filtro) return;
+
+    // Aplica filtro corretamente
+    linhas.forEach(l => {
+        const status = l.children[3].innerText.trim().toUpperCase();
+        if (status !== filtro) {
+            l.style.display = "none";
+        }
+    });
+});
 
 </div> <!-- fecha dashboard-container -->
 

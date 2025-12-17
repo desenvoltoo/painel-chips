@@ -18,7 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ============================================================
    DADOS DO BACKEND
 ============================================================ */
-const chipsData = Array.isArray(window.chipsData) ? window.chipsData : [];
+const ALL_CHIPS = Array.isArray(window.chipsData) ? [...window.chipsData] : [];
+let chipsView = [...ALL_CHIPS];
 
 
 /* ============================================================
@@ -159,7 +160,7 @@ function renderRows(lista) {
    MODAL OBSERVAÇÃO
 ============================================================ */
 function abrirObs(sk_chip) {
-    const chip = chipsData.find(c => c.sk_chip === sk_chip);
+    const chip = ALL_CHIPS.find(c => c.sk_chip === sk_chip);
     if (!chip || !chip.observacao) return;
 
     document.getElementById("obsModalContent").innerText = chip.observacao;
@@ -190,7 +191,7 @@ function bindEditButtons() {
 
 
 /* ============================================================
-   MODAL DE EDIÇÃO (SEM APARELHO)
+   MODAL DE EDIÇÃO
 ============================================================ */
 function abrirModalEdicao(chip) {
     document.getElementById("editModal").style.display = "flex";
@@ -222,7 +223,6 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const form = new FormData(document.getElementById("modalForm"));
     const data = Object.fromEntries(form);
 
-    // normalizações
     data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
@@ -242,21 +242,24 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
 
 /* ============================================================
-   BUSCA
+   BUSCA (CORRIGIDA)
 ============================================================ */
 document.getElementById("searchInput")?.addEventListener("input", e => {
-    const termo = e.target.value.toLowerCase();
-    renderRows(
-        chipsData.filter(c =>
+    const termo = e.target.value.toLowerCase().trim();
+
+    chipsView = !termo
+        ? [...ALL_CHIPS]
+        : ALL_CHIPS.filter(c =>
             Object.values(c).some(v =>
                 String(v ?? "").toLowerCase().includes(termo)
             )
-        )
-    );
+        );
+
+    renderRows(chipsView);
 });
 
 
 /* ============================================================
    INIT
 ============================================================ */
-renderRows(chipsData);
+renderRows(ALL_CHIPS);

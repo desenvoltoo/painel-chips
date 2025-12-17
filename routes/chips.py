@@ -14,6 +14,49 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
+# 🔐 REGISTRAR EVENTO / HISTÓRICO
+# ============================================================
+def registrar_evento_chip(
+    sk_chip,
+    tipo_evento,
+    campo=None,
+    valor_antigo=None,
+    valor_novo=None,
+    categoria="CHIP",
+    origem="Painel",
+    observacao=None
+):
+    sql = f"""
+    INSERT INTO `{PROJECT}.{DATASET}.f_chip_evento`
+    (
+        sk_chip,
+        categoria,
+        tipo_evento,
+        campo,
+        valor_antigo,
+        valor_novo,
+        origem,
+        observacao,
+        data_evento,
+        created_at
+    )
+    VALUES (
+        {sk_chip},
+        '{categoria}',
+        '{tipo_evento}',
+        {f"'{campo}'" if campo else "NULL"},
+        {f"'{valor_antigo}'" if valor_antigo is not None else "NULL"},
+        {f"'{valor_novo}'" if valor_novo is not None else "NULL"},
+        '{origem}',
+        {f"'{observacao}'" if observacao else "NULL"},
+        CURRENT_TIMESTAMP(),
+        CURRENT_TIMESTAMP()
+    )
+    """
+    bq.execute(sql)
+
+
+# ============================================================
 # 📌 LISTAGEM PRINCIPAL
 # ============================================================
 @chips_bp.route("/chips")
@@ -46,17 +89,32 @@ def chips_add():
             if data[k] == "":
                 data[k] = None
 
-        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
         if "sk_aparelho_atual" in data and not data["sk_aparelho_atual"]:
             data["sk_aparelho_atual"] = None
 
-        # garante que não venha SK
         data.pop("sk_chip", None)
 
+        # grava chip
         bq.upsert_chip(data)
+
+        # recupera sk_chip criado
+        df = bq._run(f"""
+            SELECT sk_chip
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE numero = '{data.get("numero")}'
+            ORDER BY created_at DESC
+            LIMIT 1
+        """)
+
+        if not df.empty:
+            registrar_evento_chip(
+                sk_chip=int(df.iloc[0]["sk_chip"]),
+                tipo_evento="CRIACAO",
+                observacao="Chip cadastrado via painel"
+            )
 
         return """
             <script>
@@ -76,40 +134,17 @@ def chips_add():
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     try:
-        query = f"""
-            SELECT
-                sk_chip,
-                id_chip,
-                numero,
-                operadora,
-                operador,
-                status,
-                plano,
-
-                -- view já expõe
-                data_inicio,
-
-                ultima_recarga_data,
-                ultima_recarga_valor,
-                total_gasto,
-
-                -- alias padronizado
-                sk_aparelho AS sk_aparelho_atual,
-
-                observacao
+        df = bq._run(f"""
+            SELECT *
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
             LIMIT 1
-        """
-
-        df = bq._run(query)
+        """)
 
         if df.empty:
             return jsonify({"error": "Chip não encontrado"}), 404
 
-        return jsonify(
-            sanitize_df(df).iloc[0].to_dict()
-        )
+        return jsonify(sanitize_df(df).iloc[0].to_dict())
 
     except Exception as e:
         print("🚨 Erro ao buscar chip:", e)
@@ -127,17 +162,44 @@ def chips_update_json():
         if not data.get("sk_chip"):
             return jsonify({"error": "sk_chip não informado"}), 400
 
-        # normaliza vazios
+        sk_chip = data["sk_chip"]
+
         for k in list(data.keys()):
             if data[k] == "":
                 data[k] = None
 
-        # FRONT → MODELO FÍSICO
         if "data_inicio" in data:
             data["dt_inicio"] = data.pop("data_inicio")
 
-        # sk_aparelho_atual já vem correto do JS
+        # estado antes
+        antes = bq._run(f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE sk_chip = {sk_chip}
+        """).iloc[0].to_dict()
+
+        # atualiza
         bq.upsert_chip(data)
+
+        # estado depois
+        depois = bq._run(f"""
+            SELECT *
+            FROM `{PROJECT}.{DATASET}.dim_chip`
+            WHERE sk_chip = {sk_chip}
+        """).iloc[0].to_dict()
+
+        # registra diferenças
+        for campo, valor_novo in depois.items():
+            valor_antigo = antes.get(campo)
+            if str(valor_antigo) != str(valor_novo):
+                registrar_evento_chip(
+                    sk_chip=sk_chip,
+                    tipo_evento="ALTERACAO",
+                    campo=campo,
+                    valor_antigo=str(valor_antigo),
+                    valor_novo=str(valor_novo),
+                    observacao="Alteração via painel"
+                )
 
         return jsonify({"success": True})
 
@@ -159,9 +221,7 @@ def chips_timeline(sk_chip):
             ORDER BY data_evento DESC
         """)
 
-        return jsonify(
-            sanitize_df(df).to_dict(orient="records")
-        )
+        return jsonify(sanitize_df(df).to_dict(orient="records"))
 
     except Exception as e:
         print("🚨 Erro ao carregar timeline:", e)

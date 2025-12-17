@@ -17,7 +17,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 # 🔧 UTIL — EXECUTAR STORED PROCEDURE
 # ============================================================
 def call_sp(sql: str):
-    bq.client.query(sql).result()
+    bq.run(sql)
 
 
 # ============================================================
@@ -42,7 +42,6 @@ def chips_list():
 
 # ============================================================
 # ➕ CADASTRAR CHIP
-# SP: sp_upsert_chip(p_id_chip, p_numero, p_operadora, p_plano, p_status)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -82,7 +81,7 @@ def chips_add():
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     try:
-        df = bq._run(f"""
+        df = bq.run_df(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.vw_chips_painel`
             WHERE sk_chip = {sk_chip}
@@ -101,11 +100,6 @@ def chips_get_by_sk(sk_chip):
 
 # ============================================================
 # 💾 SALVAR EDIÇÃO
-# Regras:
-# - Front envia SOMENTE sk_chip
-# - id_chip é resolvido no backend
-# - Status só altera se mudar
-# - Aparelho só altera se vier no payload
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -120,7 +114,7 @@ def chips_update_json():
         # ----------------------------------------------------
         # 🔎 BUSCAR ESTADO ATUAL
         # ----------------------------------------------------
-        df_atual = bq._run(f"""
+        df_atual = bq.run_df(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
             WHERE sk_chip = {sk_chip}
@@ -132,7 +126,6 @@ def chips_update_json():
         atual = df_atual.iloc[0].to_dict()
         id_chip = atual["id_chip"]
 
-        # normaliza payload
         for k in list(payload.keys()):
             if payload[k] == "":
                 payload[k] = None
@@ -199,7 +192,7 @@ def chips_update_json():
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
     try:
-        df = bq._run(f"""
+        df = bq.run_df(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
             WHERE sk_chip = {sk_chip}

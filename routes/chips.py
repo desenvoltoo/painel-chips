@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔧 EXECUTAR STORED PROCEDURE (LOG + BLOQUEIO CONTROLADO)
+# 🔧 EXECUTAR STORED PROCEDURE (LOG CONTROLADO)
 # ============================================================
 def call_sp(sql: str):
     print("\n🔥 CALL SP ===============================")
@@ -44,7 +44,7 @@ def chips_list():
 
 
 # ============================================================
-# ➕ CADASTRAR CHIP
+# ➕ CADASTRAR CHIP (INSERT REAL)
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -56,12 +56,13 @@ def chips_add():
                 data[k] = None
 
         call_sp(f"""
-            CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+            CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
                 {f"'{data['id_chip']}'" if data.get("id_chip") else "NULL"},
-                {f"'{data['numero']}'" if data.get("numero") else "NULL"},
+                '{data["numero"]}',
                 {f"'{data['operadora']}'" if data.get("operadora") else "NULL"},
                 {f"'{data['plano']}'" if data.get("plano") else "NULL"},
-                {f"'{data['status']}'" if data.get("status") else "NULL"}
+                {f"'{data['status']}'" if data.get("status") else "NULL"},
+                'Painel'
             )
         """)
 
@@ -105,7 +106,6 @@ def chips_get_by_sk(sk_chip):
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
-
     try:
         payload = request.json or {}
         sk_chip = payload.get("sk_chip")
@@ -113,9 +113,6 @@ def chips_update_json():
         if not sk_chip:
             return jsonify({"error": "sk_chip ausente"}), 400
 
-        # ----------------------------------------------------
-        # 🔎 ESTADO ATUAL
-        # ----------------------------------------------------
         df_atual = bq.run_df(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -138,44 +135,56 @@ def chips_update_json():
             payload.get("numero") != atual.get("numero")
             or payload.get("operadora") != atual.get("operadora")
             or payload.get("plano") != atual.get("plano")
+            or payload.get("observacao") != atual.get("observacao")
         ):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-                    '{atual["id_chip"]}',
+                    {sk_chip},
                     {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
                     {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
                     {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
-                    '{atual["status"]}'
+                    {f"'{payload['observacao']}'" if payload.get("observacao") else "NULL"}
                 )
             """)
 
         # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE STATUS (5 PARÂMETROS — CORRETO)
+        # 🔹 ALTERAÇÃO DE STATUS
         # ----------------------------------------------------
         if payload.get("status") and payload["status"] != atual.get("status"):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                     {sk_chip},
                     '{payload["status"]}',
-                    CURRENT_DATE(),
                     'Painel',
                     'Alteração via painel'
                 )
             """)
 
         # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE APARELHO
+        # 🔹 VÍNCULO / DESVÍNCULO DE APARELHO
         # ----------------------------------------------------
         if "sk_aparelho_atual" in payload:
-            if payload["sk_aparelho_atual"] != atual.get("sk_aparelho_atual"):
-                call_sp(f"""
-                    CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
-                        {sk_chip},
-                        {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] else "NULL"},
-                        'Painel',
-                        'Troca de aparelho'
-                    )
-                """)
+            novo = payload.get("sk_aparelho_atual")
+            antigo = atual.get("sk_aparelho_atual")
+
+            if novo != antigo:
+                if novo:
+                    call_sp(f"""
+                        CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
+                            {sk_chip},
+                            {novo},
+                            'Painel',
+                            'Vínculo via painel'
+                        )
+                    """)
+                else:
+                    call_sp(f"""
+                        CALL `{PROJECT}.{DATASET}.sp_desvincular_aparelho_chip`(
+                            {sk_chip},
+                            'Painel',
+                            'Desvínculo via painel'
+                        )
+                    """)
 
         return jsonify({"success": True})
 

@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔧 EXECUTAR STORED PROCEDURE (LOG CONTROLADO)
+# 🔧 EXECUTAR STORED PROCEDURE (LOG + CONTROLE)
 # ============================================================
 def call_sp(sql: str):
     print("\n🔥 CALL SP ===============================")
@@ -79,7 +79,7 @@ def chips_add():
 
 
 # ============================================================
-# 🔍 BUSCAR CHIP (MODAL DE EDIÇÃO)
+# 🔍 BUSCAR CHIP (MODAL)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
@@ -102,7 +102,7 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# 💾 SALVAR EDIÇÃO (FLUXO ESTÁVEL + HISTÓRICO)
+# 💾 SALVAR EDIÇÃO (FLUXO CORRETO + HISTÓRICO)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -129,7 +129,7 @@ def chips_update_json():
                 payload[k] = None
 
         # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE DADOS BÁSICOS
+        # 🔹 ATUALIZA DADOS BÁSICOS
         # ----------------------------------------------------
         if (
             payload.get("numero") != atual.get("numero")
@@ -148,13 +148,14 @@ def chips_update_json():
             """)
 
         # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE STATUS
+        # 🔹 ALTERAÇÃO DE STATUS (5 PARÂMETROS — CORRETO)
         # ----------------------------------------------------
         if payload.get("status") and payload["status"] != atual.get("status"):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                     {sk_chip},
                     '{payload["status"]}',
+                    'status',
                     'Painel',
                     'Alteração via painel'
                 )

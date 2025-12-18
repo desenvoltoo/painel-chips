@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔧 EXECUTAR STORED PROCEDURE (LOG + CONTROLE)
+# 🔧 EXECUTAR STORED PROCEDURE (LOG)
 # ============================================================
 def call_sp(sql: str):
     print("\n🔥 CALL SP ===============================")
@@ -44,7 +44,7 @@ def chips_list():
 
 
 # ============================================================
-# ➕ CADASTRAR CHIP (INSERT REAL)
+# ➕ CADASTRAR CHIP
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -97,12 +97,12 @@ def chips_get_by_sk(sk_chip):
         return jsonify(sanitize_df(df).iloc[0].to_dict())
 
     except Exception as e:
-        print("🚨 Erro ao buscar chip:", e)
+        print("🚨 Erro modal:", e)
         return jsonify({"error": "Erro interno"}), 500
 
 
 # ============================================================
-# 💾 SALVAR EDIÇÃO (FLUXO CORRETO + HISTÓRICO)
+# 💾 ATUALIZAÇÃO (STATUS / APARELHO / DADOS)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -124,46 +124,19 @@ def chips_update_json():
 
         atual = df_atual.iloc[0].to_dict()
 
-        for k in payload:
-            if payload[k] == "":
-                payload[k] = None
-
-        # ----------------------------------------------------
-        # 🔹 ATUALIZA DADOS BÁSICOS
-        # ----------------------------------------------------
-        if (
-            payload.get("numero") != atual.get("numero")
-            or payload.get("operadora") != atual.get("operadora")
-            or payload.get("plano") != atual.get("plano")
-            or payload.get("observacao") != atual.get("observacao")
-        ):
-            call_sp(f"""
-                CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-                    {sk_chip},
-                    {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
-                    {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
-                    {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
-                    {f"'{payload['observacao']}'" if payload.get("observacao") else "NULL"}
-                )
-            """)
-
-        # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE STATUS (COM DATA DO STATUS)
-        # ----------------------------------------------------
+        # STATUS
         if payload.get("status") and payload["status"] != atual.get("status"):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                     {sk_chip},
                     '{payload["status"]}',
-                    CURRENT_DATE(),          -- ✅ data do status
+                    CURRENT_DATE(),
                     'Painel',
-                    'Alteração via painel'
+                    'Alteração de status'
                 )
             """)
 
-        # ----------------------------------------------------
-        # 🔹 VÍNCULO / DESVÍNCULO DE APARELHO
-        # ----------------------------------------------------
+        # APARELHO
         if "sk_aparelho_atual" in payload:
             novo = payload.get("sk_aparelho_atual")
             antigo = atual.get("sk_aparelho_atual")
@@ -190,12 +163,43 @@ def chips_update_json():
         return jsonify({"success": True})
 
     except Exception as e:
-        print("🚨 Erro ao atualizar chip:", e)
+        print("🚨 Erro update:", e)
         return jsonify({"error": str(e)}), 500
 
 
 # ============================================================
-# 🧵 TIMELINE / HISTÓRICO
+# 💰 REGISTRAR RECARGA (FALTAVA ISSO)
+# ============================================================
+@chips_bp.route("/chips/recarga", methods=["POST"])
+def chips_recarga():
+    try:
+        payload = request.json or {}
+
+        sk_chip = payload.get("sk_chip")
+        valor = payload.get("valor")
+        observacao = payload.get("observacao", "Recarga via painel")
+
+        if not sk_chip or not valor:
+            return jsonify({"error": "sk_chip e valor obrigatórios"}), 400
+
+        call_sp(f"""
+            CALL `{PROJECT}.{DATASET}.sp_registrar_recarga_chip`(
+                {sk_chip},
+                {valor},
+                'Painel',
+                '{observacao}'
+            )
+        """)
+
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print("🚨 Erro recarga:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================
+# 🧵 TIMELINE
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
@@ -210,5 +214,5 @@ def chips_timeline(sk_chip):
         return jsonify(sanitize_df(df).to_dict(orient="records"))
 
     except Exception as e:
-        print("🚨 Erro ao carregar timeline:", e)
+        print("🚨 Erro timeline:", e)
         return jsonify([]), 500

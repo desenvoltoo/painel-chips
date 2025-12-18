@@ -102,7 +102,7 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# 💾 ATUALIZAÇÃO (STATUS / APARELHO / DADOS)
+# 💾 ATUALIZAÇÃO COMPLETA (DADOS + STATUS + APARELHO)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -124,7 +124,30 @@ def chips_update_json():
 
         atual = df_atual.iloc[0].to_dict()
 
-        # STATUS
+        # ----------------------------------------------------
+        # 🔹 DADOS BÁSICOS (AGORA ATUALIZA!)
+        # ----------------------------------------------------
+        if (
+            payload.get("numero") != atual.get("numero")
+            or payload.get("operadora") != atual.get("operadora")
+            or payload.get("plano") != atual.get("plano")
+            or payload.get("observacao") != atual.get("observacao")
+            or payload.get("operador") != atual.get("operador")
+        ):
+            call_sp(f"""
+                CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
+                    {sk_chip},
+                    {f"'{payload['numero']}'" if payload.get("numero") else "NULL"},
+                    {f"'{payload['operadora']}'" if payload.get("operadora") else "NULL"},
+                    {f"'{payload['plano']}'" if payload.get("plano") else "NULL"},
+                    {f"'{payload['observacao']}'" if payload.get("observacao") else "NULL"},
+                    {f"'{payload['operador']}'" if payload.get("operador") else "NULL"}
+                )
+            """)
+
+        # ----------------------------------------------------
+        # 🔹 STATUS
+        # ----------------------------------------------------
         if payload.get("status") and payload["status"] != atual.get("status"):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
@@ -136,7 +159,9 @@ def chips_update_json():
                 )
             """)
 
-        # APARELHO
+        # ----------------------------------------------------
+        # 🔹 APARELHO
+        # ----------------------------------------------------
         if "sk_aparelho_atual" in payload:
             novo = payload.get("sk_aparelho_atual")
             antigo = atual.get("sk_aparelho_atual")
@@ -168,7 +193,7 @@ def chips_update_json():
 
 
 # ============================================================
-# 💰 REGISTRAR RECARGA (FALTAVA ISSO)
+# 💰 REGISTRAR RECARGA
 # ============================================================
 @chips_bp.route("/chips/recarga", methods=["POST"])
 def chips_recarga():

@@ -148,14 +148,14 @@ def chips_update_json():
             """)
 
         # ----------------------------------------------------
-        # 🔹 ALTERAÇÃO DE STATUS (5 PARÂMETROS — CORRETO)
+        # 🔹 ALTERAÇÃO DE STATUS (COM DATA DO STATUS)
         # ----------------------------------------------------
         if payload.get("status") and payload["status"] != atual.get("status"):
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                     {sk_chip},
                     '{payload["status"]}',
-                    'status',
+                    CURRENT_DATE(),          -- ✅ data do status
                     'Painel',
                     'Alteração via painel'
                 )

@@ -1,10 +1,10 @@
 # routes/chips.py
 # -*- coding: utf-8 -*-
 
+import os
 from flask import Blueprint, render_template, request, jsonify
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
-import os
 
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
@@ -14,7 +14,7 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 
 
 # ============================================================
-# 🔧 EXECUTAR STORED PROCEDURE
+# 🔧 EXECUTAR STORED PROCEDURE (LOG + BLOQUEANTE)
 # ============================================================
 def call_sp(sql: str):
     print("🔥 CALL SP:\n", sql)
@@ -41,6 +41,7 @@ def chips_list():
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
+
     data = request.form.to_dict()
 
     for k in data:
@@ -66,10 +67,11 @@ def chips_add():
 
 
 # ============================================================
-# 🔍 BUSCAR CHIP POR SK
+# 🔍 BUSCAR CHIP POR SK (MODAL)
 # ============================================================
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
+
     df = bq.run_df(f"""
         SELECT *
         FROM `{PROJECT}.{DATASET}.vw_chips_painel`
@@ -84,7 +86,7 @@ def chips_get_by_sk(sk_chip):
 
 
 # ============================================================
-# 💾 SALVAR EDIÇÃO (ARQUITETURA BLINDADA)
+# 💾 SALVAR EDIÇÃO (BLINDADO)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -95,6 +97,9 @@ def chips_update_json():
     if not sk_chip:
         return jsonify({"error": "sk_chip ausente"}), 400
 
+    # --------------------------------------------------------
+    # 🔎 ESTADO ATUAL
+    # --------------------------------------------------------
     df_atual = bq.run_df(f"""
         SELECT *
         FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -106,13 +111,13 @@ def chips_update_json():
 
     atual = df_atual.iloc[0].to_dict()
 
-    # Normalização
+    # normalização
     for k in payload:
         if payload[k] == "":
             payload[k] = None
 
     # ========================================================
-    # 🔹 ALTERAÇÃO DE DADOS BÁSICOS
+    # 🔹 DADOS BÁSICOS
     # ========================================================
     if (
         payload.get("numero") != atual.get("numero") or
@@ -129,14 +134,28 @@ def chips_update_json():
             )
         """)
 
+        call_sp(f"""
+            CALL `{PROJECT}.{DATASET}.sp_registrar_evento_chip`(
+                {sk_chip},
+                'DADOS',
+                'ALTERACAO_DADOS',
+                'VALOR_ANTIGO',
+                'VALOR_NOVO',
+                'Painel',
+                'Alteração de dados do chip'
+            )
+        """)
+
     # ========================================================
-    # 🔹 STATUS — CORREÇÃO DEFINITIVA (5 PARÂMETROS)
+    # 🔹 STATUS (ASSINATURA CORRETA)
     # ========================================================
     if payload.get("status") and payload["status"] != atual.get("status"):
+
         call_sp(f"""
             CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
                 {sk_chip},
                 '{payload["status"]}',
+                CURRENT_DATE(),
                 'Painel',
                 'Alteração via painel',
                 'sistema'
@@ -148,10 +167,12 @@ def chips_update_json():
     # ========================================================
     if "sk_aparelho_atual" in payload:
         if payload["sk_aparelho_atual"] != atual.get("sk_aparelho_atual"):
+
             call_sp(f"""
                 CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
                     {sk_chip},
                     {payload["sk_aparelho_atual"] if payload["sk_aparelho_atual"] else "NULL"},
+                    CURRENT_DATE(),
                     'Painel',
                     'Troca de aparelho',
                     'sistema'
@@ -166,6 +187,7 @@ def chips_update_json():
 # ============================================================
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
+
     df = bq.run_df(f"""
         SELECT *
         FROM `{PROJECT}.{DATASET}.vw_chip_timeline`

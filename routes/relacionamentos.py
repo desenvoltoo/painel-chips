@@ -22,7 +22,7 @@ def to_int(v):
         if v.lower() in ["", "none", "null", "nan"]:
             return None
         return int(float(v))
-    except:
+    except Exception:
         return None
 
 
@@ -41,7 +41,7 @@ def is_null(v):
 def relacionamentos_home():
     try:
         # ====================================================
-        # 1) VIEW DE RELACIONAMENTOS
+        # 1) VIEW RELACIONAMENTOS
         # ====================================================
         df = sanitize_df(
             bq.run_df(f"""
@@ -86,7 +86,7 @@ def relacionamentos_home():
             )
 
         # ====================================================
-        # 3) AGRUPAMENTO POR APARELHO
+        # 3) AGRUPAR POR APARELHO
         # ====================================================
         aparelhos = []
 
@@ -110,16 +110,16 @@ def relacionamentos_home():
                 else 0
             )
 
-            capacidade_total = (cap_bus or 0) + (cap_norm or 0)
+            capacidade_total = cap_bus + cap_norm
 
-            # --------------------------------------------
+            # ------------------------------------------------
             # CRIA TODOS OS SLOTS VAZIOS
-            # --------------------------------------------
+            # ------------------------------------------------
             slots = {i: None for i in range(1, capacidade_total + 1)}
 
-            # --------------------------------------------
+            # ------------------------------------------------
             # PREENCHE SLOTS OCUPADOS
-            # --------------------------------------------
+            # ------------------------------------------------
             for _, r in g.iterrows():
                 sk_chip = to_int(r.get("sk_chip"))
                 slot = to_int(r.get("slot_whatsapp"))
@@ -143,8 +143,8 @@ def relacionamentos_home():
                 "marca": marca,
                 "modelo": modelo,
                 "capacidade_total": capacidade_total,
-                "cap_whats_business": cap_bus or 0,
-                "cap_whats_normal": cap_norm or 0,
+                "cap_whats_business": cap_bus,
+                "cap_whats_normal": cap_norm,
                 "slots": [
                     {"slot": s, "chip": slots[s]}
                     for s in range(1, capacidade_total + 1)
@@ -163,7 +163,7 @@ def relacionamentos_home():
 
 
 # ============================================================
-# VINCULAR CHIP (SP OFICIAL)
+# VINCULAR CHIP (COM SLOT — SP FINAL)
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/vincular", methods=["POST"])
 def relacionamentos_vincular():
@@ -172,14 +172,16 @@ def relacionamentos_vincular():
 
         sk_chip = to_int(data.get("sk_chip"))
         sk_aparelho = to_int(data.get("sk_aparelho"))
+        slot = to_int(data.get("slot"))
 
-        if not sk_chip or not sk_aparelho:
+        if not sk_chip or not sk_aparelho or not slot:
             return jsonify({"ok": False, "error": "Dados inválidos"}), 400
 
         bq.run(f"""
             CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
                 {sk_chip},
                 {sk_aparelho},
+                {slot},
                 'Painel',
                 'Vínculo WhatsApp'
             )
@@ -193,7 +195,7 @@ def relacionamentos_vincular():
 
 
 # ============================================================
-# DESVINCULAR CHIP (SP OFICIAL)
+# DESVINCULAR CHIP
 # ============================================================
 @relacionamentos_bp.route("/relacionamentos/desvincular", methods=["POST"])
 def relacionamentos_desvincular():

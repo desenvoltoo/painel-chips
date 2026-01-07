@@ -3,6 +3,7 @@
 
 from flask import Blueprint, render_template
 import os
+from collections import Counter
 
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
@@ -50,32 +51,71 @@ def dashboard():
 
     chips_ativos = sum(
         1 for x in tabela
-        if (x.get("status") or "").upper() == "ATIVO"
+        if (x.get("status") or "").strip().upper() == "ATIVO"
     )
 
     disparando = sum(
         1 for x in tabela
-        if (x.get("status") or "").upper() == "DISPARANDO"
+        if (x.get("status") or "").strip().upper() == "DISPARANDO"
     )
 
     banidos = sum(
         1 for x in tabela
-        if (x.get("status") or "").upper() == "BANIDO"
+        if (x.get("status") or "").strip().upper() == "BANIDO"
     )
+
+    # ===========================================================
+    # CONTAGEM POR STATUS (SUBSTITUI GRÁFICOS)
+    # ===========================================================
+    status_counts_raw = Counter(
+        (x.get("status") or "SEM STATUS").strip().upper()
+        for x in tabela
+    )
+
+    # Ordem "inteligente" (você pode ajustar como quiser)
+    status_order = [
+        "ATIVO",
+        "DISPARANDO",
+        "MATURANDO",
+        "DISPONIVEL",
+        "DISPONÍVEL",
+        "RESTRINGIDO",
+        "BANIDO",
+        "CANCELADO",
+        "INATIVO",
+        "SEM STATUS",
+    ]
+
+    # Monta dict final respeitando a ordem definida e depois adiciona os "extras"
+    status_counts = {}
+
+    # 1) Primeiro, os da ordem (se existirem)
+    for st in status_order:
+        if st in status_counts_raw:
+            status_counts[st] = int(status_counts_raw[st])
+
+    # 2) Depois, qualquer outro status que apareça no banco (não previsto na ordem)
+    extras = sorted(
+        [k for k in status_counts_raw.keys() if k not in status_counts],
+        key=lambda s: (-status_counts_raw[s], s)
+    )
+
+    for st in extras:
+        status_counts[st] = int(status_counts_raw[st])
 
     # ===========================================================
     # FILTROS
     # ===========================================================
     lista_status = sorted({
-        (x.get("status") or "").upper()
+        (x.get("status") or "").strip().upper()
         for x in tabela
-        if x.get("status")
+        if (x.get("status") or "").strip()
     })
 
     lista_operadora = sorted({
-        x.get("operadora")
+        (x.get("operadora") or "").strip()
         for x in tabela
-        if x.get("operadora")
+        if (x.get("operadora") or "").strip()
     })
 
     # ===========================================================
@@ -118,9 +158,15 @@ def dashboard():
         disparando=disparando,
         banidos=banidos,
 
+        # filtros
         lista_status=lista_status,
         lista_operadora=lista_operadora,
 
+        # alertas
         alerta_recarga=alerta_recarga,
         qtd_alerta=len(alerta_recarga),
+
+        # NOVO: cards numéricos por status
+        status_counts=status_counts,
+        status_order=status_order,
     )

@@ -139,8 +139,8 @@ function renderRows(lista) {
                         ${c.status ?? "-"}
                     </span>
                 </td>
-                <td>${c.quantidade_banimentos ?? "-"}</td>
-                <td>${formatDate(c.data_ultimo_banimento)}</td>
+                <td>${c.qt_banimentos ?? "-"}</td>
+                <td>${formatDate(c.dt_banimentos)}</td>
                 <td>${c.plano ?? "-"}</td>
                 <td>${formatDate(c.ultima_recarga_data)}</td>
                 <td>${c.ultima_recarga_valor ?? "-"}</td>
@@ -210,8 +210,8 @@ function abrirModalEdicao(chip) {
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
-    setValue("modal_quantidade_banimentos", chip.quantidade_banimentos);
-    setValue("modal_data_ultimo_banimento", formatDate(chip.data_ultimo_banimento));
+    setValue("modal_quantidade_banimentos", chip.qt_banimentos);
+    setValue("modal_data_ultimo_banimento", formatDate(chip.dt_banimentos));
     setValue("modal_data_inicio", formatDate(chip.dt_inicio || chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
@@ -238,8 +238,8 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
     data.status = document.getElementById("modal_status").value;
 
-    data.quantidade_banimentos = Number(document.getElementById("modal_quantidade_banimentos").value);
-    data.data_ultimo_banimento = document.getElementById("modal_data_ultimo_banimento").value;
+    data.qt_banimentos = Number(document.getElementById("modal_qt_banimentos").value);
+    data.dt_banimentos = document.getElementById("modal_dt_banimentos").value;
     
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;

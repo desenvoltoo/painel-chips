@@ -210,8 +210,8 @@ function abrirModalEdicao(chip) {
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
-    setValue("modal_quantidade_banimentos", chip.qt_banimentos);
-    setValue("modal_data_ultimo_banimento", formatDate(chip.dt_banimentos));
+    setValue("modal_qt_banimentos", chip.qt_banimentos);
+    setValue("modal_dt_banimentos", formatDate(chip.dt_banimentos));
     setValue("modal_data_inicio", formatDate(chip.dt_inicio || chip.data_inicio));
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);

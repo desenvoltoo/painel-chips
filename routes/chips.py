@@ -114,7 +114,7 @@ def chips_add():
         operadora = norm_str(data.get("operadora"))
         plano = norm_str(data.get("plano"))
         status = norm_str(data.get("status"))
-        qt_banimentos = data.get("qt_banimentos")
+        qt_banimentos = norm_str(data.get("qt_banimentos"))
         dt_banimentos = norm_str(data.get("dt_banimentos"))
         observacao = norm_str(data.get("observacao"))  # se seu form tiver esse campo
         origem = "Painel"
@@ -134,6 +134,8 @@ def chips_add():
                 {sql_str(operadora)},
                 {sql_str(plano)},
                 {sql_str(status)},
+                {sql_str(qt_banimentos)},
+                {sql_str(dt_banimentos)},
                 {sql_str(observacao)},
                 {sql_str(origem)}
             )
@@ -270,10 +272,7 @@ def chips_update_json():
                     'Alteração via modal (status/data)'
                 )
             """)
-   # ----------------------------------------------------
-        # 🔹 2.b) CAMPOS ADICIONAIS RENOMEADOS: qt_banimentos, dt_banimentos
-        # Atualiza DIM diretamente se houver alteração
-        # ----------------------------------------------------
+
        # ----------------------------------------------------
         # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, dt_banimentos
         # Atualiza por último para não ser sobrescrito pelas SPs acima.
@@ -300,6 +299,7 @@ def chips_update_json():
                     dt_banimentos = {sql_date(dt_banimentos_nova)}
                 WHERE sk_chip = {int(sk_chip)}
             """)
+            
         # ----------------------------------------------------
         # 🔹 3) APARELHO (vincular/desvincular)
         # sp_vincular_aparelho_chip(p_sk_chip, p_sk_aparelho, p_slot_whatsapp, p_origem, p_observacao)

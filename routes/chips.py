@@ -114,6 +114,8 @@ def chips_add():
         operadora = norm_str(data.get("operadora"))
         plano = norm_str(data.get("plano"))
         status = norm_str(data.get("status"))
+        qt_banimentos = data.get("qt_banimentos")
+        dt_banimentos = norm_str(data.get("dt_banimentos"))
         observacao = norm_str(data.get("observacao"))  # se seu form tiver esse campo
         origem = "Painel"
 
@@ -137,6 +139,14 @@ def chips_add():
             )
         """)
 
+        # Campos complementares ainda não fazem parte da assinatura da SP de insert.
+        # Atualizamos na DIM logo após o cadastro para persistir o que veio no formulário.
+        call_sp(f"""
+            UPDATE `{PROJECT}.{DATASET}.dim_chip`
+            SET qt_banimentos = {sql_int(qt_banimentos)},
+                dt_banimentos = {sql_date(dt_banimentos)}
+            WHERE id_chip = {sql_str(id_chip)}
+        """)
         return """
             <script>
                 alert('Chip cadastrado com sucesso!');

@@ -227,33 +227,7 @@ def chips_update_json():
                 )
             """)
 
-        # ----------------------------------------------------
-        # 🔹 1.b) CAMPOS ADICIONAIS RENOMEADOS: qt_banimentos, dt_banimentos
-        # Atualiza DIM diretamente se houver alteração
-        # ----------------------------------------------------
-        qt_nova_raw = payload.get("qt_banimentos")
-        dt_banimentos_nova_raw = payload.get("dt_banimentos")
-
-        qt_nova = None
-        try:
-            if qt_nova_raw is not None and str(qt_nova_raw).strip() != "":
-                qt_nova = int(float(qt_nova_raw))
-        except Exception:
-            qt_nova = None
-
-        dt_banimentos_nova = norm_str(dt_banimentos_nova_raw)
-
-        mudou_qt = (qt_nova is not None and str(qt_nova) != str(atual.get("qt_banimentos")))
-        mudou_dt = (dt_banimentos_nova is not None and dt_banimentos_nova != (str(atual.get("dt_banimentos")) if atual.get("dt_banimentos") is not None else None))
-
-        if mudou_qt or mudou_dt:
-            call_sp(f"""
-                UPDATE `{PROJECT}.{DATASET}.dim_chip`
-                SET qt_banimentos = {sql_int(qt_nova)},
-                    dt_banimentos = {sql_date(dt_banimentos_nova)}
-                WHERE sk_chip = {int(sk_chip)}
-            """)
-            
+     
         # ----------------------------------------------------
         # 🔹 2) STATUS + DATA (sp_alterar_status_chip)
         # sp_alterar_status_chip(p_sk_chip, p_novo_status, p_data_status, p_origem, p_observacao)
@@ -286,7 +260,36 @@ def chips_update_json():
                     'Alteração via modal (status/data)'
                 )
             """)
+   # ----------------------------------------------------
+        # 🔹 2.b) CAMPOS ADICIONAIS RENOMEADOS: qt_banimentos, dt_banimentos
+        # Atualiza DIM diretamente se houver alteração
+        # ----------------------------------------------------
+       # ----------------------------------------------------
+        # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, dt_banimentos
+        # Atualiza por último para não ser sobrescrito pelas SPs acima.
+        # ----------------------------------------------------
+        qt_nova_raw = payload.get("qt_banimentos")
+        qt_nova = None
+        try:
+            if qt_nova_raw is not None and str(qt_nova_raw).strip() != "":
+                qt_nova = int(float(qt_nova_raw))
+        except Exception:
+            qt_nova = None
 
+        dt_banimentos_nova = norm_str(payload.get("dt_banimentos"))
+        qt_atual = None if atual.get("qt_banimentos") is None else int(float(atual.get("qt_banimentos")))
+        dt_banimentos_atual = (str(atual.get("dt_banimentos")) if atual.get("dt_banimentos") is not None else None)
+
+        mudou_qt = (qt_nova != qt_atual)
+        mudou_dt = (dt_banimentos_nova != dt_banimentos_atual)
+
+        if mudou_qt or mudou_dt:
+            call_sp(f"""
+                UPDATE `{PROJECT}.{DATASET}.dim_chip`
+                SET qt_banimentos = {sql_int(qt_nova)},
+                    dt_banimentos = {sql_date(dt_banimentos_nova)}
+                WHERE sk_chip = {int(sk_chip)}
+            """)
         # ----------------------------------------------------
         # 🔹 3) APARELHO (vincular/desvincular)
         # sp_vincular_aparelho_chip(p_sk_chip, p_sk_aparelho, p_slot_whatsapp, p_origem, p_observacao)

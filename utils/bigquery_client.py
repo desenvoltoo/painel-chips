@@ -98,12 +98,21 @@ class BigQueryClient:
     # 🔧 EXECUTAR STORED PROCEDURE (UTIL DO PAINEL)
     # ========================================================
     def call_sp(self, sp_name: str, params: str):
-        """
-        Exemplo:
-        call_sp(
-            "sp_upsert_chip",
+    """Executa uma Stored Procedure no dataset configurado.
+
+    Args:
+        sp_name: nome da SP (sem projeto/dataset), ex.: "sp_upsert_chip".
+        params: string já formatada com os parâmetros, ex.:
             "'ID123','11999999999','VIVO','PRE','ATIVO'"
+
+    Exemplo:
+        bq.call_sp(
+            "sp_upsert_chip",
+            "123,'11999999999','VIVO','PRE','Obs','Operador'"
         )
+    """
+    sql = f"CALL {self.project}.{self.dataset}.{sp_name}({params})"
+    return self.run(sql)
 
 
     # ========================================================

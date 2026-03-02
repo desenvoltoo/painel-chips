@@ -303,7 +303,6 @@ def chips_update_json():
         mudou_qt_disparos = (qt_disparos_nova != qt_disparos_atual)
         mudou_dt = (dt_banimentos_nova != dt_banimentos_atual)
 
-        if mudou_qt or mudou_dt:
         if mudou_qt or mudou_qt_disparos or mudou_dt:
             call_sp(f"""
                 UPDATE `{PROJECT}.{DATASET}.dim_chip`

@@ -154,7 +154,6 @@ def chips_add():
                 </script>
             """
 
-        # ✅ MANTIVE seu CALL atual (9 params).
         call_sp(f"""
             CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
                 {sql_str(id_chip)},

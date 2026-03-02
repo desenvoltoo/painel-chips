@@ -3,6 +3,7 @@
 
 import os
 from flask import Blueprint, render_template, request, jsonify
+
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
@@ -16,19 +17,47 @@ DATASET = os.getenv("BQ_DATASET", "marts")
 # ============================================================
 # Helpers
 # ============================================================
+def _get_bq_client():
+    """
+    Garante que temos um client BigQuery pronto.
+    Compatível com implementações diferentes de BigQueryClient.
+    """
+    # Caso exista atributo client já setado
+    client = getattr(bq, "client", None)
+    if client is not None:
+        return client
+
+    # Caso exista método _get_client() (bem comum)
+    getter = getattr(bq, "_get_client", None)
+    if callable(getter):
+        client = getter()
+        # se o objeto guarda em bq.client depois, ótimo; se não, tudo bem
+        return client
+
+    raise RuntimeError("BigQueryClient não expõe client nem _get_client()")
+
+
 def call_sp(sql: str):
-    print("\n🔥 CALL SP ===============================")
+    print("\n🔥 SQL ===============================")
     print(sql)
-    print("========================================\n")
-    return bq.client.query(sql).result()
+    print("====================================\n")
+    client = _get_bq_client()
+    return client.query(sql).result()
 
 
 def sql_str(v):
+    """
+    String segura para BigQuery:
+    - NULL se vazio/None
+    - Escapa aspas simples com '' (padrão SQL)
+    """
     if v is None:
         return "NULL"
-    v = str(v)
-    v = v.replace("\\", "\\\\").replace("'", "\\'")
-    return f"'{v}'"
+    s = str(v).strip()
+    if s == "" or s.lower() in ["none", "null", "nan"]:
+        return "NULL"
+    s = s.replace("\\", "\\\\").replace("'", "''")
+    return f"'{s}'"
 
 
 def sql_int(v):
@@ -51,14 +80,13 @@ def sql_float(v):
 
 def sql_date(v):
     """
-    Espera "YYYY-MM-DD" ou date-like; retorna DATE('YYYY-MM-DD') ou NULL
+    Espera "YYYY-MM-DD" (string). Retorna DATE('YYYY-MM-DD') ou NULL
     """
     if v is None:
         return "NULL"
     s = str(v).strip()
     if s == "" or s.lower() in ["none", "null", "nan"]:
         return "NULL"
-    # se vier "2026-01-05", ok
     return f"DATE('{s}')"
 
 
@@ -92,23 +120,21 @@ def chips_list():
 
 
 # ============================================================
-# ➕ CADASTRAR CHIP  (CORRIGIDO: bate com sp_insert_chip)
-# sp_insert_chip(
-#   p_id_chip STRING,
-#   p_numero STRING,
-#   p_operadora STRING,
-#   p_plano STRING,
-#   p_status STRING,
-#   p_observacao STRING,
-#   p_origem STRING
-# )
+# ➕ CADASTRAR CHIP
+#
+# ⚠️ ATENÇÃO:
+# Você comentou uma assinatura de 7 params, mas está chamando 9 params.
+# Garanta que a SP no BigQuery bate com o CALL abaixo.
+#
+# Se a sua SP for MESMO só 7 params:
+#   (p_id_chip, p_numero, p_operadora, p_plano, p_status, p_observacao, p_origem)
+# então use o CALL ALTERNATIVO (comentado logo abaixo).
 # ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
     try:
         data = request.form.to_dict()
 
-        # normaliza vazios pra NULL
         id_chip = norm_str(data.get("id_chip"))
         numero = norm_str(data.get("numero"))
         operadora = norm_str(data.get("operadora"))
@@ -117,7 +143,7 @@ def chips_add():
         qt_disparos = norm_str(data.get("qt_disparos"))
         qt_banimentos = norm_str(data.get("qt_banimentos"))
         dt_banimentos = norm_str(data.get("dt_banimentos"))
-        observacao = norm_str(data.get("observacao"))  # se seu form tiver esse campo
+        observacao = norm_str(data.get("observacao"))
         origem = "Painel"
 
         if not numero:
@@ -128,6 +154,7 @@ def chips_add():
                 </script>
             """
 
+        # ✅ MANTIVE seu CALL atual (9 params).
         call_sp(f"""
             CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
                 {sql_str(id_chip)},
@@ -142,15 +169,28 @@ def chips_add():
             )
         """)
 
-        # Campos complementares ainda não fazem parte da assinatura da SP de insert.
-        # Atualizamos na DIM logo após o cadastro para persistir o que veio no formulário.
+        # 🔁 CALL alternativo caso sua SP seja só 7 params:
+        # call_sp(f"""
+        #     CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
+        #         {sql_str(id_chip)},
+        #         {sql_str(numero)},
+        #         {sql_str(operadora)},
+        #         {sql_str(plano)},
+        #         {sql_str(status)},
+        #         {sql_str(observacao)},
+        #         {sql_str(origem)}
+        #     )
+        # """)
+
+        # ✅ Correção SQL: faltava vírgula após qt_disparos
         call_sp(f"""
             UPDATE `{PROJECT}.{DATASET}.dim_chip`
-            SET qt_disparos = {sql_int(qt_disparos)}
+            SET qt_disparos = {sql_int(qt_disparos)},
                 qt_banimentos = {sql_int(qt_banimentos)},
                 dt_banimentos = {sql_date(dt_banimentos)}
             WHERE id_chip = {sql_str(id_chip)}
         """)
+
         return """
             <script>
                 alert('Chip cadastrado com sucesso!');
@@ -188,8 +228,6 @@ def chips_get_by_sk(sk_chip):
 
 # ============================================================
 # 💾 ATUALIZAÇÃO COMPLETA (DADOS + STATUS + DATA + APARELHO)
-# - ✅ muda dt_inicio mesmo sem mudar status
-# - ✅ corrige sp_vincular_aparelho_chip (inclui slot_whatsapp)
 # ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
@@ -200,7 +238,6 @@ def chips_update_json():
         if not sk_chip:
             return jsonify({"error": "sk_chip ausente"}), 400
 
-        # pega atual na DIM (fonte da verdade)
         df_atual = bq.run_df(f"""
             SELECT *
             FROM `{PROJECT}.{DATASET}.dim_chip`
@@ -214,8 +251,7 @@ def chips_update_json():
         atual = df_atual.iloc[0].to_dict()
 
         # ----------------------------------------------------
-        # 🔹 1) DADOS BÁSICOS (sp_upsert_chip)
-        # sp_upsert_chip(p_sk_chip, p_numero, p_operadora, p_plano, p_observacao, p_operador)
+        # 1) DADOS BÁSICOS (sp_upsert_chip)
         # ----------------------------------------------------
         numero_novo = norm_str(payload.get("numero"))
         operadora_novo = norm_str(payload.get("operadora"))
@@ -241,25 +277,17 @@ def chips_update_json():
                 )
             """)
 
-     
         # ----------------------------------------------------
-        # 🔹 2) STATUS + DATA (sp_alterar_status_chip)
-        # sp_alterar_status_chip(p_sk_chip, p_novo_status, p_data_status, p_origem, p_observacao)
-        #
-        # ✅ regra nova: se mudar a data (dt_inicio) chama a SP mesmo com status igual
+        # 2) STATUS + DATA (sp_alterar_status_chip)
         # ----------------------------------------------------
         status_atual = norm_str(atual.get("status"))
-        dt_inicio_atual = atual.get("dt_inicio")  # pode ser date/datetime
+        dt_inicio_atual = atual.get("dt_inicio")
         dt_inicio_atual_str = str(dt_inicio_atual) if dt_inicio_atual is not None else None
 
-        status_payload_raw = payload.get("status")
-        status_payload = norm_str(status_payload_raw)
-
-        # se o usuário não mandou status, mantém o atual
+        status_payload = norm_str(payload.get("status"))
         status_final = status_payload if status_payload is not None else status_atual
 
-        dt_inicio_payload_raw = payload.get("dt_inicio")  # esperado "YYYY-MM-DD"
-        dt_inicio_payload_str = norm_str(dt_inicio_payload_raw)
+        dt_inicio_payload_str = norm_str(payload.get("dt_inicio"))
 
         mudou_status = (status_payload is not None and status_payload != status_atual)
         mudou_data = (dt_inicio_payload_str is not None and dt_inicio_payload_str != dt_inicio_atual_str)
@@ -275,13 +303,15 @@ def chips_update_json():
                 )
             """)
 
-     # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, qt_disparos, dt_banimentos
-        # Atualiza por último para não ser sobrescrito pelas SPs acima.
+        # ----------------------------------------------------
+        # 2b) CAMPOS ADICIONAIS (qt_banimentos, qt_disparos, dt_banimentos)
         # ----------------------------------------------------
         qt_disparos_nova_raw = payload.get("qt_disparos")
         qt_nova_raw = payload.get("qt_banimentos")
+
         qt_nova = None
         qt_disparos_nova = None
+
         try:
             if qt_nova_raw is not None and str(qt_nova_raw).strip() != "":
                 qt_nova = int(float(qt_nova_raw))
@@ -295,6 +325,7 @@ def chips_update_json():
             qt_disparos_nova = None
 
         dt_banimentos_nova = norm_str(payload.get("dt_banimentos"))
+
         qt_atual = None if atual.get("qt_banimentos") is None else int(float(atual.get("qt_banimentos")))
         qt_disparos_atual = None if atual.get("qt_disparos") is None else int(float(atual.get("qt_disparos")))
         dt_banimentos_atual = (str(atual.get("dt_banimentos")) if atual.get("dt_banimentos") is not None else None)
@@ -311,23 +342,20 @@ def chips_update_json():
                     dt_banimentos = {sql_date(dt_banimentos_nova)}
                 WHERE sk_chip = {int(sk_chip)}
             """)
-            
+
         # ----------------------------------------------------
-        # 🔹 3) APARELHO (vincular/desvincular)
-        # sp_vincular_aparelho_chip(p_sk_chip, p_sk_aparelho, p_slot_whatsapp, p_origem, p_observacao)
-        # sp_desvincular_aparelho_chip(p_sk_chip, p_origem, p_observacao)
+        # 3) APARELHO (vincular/desvincular)
         # ----------------------------------------------------
         if "sk_aparelho_atual" in payload:
             novo_aparelho = payload.get("sk_aparelho_atual")
             antigo_aparelho = atual.get("sk_aparelho_atual")
 
-            # normaliza (None, "", etc)
             novo_aparelho = None if str(novo_aparelho).strip() in ["", "None", "none", "null", "NULL"] else novo_aparelho
             antigo_aparelho = None if str(antigo_aparelho).strip() in ["", "None", "none", "null", "NULL"] else antigo_aparelho
 
             if str(novo_aparelho) != str(antigo_aparelho):
                 if novo_aparelho is not None:
-                    slot = payload.get("slot_whatsapp")  # obrigatório no vínculo
+                    slot = payload.get("slot_whatsapp")
                     if slot in [None, "", "None", "null", "NULL"]:
                         return jsonify({"error": "slot_whatsapp obrigatório ao vincular"}), 400
 
@@ -358,7 +386,6 @@ def chips_update_json():
 
 # ============================================================
 # 💰 REGISTRAR RECARGA
-# sp_registrar_recarga_chip(p_sk_chip, p_valor, p_origem, p_observacao)
 # ============================================================
 @chips_bp.route("/chips/recarga", methods=["POST"])
 def chips_recarga():

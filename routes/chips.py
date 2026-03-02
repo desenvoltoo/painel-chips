@@ -278,8 +278,8 @@ def chips_update_json():
      # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, qt_disparos, dt_banimentos
         # Atualiza por último para não ser sobrescrito pelas SPs acima.
         # ----------------------------------------------------
-        qt_nova_raw = payload.get("qt_banimentos")
         qt_disparos_nova_raw = payload.get("qt_disparos")
+        qt_nova_raw = payload.get("qt_banimentos")
         qt_nova = None
         qt_disparos_nova = None
         try:

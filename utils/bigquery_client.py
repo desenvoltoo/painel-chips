@@ -13,7 +13,6 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 # BIGQUERY CLIENT — LEITURA + EXECUÇÃO DE SPs
 # ============================================================
 class BigQueryClient:
-
     def __init__(self):
         self.client = None
         self.project = PROJECT
@@ -22,11 +21,10 @@ class BigQueryClient:
     def _get_client(self):
         if self.client is None:
             self.client = bigquery.Client(
-                project=PROJECT,
+                project=self.project,
                 location=LOCATION
             )
         return self.client
-
 
     # ========================================================
     # EXECUÇÃO GENÉRICA (SEM DATAFRAME)
@@ -34,7 +32,6 @@ class BigQueryClient:
     def run(self, sql: str):
         print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "=" * 80)
         return self._get_client().query(sql).result()
-
 
     # ========================================================
     # EXECUÇÃO COM DATAFRAME (LEITURA) — SUPORTE TOTAL A PARAMS
@@ -48,9 +45,7 @@ class BigQueryClient:
         # params como LISTA de ScalarQueryParameter
         # --------------------------------------------
         if isinstance(params, list):
-            job_config = bigquery.QueryJobConfig(
-                query_parameters=params
-            )
+            job_config = bigquery.QueryJobConfig(query_parameters=params)
 
         # --------------------------------------------
         # params como DICT simples
@@ -61,7 +56,7 @@ class BigQueryClient:
                     bigquery.ScalarQueryParameter(
                         name=k,
                         type_="INT64" if isinstance(v, int) else "STRING",
-                        value=v
+                        value=v,
                     )
                     for k, v in params.items()
                 ]
@@ -74,15 +69,13 @@ class BigQueryClient:
             job_config = None
 
         else:
-            raise TypeError(
-                "params deve ser dict, list[ScalarQueryParameter] ou None"
-            )
+            raise TypeError("params deve ser dict, list[ScalarQueryParameter] ou None")
 
         job = self._get_client().query(sql, job_config=job_config)
         df = job.result().to_dataframe(create_bqstorage_client=False)
 
+        # normaliza NaN -> None (pra JSON / Jinja)
         return df.astype(object).where(pd.notnull(df), None)
-
 
     # ========================================================
     # LEITURA DE VIEWS (PADRÃO DO PAINEL)
@@ -93,27 +86,26 @@ class BigQueryClient:
             FROM `{self.project}.{self.dataset}.{view_name}`
         """)
 
-
     # ========================================================
     # 🔧 EXECUTAR STORED PROCEDURE (UTIL DO PAINEL)
     # ========================================================
-    def call_sp(self, sp_name: str, params: str):
-    """Executa uma Stored Procedure no dataset configurado.
+    def call_sp(self, sp_name: str, params: str = ""):
+        """Executa uma Stored Procedure no dataset configurado.
 
-    Args:
-        sp_name: nome da SP (sem projeto/dataset), ex.: "sp_upsert_chip".
-        params: string já formatada com os parâmetros, ex.:
-            "'ID123','11999999999','VIVO','PRE','ATIVO'"
+        Args:
+            sp_name: nome da SP (sem projeto/dataset), ex.: "sp_upsert_chip".
+            params: string já formatada com os parâmetros, ex.:
+                "'ID123','11999999999','VIVO','PRE','ATIVO'"
 
-    Exemplo:
-        bq.call_sp(
-            "sp_upsert_chip",
-            "123,'11999999999','VIVO','PRE','Obs','Operador'"
-        )
-    """
-    sql = f"CALL {self.project}.{self.dataset}.{sp_name}({params})"
-    return self.run(sql)
-
+        Exemplo:
+            bq.call_sp(
+                "sp_upsert_chip",
+                "123,'11999999999','VIVO','PRE','Obs','Operador'"
+            )
+        """
+        params = (params or "").strip()
+        sql = f"CALL `{self.project}.{self.dataset}.{sp_name}`({params})"
+        return self.run(sql)
 
     # ========================================================
     # ⚠️ BLOQUEIO EXPLÍCITO — PROTEÇÃO DE ARQUITETURA
@@ -137,6 +129,5 @@ class BigQueryClient:
           - sp_registrar_movimento_chip
         """
         raise RuntimeError(
-            "upsert_chip() BLOQUEADO. "
-            "Utilize exclusivamente Stored Procedures."
+            "upsert_chip() BLOQUEADO. Utilize exclusivamente Stored Procedures."
         )

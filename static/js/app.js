@@ -105,7 +105,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="15" class="empty-message">
+                <td colspan="16" class="empty-message">
                     Nenhum chip encontrado.
                 </td>
             </tr>`;
@@ -139,6 +139,7 @@ function renderRows(lista) {
                         ${c.status ?? "-"}
                     </span>
                 </td>
+                <td>${c.qt_disparos ?? "-"}</td>
                 <td>${c.qt_banimentos ?? "-"}</td>
                 <td>${formatDate(c.dt_banimentos)}</td>
                 <td>${c.plano ?? "-"}</td>
@@ -210,6 +211,7 @@ function abrirModalEdicao(chip) {
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
 
+    setValue("modal_qt_disparos", chip.qt_disparos);
     setValue("modal_qt_banimentos", chip.qt_banimentos);
     setValue("modal_dt_banimentos", formatDate(chip.dt_banimentos));
     setValue("modal_data_inicio", formatDate(chip.dt_inicio || chip.data_inicio));
@@ -238,6 +240,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
     data.status = document.getElementById("modal_status").value;
 
+    data.qt_disparos = Number(document.getElementById("modal_qt_disparos").value);
     data.qt_banimentos = Number(document.getElementById("modal_qt_banimentos").value);
     data.dt_banimentos = document.getElementById("modal_dt_banimentos").value;
     

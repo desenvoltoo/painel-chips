@@ -15,12 +15,17 @@ LOCATION = os.getenv("BQ_LOCATION", "us")
 class BigQueryClient:
 
     def __init__(self):
-        self.client = bigquery.Client(
-            project=PROJECT,
-            location=LOCATION
-        )
+        self.client = None
         self.project = PROJECT
         self.dataset = DATASET
+
+    def _get_client(self):
+        if self.client is None:
+            self.client = bigquery.Client(
+                project=PROJECT,
+                location=LOCATION
+            )
+        return self.client
 
 
     # ========================================================
@@ -28,7 +33,7 @@ class BigQueryClient:
     # ========================================================
     def run(self, sql: str):
         print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "=" * 80)
-        return self.client.query(sql).result()
+        return self._get_client().query(sql).result()
 
 
     # ========================================================
@@ -73,7 +78,7 @@ class BigQueryClient:
                 "params deve ser dict, list[ScalarQueryParameter] ou None"
             )
 
-        job = self.client.query(sql, job_config=job_config)
+        job = self._get_client().query(sql, job_config=job_config)
         df = job.result().to_dataframe(create_bqstorage_client=False)
 
         return df.astype(object).where(pd.notnull(df), None)
@@ -99,13 +104,6 @@ class BigQueryClient:
             "sp_upsert_chip",
             "'ID123','11999999999','VIVO','PRE','ATIVO'"
         )
-        """
-        sql = f"""
-        CALL `{self.project}.{self.dataset}.{sp_name}`(
-            {params}
-        )
-        """
-        return self.run(sql)
 
 
     # ========================================================

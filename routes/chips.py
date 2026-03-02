@@ -114,6 +114,7 @@ def chips_add():
         operadora = norm_str(data.get("operadora"))
         plano = norm_str(data.get("plano"))
         status = norm_str(data.get("status"))
+        qt_disparos = norm_str(data.get("qt_disparos"))
         qt_banimentos = norm_str(data.get("qt_banimentos"))
         dt_banimentos = norm_str(data.get("dt_banimentos"))
         observacao = norm_str(data.get("observacao"))  # se seu form tiver esse campo
@@ -145,7 +146,8 @@ def chips_add():
         # Atualizamos na DIM logo após o cadastro para persistir o que veio no formulário.
         call_sp(f"""
             UPDATE `{PROJECT}.{DATASET}.dim_chip`
-            SET qt_banimentos = {sql_int(qt_banimentos)},
+            SET qt_disparos = {sql_int(qt_disparos)}
+                qt_banimentos = {sql_int(qt_banimentos)},
                 dt_banimentos = {sql_date(dt_banimentos)}
             WHERE id_chip = {sql_str(id_chip)}
         """)
@@ -273,29 +275,40 @@ def chips_update_json():
                 )
             """)
 
-       # ----------------------------------------------------
-        # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, dt_banimentos
+     # 🔹 2.b) CAMPOS ADICIONAIS: qt_banimentos, qt_disparos, dt_banimentos
         # Atualiza por último para não ser sobrescrito pelas SPs acima.
         # ----------------------------------------------------
         qt_nova_raw = payload.get("qt_banimentos")
+        qt_disparos_nova_raw = payload.get("qt_disparos")
         qt_nova = None
+        qt_disparos_nova = None
         try:
             if qt_nova_raw is not None and str(qt_nova_raw).strip() != "":
                 qt_nova = int(float(qt_nova_raw))
         except Exception:
             qt_nova = None
 
+        try:
+            if qt_disparos_nova_raw is not None and str(qt_disparos_nova_raw).strip() != "":
+                qt_disparos_nova = int(float(qt_disparos_nova_raw))
+        except Exception:
+            qt_disparos_nova = None
+
         dt_banimentos_nova = norm_str(payload.get("dt_banimentos"))
         qt_atual = None if atual.get("qt_banimentos") is None else int(float(atual.get("qt_banimentos")))
+        qt_disparos_atual = None if atual.get("qt_disparos") is None else int(float(atual.get("qt_disparos")))
         dt_banimentos_atual = (str(atual.get("dt_banimentos")) if atual.get("dt_banimentos") is not None else None)
 
         mudou_qt = (qt_nova != qt_atual)
+        mudou_qt_disparos = (qt_disparos_nova != qt_disparos_atual)
         mudou_dt = (dt_banimentos_nova != dt_banimentos_atual)
 
         if mudou_qt or mudou_dt:
+        if mudou_qt or mudou_qt_disparos or mudou_dt:
             call_sp(f"""
                 UPDATE `{PROJECT}.{DATASET}.dim_chip`
                 SET qt_banimentos = {sql_int(qt_nova)},
+                    qt_disparos = {sql_int(qt_disparos_nova)},
                     dt_banimentos = {sql_date(dt_banimentos_nova)}
                 WHERE sk_chip = {int(sk_chip)}
             """)

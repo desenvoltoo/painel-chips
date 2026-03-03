@@ -29,7 +29,6 @@ def dashboard():
             c.operadora,
             c.plano,
             c.status,
-             c.qt_disparos,
             c.ultima_recarga_data,
 
             -- CAMPOS QUE O HTML ESPERA 👇
@@ -145,15 +144,6 @@ def dashboard():
 
     alerta_df = sanitize_df(bq.run_df(alerta_sql))
     alerta_recarga = alerta_df.to_dict(orient="records")
-
-    # ===========================================================
-    # RANKING — TOP 10 CHIPS POR QUANTIDADE DE DISPAROS
-    # ===========================================================
-    ranking_disparos = sorted(
-        tabela,
-        key=lambda x: int(x.get("qt_disparos") or 0),
-        reverse=True
-    )[:10]
     
     # ===========================================================
     # RENDER
@@ -180,6 +170,6 @@ def dashboard():
         status_counts=status_counts,
         status_order=status_order,
 
-        ranking_disparos=ranking_disparos,
     )
+
 

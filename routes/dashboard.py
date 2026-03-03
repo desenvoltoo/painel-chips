@@ -30,8 +30,9 @@ def dashboard():
             c.plano,
             c.status,
             c.ultima_recarga_data,
+            c.qt_disparos,
 
-            -- CAMPOS QUE O HTML ESPERA 👇
+            -- CAMPOS QUE O HTML ESPERA
             a.marca  AS marca_aparelho,
             a.modelo AS modelo_aparelho
 
@@ -144,6 +145,16 @@ def dashboard():
 
     alerta_df = sanitize_df(bq.run_df(alerta_sql))
     alerta_recarga = alerta_df.to_dict(orient="records")
+
+    # ===========================================================
+    # RANKING — TOP 10 CHIPS POR QUANTIDADE DE DISPAROS
+    # ===========================================================
+
+    ranking_disparos = sorted(
+        [x for x in tabela if x.get("qt_disparos") is not None],
+        key=lambda x: x["qt_disparos"],
+        reverse=True
+    )[:10]
     
     # ===========================================================
     # RENDER
@@ -170,6 +181,8 @@ def dashboard():
         status_counts=status_counts,
         status_order=status_order,
 
+        ranking_disparos=ranking_disparos,
     )
+
 
 

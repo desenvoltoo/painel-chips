@@ -209,6 +209,34 @@
         background: #1b2333;
     }
 
+    .ranking-box {
+        background: #111827;
+        border: 1px solid #1e3a8a55;
+        border-radius: 16px;
+        padding: 18px;
+        margin-top: 28px;
+        margin-bottom: 20px;
+    }
+
+    .ranking-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+    }
+
+    .ranking-table th,
+    .ranking-table td {
+        padding: 10px;
+        border-bottom: 1px solid #1e293b;
+        text-align: left;
+    }
+
+    .ranking-table th {
+        color: #93c5fd;
+        font-size: .86rem;
+        text-transform: uppercase;
+    }
+
     .status {
         padding: 4px 10px;
         border-radius: 10px;
@@ -316,7 +344,33 @@
     {% endfor %}
 </div>
 
+<div class="ranking-box">
+    <h2 class="table-section-title" style="margin-top: 0;">Top 10 Chips por Quantidade de Disparos</h2>
 
+    <table class="ranking-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Número</th>
+                <th>Operadora</th>
+                <th>Status</th>
+                <th>Qtd. Disparos</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for chip in ranking_disparos %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ chip.numero }}</td>
+                <td>{{ chip.operadora }}</td>
+                <td>{{ chip.status }}</td>
+                <td><strong>{{ chip.qt_disparos or 0 }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    
 <!-- ===================== TABELA COMPLETA ===================== -->
 <h2 class="table-section-title">Lista Completa</h2>
 

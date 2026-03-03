@@ -151,8 +151,8 @@ def dashboard():
     # ===========================================================
 
     ranking_disparos = sorted(
-        [x for x in tabela if x.get("qt_disparos") is not None],
-        key=lambda x: x["qt_disparos"],
+        tabela,
+        key=lambda x: x.get("quantidade_disparos") if x.get("quantidade_disparos") is not None else 0,
         reverse=True
     )[:10]
     
@@ -183,6 +183,7 @@ def dashboard():
 
         ranking_disparos=ranking_disparos,
     )
+
 
 
 

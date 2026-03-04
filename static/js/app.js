@@ -270,6 +270,13 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     }
 });
 
+const btnSalvar = document.getElementById("btnSalvar");
+
+if (btnSalvar) {
+  btnSalvar.addEventListener("click", () => {
+    btnSalvar.innerHTML = 'Salvando <span class="spinner"></span>';
+  });
+}
 
 /* ============================================================
    BUSCA

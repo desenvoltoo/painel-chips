@@ -130,6 +130,12 @@ function renderRows(lista) {
 
         tbody.innerHTML += `
             <tr>
+                <td>
+                    <button class="btn btn-primary btn-sm edit-btn"
+                        data-sk="${c.sk_chip}">
+                        Editar
+                    </button>
+                </td>
                 <td>${c.id_chip ?? "-"}</td>
                 <td>${c.numero ?? "-"}</td>
                 <td>${c.operadora ?? "-"}</td>
@@ -149,12 +155,6 @@ function renderRows(lista) {
                 <td>${aparelho}</td>
                 <td>${formatDate(dataStatus)}</td>
                 <td>${obsIcon}</td>
-                <td>
-                    <button class="btn btn-primary btn-sm edit-btn"
-                        data-sk="${c.sk_chip}">
-                        Editar
-                    </button>
-                </td>
             </tr>`;
     });
 

@@ -274,9 +274,15 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 /* ============================================================
    BUSCA
 ============================================================ */
-document.getElementById("searchInput")?.addEventListener("input", e => {
+ddocument.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase().trim();
+    
+    localStorage.setItem("chipSearchTerm", termo);
 
+    executarBusca(termo);
+});
+
+function executarBusca(termo) {
     if (!termo) {
         chipsView = [...ALL_CHIPS];
     } else {
@@ -286,12 +292,19 @@ document.getElementById("searchInput")?.addEventListener("input", e => {
             )
         );
     }
-
     renderRows(chipsView);
-});
-
+}
 
 /* ============================================================
    INIT
 ============================================================ */
-renderRows(ALL_CHIPS);
+const termoSalvo = localStorage.getItem("chipSearchTerm");
+
+if (termoSalvo) {
+    const input = document.getElementById("searchInput");
+    if (input) input.value = termoSalvo;
+    
+    executarBusca(termoSalvo);
+} else {
+    renderRows(ALL_CHIPS);
+}

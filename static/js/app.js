@@ -222,13 +222,17 @@ function abrirModalEdicao(chip) {
 
 
 /* ============================================================
-   FECHAR / SALVAR  ✅CORRIGIDO
+   FECHAR / SALVAR 
 ============================================================ */
 document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
     document.getElementById("editModal").style.display = "none";
 });
 
 document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
+
+    const btn = document.getElementById("modalSaveBtn");
+    btn.innerHTML = 'Salvando <span class="spinner"></span>';
+   
     const formEl = document.getElementById("modalForm");
     const formData = new FormData(formEl);
     const data = {};
@@ -269,14 +273,6 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
         alert(r.error || "Erro ao salvar");
     }
 });
-
-const btnSalvar = document.getElementById("btnSalvar");
-
-if (btnSalvar) {
-  btnSalvar.addEventListener("click", () => {
-    btnSalvar.innerHTML = 'Salvando <span class="spinner"></span>';
-  });
-}
 
 /* ============================================================
    BUSCA

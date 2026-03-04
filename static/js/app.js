@@ -274,7 +274,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 /* ============================================================
    BUSCA
 ============================================================ */
-ddocument.getElementById("searchInput")?.addEventListener("input", e => {
+document.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase().trim();
     
     localStorage.setItem("chipSearchTerm", termo);

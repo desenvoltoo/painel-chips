@@ -180,7 +180,7 @@ def chips_add():
         # ✅ Correção SQL: faltava vírgula após qt_disparos
         call_sp(f"""
             UPDATE `{PROJECT}.{DATASET}.dim_chip`
-            SET qt_disparos = {sql_int(qt_disparos)},
+            SET qt_disparos = {sql_int(qt_disparos)}
             WHERE id_chip = {sql_str(id_chip)}
         """)
 

@@ -141,8 +141,6 @@ def chips_add():
         plano = norm_str(data.get("plano"))
         status = norm_str(data.get("status"))
         qt_disparos = norm_str(data.get("qt_disparos"))
-        qt_banimentos = norm_str(data.get("qt_banimentos"))
-        dt_banimentos = norm_str(data.get("dt_banimentos"))
         observacao = norm_str(data.get("observacao"))
         origem = "Painel"
 
@@ -161,8 +159,6 @@ def chips_add():
                 {sql_str(operadora)},
                 {sql_str(plano)},
                 {sql_str(status)},
-                {sql_str(qt_banimentos)},
-                {sql_str(dt_banimentos)},
                 {sql_str(observacao)},
                 {sql_str(origem)}
             )
@@ -185,8 +181,6 @@ def chips_add():
         call_sp(f"""
             UPDATE `{PROJECT}.{DATASET}.dim_chip`
             SET qt_disparos = {sql_int(qt_disparos)},
-                qt_banimentos = {sql_int(qt_banimentos)},
-                dt_banimentos = {sql_date(dt_banimentos)}
             WHERE id_chip = {sql_str(id_chip)}
         """)
 

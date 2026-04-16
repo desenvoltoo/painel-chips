@@ -235,7 +235,6 @@ function abrirModalEdicao(chip) {
     const statusEl = document.getElementById("modal_status");
     if (statusEl) {
         statusEl.dataset.previousStatus = chip.status || "";
-        statusEl.dataset.changed = "false";
     }
 
     setValue("modal_qt_disparos", chip.qt_disparos);
@@ -394,11 +393,4 @@ if (termoSalvo) {
     executarBusca(termoSalvo);
 } else {
     renderRows(ALL_CHIPS);
-}
-
-const modalStatusEl = document.getElementById("modal_status");
-if (modalStatusEl) {
-    modalStatusEl.addEventListener("change", () => {
-        modalStatusEl.dataset.changed = "true";
-    });
 }

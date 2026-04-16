@@ -76,13 +76,42 @@
         margin-bottom: 30px;
     }
 
-    .filter-card select {
+    .filter-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-card label {
+        font-size: .82rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #93c5fd;
+    }
+
+    .filter-card select,
+    .filter-card input {
         margin-top: 12px;
         background: #0f172a;
         color: white;
         border: 1px solid #334155;
         border-radius: 8px;
         padding: 10px;
+        margin-top: 0;
+        width: 100%;
+    }
+
+    .filter-meta {
+        font-size: .85rem;
+        opacity: .85;
+        text-align: right;
     }
 
     /* ===================== ALERTA ===================== */
@@ -246,6 +275,26 @@
         text-transform: uppercase;
     }
 
+    .table-wrapper {
+        overflow-x: auto;
+        border-radius: 12px;
+    }
+
+    @media (max-width: 900px) {
+        .dashboard-container {
+            margin-left: 0;
+            padding: 18px;
+        }
+
+        .filter-row {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-meta {
+            text-align: left;
+        }
+    }
+
 </style>
 
 
@@ -281,12 +330,22 @@
 <!-- ===================== FILTRO ===================== -->
 <div class="filter-card">
     <h3>Filtrar Chips por Status</h3>
-    <select id="filtroStatus">
-        <option value="">Todos</option>
-        {% for s in lista_status %}
-        <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-    </select>
+    <div class="filter-row">
+        <div class="filter-field">
+            <label for="filtroStatus">Status</label>
+            <select id="filtroStatus">
+                <option value="">Todos</option>
+                {% for s in lista_status %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="filtroBusca">Busca rápida (número, operadora, plano...)</label>
+            <input type="text" id="filtroBusca" placeholder="Digite para filtrar a tabela">
+        </div>
+        <div class="filter-meta" id="contadorLinhas">0 itens</div>
+    </div>
 </div>
 
 
@@ -372,59 +431,80 @@
 <!-- ===================== TABELA COMPLETA ===================== -->
 <h2 class="table-section-title">Lista Completa</h2>
 
-<table class="tabela" id="tabelaChips">
-    <thead>
-        <tr>
-            <th>Número</th>
-            <th>Operadora</th>
-            <th>Plano</th>
-            <th>Status</th>
-            <th>Última Recarga</th>
-            <th>Aparelho Atual</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for r in tabela %}
-        <tr>
-            <td>{{ r.numero }}</td>
-            <td>{{ r.operadora }}</td>
-            <td>{{ r.plano }}</td>
-            <td>
-                <span class="status status-{{ (r.status or '')|lower|replace(' ','_') }}">
-                    {{ r.status }}
-                </span>
-            </td>
-            <td>{{ r.ultima_recarga_data }}</td>
-            <td>
-                {% if r.marca_aparelho %}
-                    {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-wrapper">
+    <table class="tabela" id="tabelaChips">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Operadora</th>
+                <th>Plano</th>
+                <th>Status</th>
+                <th>Última Recarga</th>
+                <th>Aparelho Atual</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in tabela %}
+            <tr>
+                <td>{{ r.numero }}</td>
+                <td>{{ r.operadora }}</td>
+                <td>{{ r.plano }}</td>
+                <td>
+                    <span class="status status-{{ (r.status or '')|lower|replace(' ','_') }}">
+                        {{ r.status }}
+                    </span>
+                </td>
+                <td>{{ r.ultima_recarga_data }}</td>
+                <td>
+                    {% if r.marca_aparelho %}
+                        {{ r.marca_aparelho }} {{ r.modelo_aparelho }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
 
 <script>
-document.getElementById("filtroStatus").addEventListener("change", function () {
-    const filtro = (this.value || "").toUpperCase();
-    const linhas = document.querySelectorAll("#tabelaChips tbody tr");
+const filtroStatus = document.getElementById("filtroStatus");
+const filtroBusca = document.getElementById("filtroBusca");
+const contadorLinhas = document.getElementById("contadorLinhas");
+const linhas = document.querySelectorAll("#tabelaChips tbody tr");
 
-    // reset
-    linhas.forEach(l => { l.style.display = ""; });
-
-    if (!filtro) return;
+function aplicarFiltros() {
+    const filtroStatusValor = (filtroStatus?.value || "").toUpperCase();
+    const filtroBuscaValor = (filtroBusca?.value || "").trim().toUpperCase();
+    let visiveis = 0;
 
     linhas.forEach(l => {
-        const status = (l.children[3].innerText || "").trim().toUpperCase();
-        if (status !== filtro) {
+        const status = (l.children[3]?.innerText || "").trim().toUpperCase();
+        const textoLinha = (l.innerText || "").toUpperCase();
+
+        const atendeStatus = !filtroStatusValor || status === filtroStatusValor;
+        const atendeBusca = !filtroBuscaValor || textoLinha.includes(filtroBuscaValor);
+        const mostrar = atendeStatus && atendeBusca;
+
+        if (!mostrar) {
             l.style.display = "none";
+            return;
         }
+
+        l.style.display = "";
+        visiveis += 1;
     });
-});
+
+    if (contadorLinhas) {
+        contadorLinhas.textContent = `${visiveis} ${visiveis === 1 ? "item visível" : "itens visíveis"}`;
+    }
+}
+
+filtroStatus?.addEventListener("change", aplicarFiltros);
+filtroBusca?.addEventListener("input", aplicarFiltros);
+aplicarFiltros();
 </script>
 
 </div> <!-- fecha dashboard-container -->

@@ -60,6 +60,14 @@ function setValue(id, value) {
     if (el) el.value = value ?? "";
 }
 
+function notify(message, type = "info") {
+    if (typeof window.showToast === "function") {
+        window.showToast(message, type);
+        return;
+    }
+    console.log(`[${type}] ${message}`);
+}
+
 
 /* ============================================================
    SELECTS
@@ -185,10 +193,16 @@ function bindEditButtons() {
     document.querySelectorAll(".edit-btn").forEach(btn => {
         btn.onclick = async () => {
             const sk = btn.dataset.sk;
-            if (!sk) return alert("SK inválido");
+            if (!sk) {
+                notify("SK inválido", "error");
+                return;
+            }
 
             const res = await fetch(`/chips/sk/${sk}`);
-            if (!res.ok) return alert("Erro ao carregar chip");
+            if (!res.ok) {
+                notify("Erro ao carregar chip", "error");
+                return;
+            }
 
             abrirModalEdicao(await res.json());
         };
@@ -210,6 +224,11 @@ function abrirModalEdicao(chip) {
 
     preencherOperadoras(chip.operadora);
     preencherStatus(chip.status);
+    const statusEl = document.getElementById("modal_status");
+    if (statusEl) {
+        statusEl.dataset.previousStatus = chip.status || "";
+        statusEl.dataset.changed = "false";
+    }
 
     setValue("modal_qt_disparos", chip.qt_disparos);
     setValue("modal_qt_banimentos", chip.qt_banimentos);
@@ -218,6 +237,8 @@ function abrirModalEdicao(chip) {
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
+    setValue("modal_sk_aparelho_atual", chip.sk_aparelho_atual);
+    setValue("modal_slot_whatsapp", chip.slot_whatsapp);
 }
 
 
@@ -231,6 +252,8 @@ document.getElementById("modalCloseBtn")?.addEventListener("click", () => {
 document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
     const btn = document.getElementById("modalSaveBtn");
+    const oldText = btn.innerHTML;
+    btn.disabled = true;
     btn.innerHTML = 'Salvando <span class="spinner"></span>';
    
     const formEl = document.getElementById("modalForm");
@@ -243,6 +266,8 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
     data.sk_chip = Number(document.getElementById("modal_sk_chip").value);
     data.status = document.getElementById("modal_status").value;
+    const statusAnterior = document.getElementById("modal_status")
+        .dataset.previousStatus || "";
 
     data.qt_disparos = Number(document.getElementById("modal_qt_disparos").value);
     data.qt_banimentos = Number(document.getElementById("modal_qt_banimentos").value);
@@ -250,6 +275,18 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;
+
+    const statusCriticos = ["BANIDO", "BLOQUEADO", "RESTRINGIDO"];
+    if (data.status !== statusAnterior && statusCriticos.includes(data.status)) {
+        const confirmar = window.confirm(
+            `Confirmar alteração de status para "${data.status}"?`
+        );
+        if (!confirmar) {
+            btn.disabled = false;
+            btn.innerHTML = oldText;
+            return;
+        }
+    }
 
     if (data.ultima_recarga_valor !== null)
         data.ultima_recarga_valor = Number(data.ultima_recarga_valor);
@@ -259,18 +296,26 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 
     console.log("📤 Payload enviado:", data);
 
-    const res = await fetch("/chips/update-json", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
+    try {
+        const res = await fetch("/chips/update-json", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
 
-    const r = await res.json();
+        const r = await res.json();
 
-    if (r.success) {
-        location.reload();
-    } else {
-        alert(r.error || "Erro ao salvar");
+        if (r.success) {
+            notify("Chip atualizado com sucesso", "success");
+            setTimeout(() => location.reload(), 400);
+        } else {
+            notify(r.error || "Erro ao salvar", "error");
+        }
+    } catch (e) {
+        notify("Falha de rede ao salvar", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldText;
     }
 });
 
@@ -310,4 +355,11 @@ if (termoSalvo) {
     executarBusca(termoSalvo);
 } else {
     renderRows(ALL_CHIPS);
+}
+
+const modalStatusEl = document.getElementById("modal_status");
+if (modalStatusEl) {
+    modalStatusEl.addEventListener("change", () => {
+        modalStatusEl.dataset.changed = "true";
+    });
 }

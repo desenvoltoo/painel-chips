@@ -419,6 +419,12 @@ body.sidebar-open .chip-container {
     font-size: 0.92rem;
 }
 
+.inline-feedback {
+    margin-top: 8px;
+    font-size: 0.88rem;
+    color: #fca5a5;
+}
+
 select:disabled,
 input:disabled,
 button:disabled {

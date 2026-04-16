@@ -202,13 +202,17 @@ function bindEditButtons() {
                 return;
             }
 
-            const res = await fetch(`/chips/sk/${sk}`);
-            if (!res.ok) {
-                notify("Erro ao carregar chip", "error");
-                return;
-            }
+            try {
+                const res = await fetch(`/chips/sk/${sk}`);
+                if (!res.ok) {
+                    notify("Erro ao carregar chip", "error");
+                    return;
+                }
 
-            abrirModalEdicao(await res.json());
+                abrirModalEdicao(await res.json());
+            } catch {
+                notify("Erro ao carregar chip", "error");
+            }
         };
     });
 }
@@ -301,9 +305,11 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     const statusAnterior = document.getElementById("modal_status")
         .dataset.previousStatus || "";
 
-    data.qt_disparos = Number(document.getElementById("modal_qt_disparos").value);
-    data.qt_banimentos = Number(document.getElementById("modal_qt_banimentos").value);
-    data.dt_banimentos = document.getElementById("modal_dt_banimentos").value;
+    const qtdDisparosBruto = document.getElementById("modal_qt_disparos").value;
+    const qtdBanimentosBruto = document.getElementById("modal_qt_banimentos").value;
+    data.qt_disparos = qtdDisparosBruto === "" ? null : Number(qtdDisparosBruto);
+    data.qt_banimentos = qtdBanimentosBruto === "" ? null : Number(qtdBanimentosBruto);
+    data.dt_banimentos = document.getElementById("modal_dt_banimentos").value || null;
     
     data.dt_inicio = data.data_inicio || null;
     delete data.data_inicio;

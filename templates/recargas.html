@@ -74,18 +74,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function carregarChipsSelect() {
     fetch("/api/chips/listar")
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error("Erro ao carregar chips");
+            return r.json();
+        })
         .then(chips => {
             let select = document.getElementById("select-chips-recarga");
+            select.innerHTML = "";
+            if (!chips.length) {
+                select.innerHTML = `<option value="">Nenhum chip disponível</option>`;
+                return;
+            }
             chips.forEach(c => {
                 select.innerHTML += `<option value="${c.sk_chip}">${c.numero} (${c.operadora})</option>`;
             });
+        })
+        .catch(err => {
+            if (window.showToast) window.showToast(err.message || "Falha ao carregar chips", "error");
         });
 }
 
 function carregarRecargas() {
     fetch("/api/recargas/listar")
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) throw new Error("Erro ao carregar recargas");
+            return r.json();
+        })
         .then(rec => {
             let tbody = document.getElementById("recargas-body");
             tbody.innerHTML = "";
@@ -114,6 +128,9 @@ function carregarRecargas() {
                 });
             }
             new DataTable("#tabelaRecargas");
+        })
+        .catch(err => {
+            if (window.showToast) window.showToast(err.message || "Falha ao carregar recargas", "error");
         });
 }
 

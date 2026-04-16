@@ -66,6 +66,8 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    const dateEl = document.querySelector("#form-recarga input[name='data']");
+    if (dateEl) dateEl.value = new Date().toISOString().split("T")[0];
     carregarRecargas();
     carregarChipsSelect();
 });
@@ -76,7 +78,7 @@ function carregarChipsSelect() {
         .then(chips => {
             let select = document.getElementById("select-chips-recarga");
             chips.forEach(c => {
-                select.innerHTML += `<option value="${c.id_chip}">${c.numero} (${c.operadora})</option>`;
+                select.innerHTML += `<option value="${c.sk_chip}">${c.numero} (${c.operadora})</option>`;
             });
         });
 }
@@ -87,33 +89,58 @@ function carregarRecargas() {
         .then(rec => {
             let tbody = document.getElementById("recargas-body");
             tbody.innerHTML = "";
+            if ($.fn.DataTable.isDataTable("#tabelaRecargas")) {
+                $("#tabelaRecargas").DataTable().destroy();
+            }
 
-            rec.forEach(r => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${r.id_recarga}</td>
-                        <td>${r.numero}</td>
-                        <td>${r.operadora}</td>
-                        <td>R$ ${r.valor}</td>
-                        <td>${r.data}</td>
-                        <td>${r.obs ?? "-"}</td>
-                    </tr>
-                `;
-            });
-
+            if (!rec.length) {
+                tbody.innerHTML = `<tr><td colspan="6">Nenhuma recarga registrada até o momento.</td></tr>`;
+            } else {
+                rec.forEach(r => {
+                    const valorFmt = Number(r.valor || 0).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL"
+                    });
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${r.id_recarga}</td>
+                            <td>${r.numero}</td>
+                            <td>${r.operadora}</td>
+                            <td>${valorFmt}</td>
+                            <td>${r.data}</td>
+                            <td>${r.obs ?? "-"}</td>
+                        </tr>
+                    `;
+                });
+            }
             new DataTable("#tabelaRecargas");
         });
 }
 
 document.getElementById("form-recarga").addEventListener("submit", e => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector("button[type='submit'], .btn-success");
+    if (submitBtn) submitBtn.disabled = true;
     let data = Object.fromEntries(new FormData(e.target).entries());
 
     fetch("/api/recargas/salvar", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data)
-    }).then(() => location.reload());
+    })
+    .then(r => r.json())
+    .then(r => {
+        if (!r.success) throw new Error(r.error || "Erro ao salvar");
+        if (window.showToast) window.showToast("Recarga registrada com sucesso", "success");
+        carregarRecargas();
+        e.target.reset();
+    })
+    .catch(err => {
+        if (window.showToast) window.showToast(err.message || "Falha ao registrar recarga", "error");
+    })
+    .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+    });
 });
 </script>
 

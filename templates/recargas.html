@@ -76,7 +76,7 @@ function carregarChipsSelect() {
         .then(chips => {
             let select = document.getElementById("select-chips-recarga");
             chips.forEach(c => {
-                select.innerHTML += `<option value="${c.id_chip}">${c.numero} (${c.operadora})</option>`;
+                select.innerHTML += `<option value="${c.sk_chip}">${c.numero} (${c.operadora})</option>`;
             });
         });
 }
@@ -101,19 +101,37 @@ function carregarRecargas() {
                 `;
             });
 
+            if ($.fn.DataTable.isDataTable("#tabelaRecargas")) {
+                $("#tabelaRecargas").DataTable().destroy();
+            }
             new DataTable("#tabelaRecargas");
         });
 }
 
 document.getElementById("form-recarga").addEventListener("submit", e => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector("button[type='submit'], .btn-success");
+    if (submitBtn) submitBtn.disabled = true;
     let data = Object.fromEntries(new FormData(e.target).entries());
 
     fetch("/api/recargas/salvar", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data)
-    }).then(() => location.reload());
+    })
+    .then(r => r.json())
+    .then(r => {
+        if (!r.success) throw new Error(r.error || "Erro ao salvar");
+        if (window.showToast) window.showToast("Recarga registrada com sucesso", "success");
+        carregarRecargas();
+        e.target.reset();
+    })
+    .catch(err => {
+        if (window.showToast) window.showToast(err.message || "Falha ao registrar recarga", "error");
+    })
+    .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+    });
 });
 </script>
 

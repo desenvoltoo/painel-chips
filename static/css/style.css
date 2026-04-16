@@ -43,6 +43,24 @@ body::before {
     animation: bgPulse 15s ease-in-out infinite;
 }
 
+.skip-link {
+    position: fixed;
+    top: -48px;
+    left: 16px;
+    background: #1d4ed8;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    z-index: 12000;
+    transition: top .2s ease;
+}
+
+.skip-link:focus {
+    top: 16px;
+}
+
 @keyframes bgPulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
@@ -159,6 +177,15 @@ body::before {
 .sidebar a:hover {
     color: #f1f5f9;
     transform: translateX(6px);
+}
+
+.sidebar a:focus-visible,
+.sidebar-toggle:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
 }
 
 .sidebar a:hover::before {
@@ -278,6 +305,22 @@ body.sidebar-open .sidebar-toggle {
     padding: 2rem;
     padding-top: 3.5rem;
     transition: all .32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 900px) {
+    .content,
+    .chip-container {
+        padding: 1rem;
+        padding-top: 4.5rem;
+    }
+
+    body.sidebar-open .sidebar-toggle {
+        left: 210px;
+    }
+
+    .sidebar.open {
+        width: 200px;
+    }
 }
 
 /* Conteúdo quando sidebar está ABERTA */

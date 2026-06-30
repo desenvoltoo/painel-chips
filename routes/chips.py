@@ -3,6 +3,7 @@
 
 import re
 import uuid
+import time
 
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for, flash
 from google.cloud import bigquery
@@ -49,6 +50,67 @@ def param(name, type_, value):
     return bigquery.ScalarQueryParameter(name, type_, value)
 
 
+def get_table_columns(table_name):
+    try:
+        df = bq.run_df(f"""
+            SELECT column_name
+            FROM `{PROJECT}.{DATASET}.INFORMATION_SCHEMA.COLUMNS`
+            WHERE table_name = @table_name
+        """, [param("table_name", "STRING", table_name)])
+        return {str(row["column_name"]) for _, row in df.iterrows()}
+    except Exception as exc:
+        print(f"[Chips] Erro ao ler schema de {table_name}: {exc}")
+        return set()
+
+
+def pick_col(columns, *names):
+    for name in names:
+        if name in columns:
+            return name
+    return None
+
+
+def chip_select_expr(columns, aliases=False):
+    def expr(alias, typ="STRING", *candidates, default=None):
+        col = pick_col(columns, *candidates, alias)
+        if col:
+            base = f"CAST({col} AS {typ})" if typ else col
+        elif default is not None:
+            base = default
+        else:
+            base = f"CAST(NULL AS {typ})" if typ else "NULL"
+        return f"{base} AS {alias}" if aliases else base
+
+    return {
+        "sk_chip": expr("sk_chip", "INT64", "sk_chip", "chip_id", "id", "id_chip"),
+        "id_chip": expr("id_chip", "STRING", "id_chip", "chip_id", "id"),
+        "numero": expr("numero", "STRING", "numero", "linha", "telefone", "msisdn"),
+        "operadora": expr("operadora", "STRING", "operadora", "carrier"),
+        "plano": expr("plano", "STRING", "plano"),
+        "status": expr("status", "STRING", "status", "situacao", default="'SEM_STATUS'"),
+        "ultima_recarga_valor": expr("ultima_recarga_valor", "FLOAT64", "ultima_recarga_valor"),
+        "ultima_recarga_data": expr("ultima_recarga_data", "DATE", "ultima_recarga_data"),
+        "total_gasto": expr("total_gasto", "FLOAT64", "total_gasto"),
+        "sk_aparelho_atual": expr("sk_aparelho_atual", "INT64", "sk_aparelho_atual", "aparelho_id"),
+        "ativo": expr("ativo", "BOOL", "ativo", default="TRUE"),
+        "updated_at": expr("updated_at", "TIMESTAMP", "updated_at", "data_update", "updatedAt"),
+        "created_at": expr("created_at", "TIMESTAMP", "created_at", "data_cadastro", "createdAt", "data_update", "updated_at"),
+        "operador": expr("operador", "STRING", "operador", "responsavel", "usuario_nome", "usuario", "responsavel_nome"),
+        "observacao": expr("observacao", "STRING", "observacao", "obs"),
+        "slot_whatsapp": expr("slot_whatsapp", "INT64", "slot_whatsapp"),
+        "tipo_whatsapp": expr("tipo_whatsapp", "STRING", "tipo_whatsapp"),
+        "data_status": expr("data_status", "DATE", "data_status"),
+        "dt_inicio": expr("dt_inicio", "DATE", "dt_inicio"),
+        "qt_banimentos": expr("qt_banimentos", "INT64", "qt_banimentos", default="0"),
+        "dt_banimentos": expr("dt_banimentos", "DATE", "dt_banimentos"),
+        "qt_disparos": expr("qt_disparos", "INT64", "qt_disparos", default="0"),
+    }
+
+
+def chip_select_list(columns):
+    return ",".join(chip_select_expr(columns, aliases=True).values())
+
+
 def run_op(operation, sql, params=None):
     print(f"🔵 BigQuery operação={operation} projeto={PROJECT} dataset={DATASET}")
     try:
@@ -90,65 +152,110 @@ def insert_event(sk_chip, tipo, observacao, origem="Painel"):
 
 @chips_bp.route("/chips")
 def chips_list():
+    started = time.perf_counter()
+    route_params = {k: v for k, v in request.args.items() if clean_text(v) is not None}
+    print(f"[Chips] Rota /chips chamada. Params={route_params}")
     try:
         page = max(to_int(request.args.get("page"), 1), 1)
         per_page = min(max(to_int(request.args.get("per_page"), 50), 10), 100)
         offset = (page - 1) * per_page
-        filters = {k: clean_text(request.args.get(k)) for k in ["q", "status", "operadora", "plano", "operador", "aparelho", "tipo_whatsapp", "ativo", "quick"]}
+        filter_names = [
+            "q", "status", "operadora", "plano", "operador", "responsavel", "aparelho",
+            "tipo_whatsapp", "ativo", "quick", "created_from", "created_to", "updated_from", "updated_to"
+        ]
+        filters = {k: clean_text(request.args.get(k)) for k in filter_names}
+
+        view_columns = get_table_columns("vw_chips_painel")
+        dim_columns = get_table_columns("dim_chip")
+        source_table = "vw_chips_painel" if view_columns else "dim_chip"
+        source_columns = view_columns or dim_columns
+        if not source_columns:
+            raise RuntimeError("Tabela/view de chips não encontrada no dataset configurado.")
+        print(f"[Chips] Fonte selecionada: {source_table}. Colunas={sorted(source_columns)}")
+
+        exprs = chip_select_expr(source_columns)
         where, params = ["1=1"], []
-        if filters["q"]:
-            where.append("(REGEXP_REPLACE(COALESCE(numero,''), r'[^0-9]', '') LIKE @q_digits OR LOWER(COALESCE(numero,'')) LIKE @q OR LOWER(COALESCE(id_chip,'')) LIKE @q)")
-            params += [param("q", "STRING", f"%{filters['q'].lower()}%"), param("q_digits", "STRING", f"%{only_digits(filters['q'])}%")]
-        for field in ["status", "operadora", "plano", "operador", "tipo_whatsapp"]:
-            if filters[field]:
-                where.append(f"COALESCE(CAST({field} AS STRING),'') = @{field}")
-                params.append(param(field, "STRING", filters[field]))
-        if filters["aparelho"]:
-            where.append("CAST(sk_aparelho_atual AS STRING) = @aparelho")
+        q = filters.get("q")
+        if q:
+            q_parts = [f"LOWER(COALESCE({exprs['numero']},'')) LIKE @q", f"LOWER(COALESCE({exprs['id_chip']},'')) LIKE @q", f"LOWER(COALESCE({exprs['operador']},'')) LIKE @q"]
+            digits = only_digits(q)
+            if digits:
+                q_parts.append(f"REGEXP_REPLACE(COALESCE({exprs['numero']},''), r'[^0-9]', '') LIKE @q_digits")
+                params.append(param("q_digits", "STRING", f"%{digits}%"))
+            where.append(f"({' OR '.join(q_parts)})")
+            params.append(param("q", "STRING", f"%{q.lower()}%"))
+
+        equals_map = {"status": "status", "operadora": "operadora", "plano": "plano", "operador": "operador", "responsavel": "operador", "tipo_whatsapp": "tipo_whatsapp"}
+        for filter_name, alias in equals_map.items():
+            value = filters.get(filter_name)
+            if value:
+                where.append(f"LOWER(COALESCE({exprs[alias]},'')) = @{filter_name}")
+                params.append(param(filter_name, "STRING", value.lower()))
+        if filters.get("aparelho"):
+            where.append(f"CAST({exprs['sk_aparelho_atual']} AS STRING) = @aparelho")
             params.append(param("aparelho", "STRING", filters["aparelho"]))
-        if filters["ativo"] in ["true", "false"]:
-            where.append("COALESCE(ativo, TRUE) = @ativo")
+        if filters.get("ativo") in ["true", "false"]:
+            where.append(f"COALESCE({exprs['ativo']}, TRUE) = @ativo")
             params.append(param("ativo", "BOOL", filters["ativo"] == "true"))
-        quick = filters["quick"]
-        if quick == "sem_aparelho": where.append("sk_aparelho_atual IS NULL")
-        if quick == "banidos": where.append("UPPER(COALESCE(status,'')) = 'BANIDO'")
-        if quick == "recarga": where.append("(ultima_recarga_data IS NULL OR ultima_recarga_data < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))")
-        select_cols = "sk_chip,id_chip,numero,operadora,plano,status,ultima_recarga_valor,ultima_recarga_data,total_gasto,sk_aparelho_atual,ativo,updated_at,operador,observacao,slot_whatsapp,tipo_whatsapp,data_status,dt_inicio,qt_banimentos,dt_banimentos,qt_disparos"
-        sql = f"""
-            SELECT {select_cols}, COUNT(*) OVER() AS total_count
-            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+        if filters.get("created_from"):
+            where.append(f"DATE({exprs['created_at']}) >= @created_from")
+            params.append(param("created_from", "DATE", filters["created_from"]))
+        if filters.get("created_to"):
+            where.append(f"DATE({exprs['created_at']}) <= @created_to")
+            params.append(param("created_to", "DATE", filters["created_to"]))
+        if filters.get("updated_from"):
+            where.append(f"DATE({exprs['updated_at']}) >= @updated_from")
+            params.append(param("updated_from", "DATE", filters["updated_from"]))
+        if filters.get("updated_to"):
+            where.append(f"DATE({exprs['updated_at']}) <= @updated_to")
+            params.append(param("updated_to", "DATE", filters["updated_to"]))
+        quick = filters.get("quick")
+        if quick == "sem_aparelho": where.append(f"{exprs['sk_aparelho_atual']} IS NULL")
+        if quick == "banidos": where.append(f"UPPER(COALESCE({exprs['status']},'')) = 'BANIDO'")
+        if quick == "recarga": where.append(f"({exprs['ultima_recarga_data']} IS NULL OR {exprs['ultima_recarga_data']} < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))")
+
+        base_sql = f"""
+            SELECT {chip_select_list(source_columns)}
+            FROM `{PROJECT}.{DATASET}.{source_table}`
             WHERE {' AND '.join(where)}
-            ORDER BY
-              CASE WHEN UPPER(COALESCE(status,'')) IN ('BANIDO','BLOQUEADO','RESTRINGIDO','MANUTENCAO') THEN 0 ELSE 1 END,
-              CASE WHEN sk_aparelho_atual IS NULL THEN 0 ELSE 1 END,
-              CASE WHEN ultima_recarga_data IS NULL OR ultima_recarga_data < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) THEN 0 ELSE 1 END,
-              CASE WHEN UPPER(COALESCE(status,'')) IN ('ATIVO','EM_USO') THEN 0 ELSE 1 END,
-              updated_at DESC
+        """
+        sql = f"""
+            SELECT *, COUNT(*) OVER() AS total_count
+            FROM ({base_sql})
+            ORDER BY COALESCE(updated_at, created_at, TIMESTAMP('1970-01-01')) DESC, sk_chip DESC
             LIMIT @limit OFFSET @offset
         """
-        params += [param("limit", "INT64", per_page), param("offset", "INT64", offset)]
-        chips_df = sanitize_df(bq.run_df(sql, params=params))
+        query_params = params + [param("limit", "INT64", per_page), param("offset", "INT64", offset)]
+        print(f"[Chips] Filtros aplicados: {filters}")
+        chips_df = sanitize_df(bq.run_df(sql, params=query_params))
         total = int(chips_df["total_count"].iloc[0]) if not chips_df.empty and "total_count" in chips_df else 0
-        aparelhos_df = sanitize_df(bq.run_df(f"SELECT sk_aparelho, marca, modelo FROM `{PROJECT}.{DATASET}.dim_aparelho` ORDER BY marca, modelo LIMIT 500"))
         chips_records = chips_df.drop(columns=["total_count"], errors="ignore").to_dict("records")
+        aparelhos = []
+        try:
+            aparelhos_df = sanitize_df(bq.run_df(f"SELECT sk_aparelho, marca, modelo FROM `{PROJECT}.{DATASET}.dim_aparelho` ORDER BY marca, modelo LIMIT 500"))
+            aparelhos = aparelhos_df.to_dict("records")
+        except Exception as exc:
+            print(f"[Chips] Aviso: aparelhos não carregados: {exc}")
         stats = {
-            "ativos": sum(1 for c in chips_records if c.get("ativo") is True),
-            "banidos": sum(1 for c in chips_records if c.get("status") == "BANIDO"),
-            "disponiveis": sum(1 for c in chips_records if c.get("status") == "DISPONIVEL"),
+            "total": total,
+            "ativos": sum(1 for c in chips_records if c.get("ativo") is True or str(c.get("status") or "").upper() == "ATIVO"),
+            "inativos": sum(1 for c in chips_records if c.get("ativo") is False or str(c.get("status") or "").upper() == "INATIVO"),
+            "banidos": sum(1 for c in chips_records if str(c.get("status") or "").upper() == "BANIDO"),
+            "disponiveis": sum(1 for c in chips_records if str(c.get("status") or "").upper() in ["DISPONIVEL", "DISPONÍVEL"]),
+            "em_uso": sum(1 for c in chips_records if str(c.get("status") or "").upper() in ["EM_USO", "EM USO", "ATIVO"]),
+            "com_problema": sum(1 for c in chips_records if str(c.get("status") or "").upper() in ["BANIDO", "BLOQUEADO", "RESTRINGIDO", "MANUTENCAO"]),
             "sem_aparelho": sum(1 for c in chips_records if not c.get("sk_aparelho_atual")),
             "vinculados": sum(1 for c in chips_records if c.get("sk_aparelho_atual")),
             "precisam_recarga": sum(1 for c in chips_records if not c.get("ultima_recarga_data")),
             "total_gasto": sum(float(c.get("total_gasto") or 0) for c in chips_records),
-            "media_disparos": round(sum(float(c.get("qt_disparos") or 0) for c in chips_records) / max(len(chips_records), 1), 1),
-            "total_banimentos": sum(int(c.get("qt_banimentos") or 0) for c in chips_records),
-            "whatsapp_normal": sum(1 for c in chips_records if c.get("tipo_whatsapp") == "NORMAL"),
-            "whatsapp_business": sum(1 for c in chips_records if c.get("tipo_whatsapp") == "BUSINESS"),
         }
-        return render_template("chips.html", chips=chips_records, aparelhos=aparelhos_df.to_dict("records"), page=page, per_page=per_page, total=total, filters=filters, stats=stats)
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+        print(f"[Chips] Registros retornados={len(chips_records)} total={total} tempo_ms={elapsed_ms}")
+        return render_template("chips.html", chips=chips_records, aparelhos=aparelhos, page=page, per_page=per_page, total=total, filters=filters, stats=stats, loading=False)
     except Exception as e:
-        print("🚨 Erro ao listar chips:", e)
-        return render_template("chips.html", chips=[], aparelhos=[], page=1, per_page=50, total=0, filters={}, stats={}, error="Erro ao carregar listagem de chips."), 200
-
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+        print(f"[Chips] Erro ao carregar chips tempo_ms={elapsed_ms}: {e}")
+        return render_template("chips.html", chips=[], aparelhos=[], page=1, per_page=50, total=0, filters={}, stats={}, error="Erro ao carregar chips. Verifique a conexão ou tente novamente.", loading=False), 200
 
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
@@ -201,10 +308,20 @@ def _vincular_chip(sk_chip, sk_aparelho, slot, tipo_whatsapp=None):
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     try:
-        row = fetch_one(f"SELECT sk_chip,id_chip,numero,operadora,plano,status,operador,observacao,tipo_whatsapp,slot_whatsapp,qt_disparos,qt_banimentos,dt_banimentos,data_status,dt_inicio,sk_aparelho_atual,ultima_recarga_valor,ultima_recarga_data,total_gasto FROM `{PROJECT}.{DATASET}.vw_chips_painel` WHERE sk_chip=@sk LIMIT 1", [param("sk","INT64",sk_chip)])
+        view_columns = get_table_columns("vw_chips_painel")
+        dim_columns = get_table_columns("dim_chip")
+        source_table = "vw_chips_painel" if view_columns else "dim_chip"
+        source_columns = view_columns or dim_columns
+        exprs = chip_select_expr(source_columns)
+        row = fetch_one(f"""
+            SELECT {chip_select_list(source_columns)}
+            FROM `{PROJECT}.{DATASET}.{source_table}`
+            WHERE {exprs['sk_chip']}=@sk
+            LIMIT 1
+        """, [param("sk","INT64",sk_chip)])
         return (jsonify(row), 200) if row else (jsonify({"error":"Chip não encontrado"}),404)
     except Exception as e:
-        print("🚨 Erro ao buscar chip:", e); return jsonify({"error":"Erro interno ao buscar chip"}),500
+        print(f"[Chips] Erro ao buscar chip sk={sk_chip}: {e}"); return jsonify({"error":"Erro interno ao buscar chip"}),500
 
 
 @chips_bp.route("/chips/update-json", methods=["POST"])

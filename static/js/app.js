@@ -233,7 +233,8 @@ function abrirModalEdicao(chip) {
     setValue("modal_qt_disparos", chip.qt_disparos);
     setValue("modal_qt_banimentos", chip.qt_banimentos);
     setValue("modal_dt_banimentos", formatDate(chip.dt_banimentos));
-    setValue("modal_data_inicio", formatDate(chip.dt_inicio || chip.data_inicio));
+    setValue("modal_data_status", formatDate(chip.data_status || chip.dt_inicio));
+    setValue("modal_tipo_whatsapp", chip.tipo_whatsapp);
     setValue("modal_ultima_recarga_data", formatDate(chip.ultima_recarga_data));
     setValue("modal_ultima_recarga_valor", chip.ultima_recarga_valor);
     setValue("modal_total_gasto", chip.total_gasto);
@@ -273,8 +274,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
     data.qt_banimentos = Number(document.getElementById("modal_qt_banimentos").value);
     data.dt_banimentos = document.getElementById("modal_dt_banimentos").value;
     
-    data.dt_inicio = data.data_inicio || null;
-    delete data.data_inicio;
+    data.data_status = data.data_status || null;
 
     const statusCriticos = ["BANIDO", "BLOQUEADO", "RESTRINGIDO"];
     if (data.status !== statusAnterior && statusCriticos.includes(data.status)) {
@@ -362,4 +362,85 @@ if (modalStatusEl) {
     modalStatusEl.addEventListener("change", () => {
         modalStatusEl.dataset.changed = "true";
     });
+}
+
+
+/* ============================================================
+   OVERRIDES MODERNOS: tabela, ações rápidas, moeda e timeline
+============================================================ */
+function formatBRDate(value) {
+    if (!value) return "—";
+    const d = new Date(String(value).includes("T") ? value : `${value}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
+}
+function formatBRL(value) {
+    const n = Number(value || 0);
+    return n ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
+}
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+}
+function renderRows(lista) {
+    const tbody = document.getElementById("tableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (!lista.length) {
+        tbody.innerHTML = `<tr><td colspan="16" class="empty-message">Nenhum chip encontrado para os filtros atuais.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = lista.map(c => {
+        const status = c.status || "-";
+        const aparelho = c.aparelho_modelo ? `${escapeHtml(c.aparelho_modelo)} ${c.aparelho_marca ? '(' + escapeHtml(c.aparelho_marca) + ')' : ''}` : (c.sk_aparelho_atual ? `SK ${c.sk_aparelho_atual}` : "Sem aparelho");
+        const rowClass = status === "BANIDO" ? "row-danger" : (!c.sk_aparelho_atual ? "row-warning" : "");
+        return `<tr class="${rowClass}">
+            <td class="quick-actions">
+              <button class="btn btn-primary btn-sm edit-btn" data-sk="${c.sk_chip}">Editar</button>
+              <button class="btn btn-sm recarga-btn" data-sk="${c.sk_chip}">Recarregar</button>
+              <button class="btn btn-sm banir-btn" data-sk="${c.sk_chip}">Banir</button>
+              <button class="btn btn-sm timeline-btn" data-sk="${c.sk_chip}">Histórico</button>
+            </td>
+            <td>${c.sk_chip ?? "—"}</td><td>${escapeHtml(c.numero || "—")}</td><td>${escapeHtml(c.operadora || "—")}</td>
+            <td><span class="status-badge status-${String(status).toLowerCase()}">${escapeHtml(status)}</span></td>
+            <td>${escapeHtml(c.operador || "—")}</td><td>${escapeHtml(c.plano || "—")}</td>
+            <td>${escapeHtml(c.tipo_whatsapp || "—")}${c.slot_whatsapp ? ` · Slot ${c.slot_whatsapp}` : ""}</td>
+            <td>${c.qt_disparos ?? 0}</td><td>${c.qt_banimentos ?? 0}</td><td>${formatBRDate(c.dt_banimentos)}</td>
+            <td>${formatBRDate(c.ultima_recarga_data)}<br><small>${formatBRL(c.ultima_recarga_valor)}</small></td>
+            <td>${formatBRL(c.total_gasto)}</td><td>${aparelho}</td><td>${formatBRDate(c.updated_at || c.data_status)}</td>
+            <td title="${escapeHtml(c.observacao || '')}">${c.observacao ? '<i class="fas fa-comment-dots obs-icon"></i>' : '—'}</td>
+        </tr>`;
+    }).join("");
+    bindEditButtons(); bindQuickActions();
+}
+function bindQuickActions() {
+    document.querySelectorAll(".recarga-btn").forEach(btn => btn.onclick = async () => {
+        const valor = prompt("Valor da recarga (R$):");
+        if (!valor) return;
+        btn.disabled = true;
+        const res = await fetch("/chips/recarga", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({sk_chip:Number(btn.dataset.sk), valor}) });
+        const out = await res.json();
+        if (out.success) { notify("Recarga registrada com sucesso", "success"); setTimeout(() => location.reload(), 500); }
+        else { notify(out.error || "Erro ao recarregar", "error"); btn.disabled = false; }
+    });
+    document.querySelectorAll(".banir-btn").forEach(btn => btn.onclick = async () => {
+        if (!confirm("Confirmar banimento deste chip?")) return;
+        btn.disabled = true;
+        const res = await fetch("/chips/banir", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({sk_chip:Number(btn.dataset.sk)}) });
+        const out = await res.json();
+        if (out.success) { notify("Chip banido", "success"); setTimeout(() => location.reload(), 500); }
+        else { notify(out.error || "Erro ao banir", "error"); btn.disabled = false; }
+    });
+    document.querySelectorAll(".timeline-btn").forEach(btn => btn.onclick = async () => {
+        const res = await fetch(`/chips/timeline/${btn.dataset.sk}`);
+        const items = await res.json();
+        const box = document.getElementById("timelineContent");
+        box.innerHTML = items.length ? items.map(i => `<div class="timeline-item"><strong>${escapeHtml(i.tipo_evento || 'EVENTO')}</strong><span>${formatBRDate(i.data_evento)}</span><p>${escapeHtml(i.observacao || '')}</p><small>${escapeHtml(i.origem || '')}</small></div>`).join("") : "<p>Nenhum histórico encontrado.</p>";
+        document.getElementById("timelineModal").style.display = "flex";
+    });
+}
+document.getElementById("timelineCloseBtn")?.addEventListener("click", () => document.getElementById("timelineModal").style.display = "none");
+
+// Re-render after override definitions are loaded.
+if (typeof ALL_CHIPS !== "undefined") {
+    const savedTerm = localStorage.getItem("chipSearchTerm") || "";
+    savedTerm ? executarBusca(savedTerm) : renderRows(ALL_CHIPS);
 }

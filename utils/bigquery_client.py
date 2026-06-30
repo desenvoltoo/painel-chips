@@ -29,9 +29,12 @@ class BigQueryClient:
     # ========================================================
     # EXECUÇÃO GENÉRICA (SEM DATAFRAME)
     # ========================================================
-    def run(self, sql: str):
+    def run(self, sql: str, params=None):
         print("\n🔥 EXECUTANDO SQL:\n", sql, "\n" + "=" * 80)
-        return self._get_client().query(sql).result()
+        job_config = None
+        if params is not None:
+            job_config = bigquery.QueryJobConfig(query_parameters=params)
+        return self._get_client().query(sql, job_config=job_config).result()
 
     # ========================================================
     # EXECUÇÃO COM DATAFRAME (LEITURA) — SUPORTE TOTAL A PARAMS

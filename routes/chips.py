@@ -1,428 +1,307 @@
 # routes/chips.py
 # -*- coding: utf-8 -*-
 
-import os
-from flask import Blueprint, render_template, request, jsonify
+import re
+import uuid
+
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for, flash
+from google.cloud import bigquery
 
 from utils.bigquery_client import BigQueryClient
 from utils.sanitizer import sanitize_df
 
 chips_bp = Blueprint("chips", __name__)
 bq = BigQueryClient()
-
-PROJECT = os.getenv("GCP_PROJECT_ID", "painel-universidade")
-DATASET = os.getenv("BQ_DATASET", "marts")
-
-
-# ============================================================
-# Helpers
-# ============================================================
-def _get_bq_client():
-    """
-    Garante que temos um client BigQuery pronto.
-    Compatível com implementações diferentes de BigQueryClient.
-    """
-    # Caso exista atributo client já setado
-    client = getattr(bq, "client", None)
-    if client is not None:
-        return client
-
-    # Caso exista método _get_client() (bem comum)
-    getter = getattr(bq, "_get_client", None)
-    if callable(getter):
-        client = getter()
-        # se o objeto guarda em bq.client depois, ótimo; se não, tudo bem
-        return client
-
-    raise RuntimeError("BigQueryClient não expõe client nem _get_client()")
+PROJECT = bq.project
+DATASET = bq.dataset
 
 
-def call_sp(sql: str):
-    print("\n🔥 SQL ===============================")
-    print(sql)
-    print("====================================\n")
-    client = _get_bq_client()
-    return client.query(sql).result()
+def only_digits(value):
+    return re.sub(r"\D+", "", str(value or ""))
 
 
-def sql_str(v):
-    """
-    String segura para BigQuery:
-    - NULL se vazio/None
-    - Escapa aspas simples com '' (padrão SQL)
-    """
-    if v is None:
-        return "NULL"
-    s = str(v).strip()
-    if s == "" or s.lower() in ["none", "null", "nan"]:
-        return "NULL"
-    s = s.replace("\\", "\\\\").replace("'", "''")
-    return f"'{s}'"
+def clean_text(value, default=None):
+    if value is None:
+        return default
+    value = str(value).strip()
+    return value if value else default
 
 
-def sql_int(v):
+def to_int(value, default=None):
     try:
-        if v is None or str(v).strip() == "":
-            return "NULL"
-        return str(int(float(v)))
+        if value in (None, ""):
+            return default
+        return int(float(value))
     except Exception:
-        return "NULL"
+        return default
 
 
-def sql_float(v):
+def to_float(value, default=None):
     try:
-        if v is None or str(v).strip() == "":
-            return "NULL"
-        return str(float(v))
+        if value in (None, ""):
+            return default
+        return float(str(value).replace(",", "."))
     except Exception:
-        return "NULL"
+        return default
 
 
-def sql_date(v):
-    """
-    Espera "YYYY-MM-DD" (string). Retorna DATE('YYYY-MM-DD') ou NULL
-    """
-    if v is None:
-        return "NULL"
-    s = str(v).strip()
-    if s == "" or s.lower() in ["none", "null", "nan"]:
-        return "NULL"
-    return f"DATE('{s}')"
+def param(name, type_, value):
+    return bigquery.ScalarQueryParameter(name, type_, value)
 
 
-def norm_str(v):
-    if v is None:
-        return None
-    s = str(v).strip()
-    if s == "" or s.lower() in ["none", "null", "nan"]:
-        return None
-    return s
+def run_op(operation, sql, params=None):
+    print(f"🔵 BigQuery operação={operation} projeto={PROJECT} dataset={DATASET}")
+    try:
+        return bq.run(sql, params=params)
+    except Exception as exc:
+        print(f"🚨 Erro BigQuery operação={operation}: {exc}")
+        raise
 
 
-# ============================================================
-# 📌 LISTAGEM PRINCIPAL
-# ============================================================
+def fetch_one(sql, params=None):
+    df = bq.run_df(sql, params=params)
+    return None if df.empty else sanitize_df(df).iloc[0].to_dict()
+
+
+def chip_by_clean_number(numero_limpo, exclude_sk=None):
+    where = "REGEXP_REPLACE(numero, r'[^0-9]', '') = @numero_limpo AND COALESCE(ativo, TRUE) = TRUE"
+    params = [param("numero_limpo", "STRING", numero_limpo)]
+    if exclude_sk:
+        where += " AND sk_chip != @exclude_sk"
+        params.append(param("exclude_sk", "INT64", int(exclude_sk)))
+    return fetch_one(f"""
+        SELECT sk_chip, id_chip, numero, status
+        FROM `{PROJECT}.{DATASET}.dim_chip`
+        WHERE {where}
+        LIMIT 1
+    """, params)
+
+
+def insert_event(sk_chip, tipo, observacao, origem="Painel"):
+    try:
+        run_op("registrar evento", f"""
+            INSERT INTO `{PROJECT}.{DATASET}.f_chip_evento`
+                (sk_chip, tipo_evento, origem, observacao, created_at)
+            VALUES (@sk_chip, @tipo, @origem, @observacao, CURRENT_TIMESTAMP())
+        """, [param("sk_chip", "INT64", int(sk_chip)), param("tipo", "STRING", tipo), param("origem", "STRING", origem), param("observacao", "STRING", observacao)])
+    except Exception as exc:
+        print(f"⚠️ Evento não registrado ({tipo}) para sk_chip={sk_chip}: {exc}")
+
+
 @chips_bp.route("/chips")
 def chips_list():
     try:
-        chips_df = sanitize_df(bq.get_view("vw_chips_painel"))
-        aparelhos_df = sanitize_df(bq.get_view("vw_aparelhos"))
-
-        return render_template(
-            "chips.html",
-            chips=chips_df.to_dict(orient="records"),
-            aparelhos=aparelhos_df.to_dict(orient="records"),
-        )
-
+        page = max(to_int(request.args.get("page"), 1), 1)
+        per_page = min(max(to_int(request.args.get("per_page"), 50), 10), 100)
+        offset = (page - 1) * per_page
+        filters = {k: clean_text(request.args.get(k)) for k in ["q", "status", "operadora", "plano", "operador", "aparelho", "tipo_whatsapp", "ativo", "quick"]}
+        where, params = ["1=1"], []
+        if filters["q"]:
+            where.append("(REGEXP_REPLACE(COALESCE(numero,''), r'[^0-9]', '') LIKE @q_digits OR LOWER(COALESCE(numero,'')) LIKE @q OR LOWER(COALESCE(id_chip,'')) LIKE @q)")
+            params += [param("q", "STRING", f"%{filters['q'].lower()}%"), param("q_digits", "STRING", f"%{only_digits(filters['q'])}%")]
+        for field in ["status", "operadora", "plano", "operador", "tipo_whatsapp"]:
+            if filters[field]:
+                where.append(f"COALESCE(CAST({field} AS STRING),'') = @{field}")
+                params.append(param(field, "STRING", filters[field]))
+        if filters["aparelho"]:
+            where.append("CAST(sk_aparelho_atual AS STRING) = @aparelho")
+            params.append(param("aparelho", "STRING", filters["aparelho"]))
+        if filters["ativo"] in ["true", "false"]:
+            where.append("COALESCE(ativo, TRUE) = @ativo")
+            params.append(param("ativo", "BOOL", filters["ativo"] == "true"))
+        quick = filters["quick"]
+        if quick == "sem_aparelho": where.append("sk_aparelho_atual IS NULL")
+        if quick == "banidos": where.append("UPPER(COALESCE(status,'')) = 'BANIDO'")
+        if quick == "recarga": where.append("(ultima_recarga_data IS NULL OR ultima_recarga_data < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))")
+        select_cols = "sk_chip,id_chip,numero,operadora,plano,status,ultima_recarga_valor,ultima_recarga_data,total_gasto,sk_aparelho_atual,ativo,updated_at,operador,observacao,slot_whatsapp,tipo_whatsapp,data_status,dt_inicio,qt_banimentos,dt_banimentos,qt_disparos"
+        sql = f"""
+            SELECT {select_cols}, COUNT(*) OVER() AS total_count
+            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
+            WHERE {' AND '.join(where)}
+            ORDER BY
+              CASE WHEN UPPER(COALESCE(status,'')) IN ('BANIDO','BLOQUEADO','RESTRINGIDO','MANUTENCAO') THEN 0 ELSE 1 END,
+              CASE WHEN sk_aparelho_atual IS NULL THEN 0 ELSE 1 END,
+              CASE WHEN ultima_recarga_data IS NULL OR ultima_recarga_data < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) THEN 0 ELSE 1 END,
+              CASE WHEN UPPER(COALESCE(status,'')) IN ('ATIVO','EM_USO') THEN 0 ELSE 1 END,
+              updated_at DESC
+            LIMIT @limit OFFSET @offset
+        """
+        params += [param("limit", "INT64", per_page), param("offset", "INT64", offset)]
+        chips_df = sanitize_df(bq.run_df(sql, params=params))
+        total = int(chips_df["total_count"].iloc[0]) if not chips_df.empty and "total_count" in chips_df else 0
+        aparelhos_df = sanitize_df(bq.run_df(f"SELECT sk_aparelho, marca, modelo FROM `{PROJECT}.{DATASET}.dim_aparelho` ORDER BY marca, modelo LIMIT 500"))
+        chips_records = chips_df.drop(columns=["total_count"], errors="ignore").to_dict("records")
+        stats = {
+            "ativos": sum(1 for c in chips_records if c.get("ativo") is True),
+            "banidos": sum(1 for c in chips_records if c.get("status") == "BANIDO"),
+            "disponiveis": sum(1 for c in chips_records if c.get("status") == "DISPONIVEL"),
+            "sem_aparelho": sum(1 for c in chips_records if not c.get("sk_aparelho_atual")),
+            "vinculados": sum(1 for c in chips_records if c.get("sk_aparelho_atual")),
+            "precisam_recarga": sum(1 for c in chips_records if not c.get("ultima_recarga_data")),
+            "total_gasto": sum(float(c.get("total_gasto") or 0) for c in chips_records),
+            "media_disparos": round(sum(float(c.get("qt_disparos") or 0) for c in chips_records) / max(len(chips_records), 1), 1),
+            "total_banimentos": sum(int(c.get("qt_banimentos") or 0) for c in chips_records),
+            "whatsapp_normal": sum(1 for c in chips_records if c.get("tipo_whatsapp") == "NORMAL"),
+            "whatsapp_business": sum(1 for c in chips_records if c.get("tipo_whatsapp") == "BUSINESS"),
+        }
+        return render_template("chips.html", chips=chips_records, aparelhos=aparelhos_df.to_dict("records"), page=page, per_page=per_page, total=total, filters=filters, stats=stats)
     except Exception as e:
-        print("🚨 Erro ao carregar /chips:", e)
-        return "Erro ao carregar chips", 500
+        print("🚨 Erro ao listar chips:", e)
+        return render_template("chips.html", chips=[], aparelhos=[], page=1, per_page=50, total=0, filters={}, stats={}, error="Erro ao carregar listagem de chips."), 200
 
 
-# ============================================================
-# ➕ CADASTRAR CHIP
-#
-# ⚠️ ATENÇÃO:
-# Você comentou uma assinatura de 7 params, mas está chamando 9 params.
-# Garanta que a SP no BigQuery bate com o CALL abaixo.
-#
-# Se a sua SP for MESMO só 7 params:
-#   (p_id_chip, p_numero, p_operadora, p_plano, p_status, p_observacao, p_origem)
-# então use o CALL ALTERNATIVO (comentado logo abaixo).
-# ============================================================
 @chips_bp.route("/chips/add", methods=["POST"])
 def chips_add():
+    data = request.form.to_dict()
+    numero_limpo = only_digits(data.get("numero"))
+    operadora = clean_text(data.get("operadora"))
+    if not numero_limpo or not operadora:
+        flash("Número e operadora são obrigatórios.", "error"); return redirect(url_for("chips.chips_list"))
     try:
-        data = request.form.to_dict()
-
-        id_chip = norm_str(data.get("id_chip"))
-        numero = norm_str(data.get("numero"))
-        operadora = norm_str(data.get("operadora"))
-        plano = norm_str(data.get("plano"))
-        status = norm_str(data.get("status"))
-        qt_disparos = norm_str(data.get("qt_disparos"))
-        observacao = norm_str(data.get("observacao"))
-        origem = "Painel"
-
-        if not numero:
-            return """
-                <script>
-                    alert('Número é obrigatório!');
-                    window.location.href='/chips';
-                </script>
-            """
-
-        call_sp(f"""
-            CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
-                {sql_str(id_chip)},
-                {sql_str(numero)},
-                {sql_str(operadora)},
-                {sql_str(plano)},
-                {sql_str(status)},
-                {sql_str(observacao)},
-                {sql_str(origem)}
-            )
-        """)
-
-        # 🔁 CALL alternativo caso sua SP seja só 7 params:
-        # call_sp(f"""
-        #     CALL `{PROJECT}.{DATASET}.sp_insert_chip`(
-        #         {sql_str(id_chip)},
-        #         {sql_str(numero)},
-        #         {sql_str(operadora)},
-        #         {sql_str(plano)},
-        #         {sql_str(status)},
-        #         {sql_str(observacao)},
-        #         {sql_str(origem)}
-        #     )
-        # """)
-
-        # ✅ Correção SQL: faltava vírgula após qt_disparos
-        call_sp(f"""
-            UPDATE `{PROJECT}.{DATASET}.dim_chip`
-            SET qt_disparos = {sql_int(qt_disparos)}
-            WHERE id_chip = {sql_str(id_chip)}
-        """)
-
-        return """
-            <script>
-                alert('Chip cadastrado com sucesso!');
-                window.location.href='/chips';
-            </script>
-        """
-
+        dup = chip_by_clean_number(numero_limpo)
+        if dup:
+            flash(f"Chip já cadastrado para este número (SK {dup['sk_chip']}).", "error"); return redirect(url_for("chips.chips_list"))
+        id_chip = clean_text(data.get("id_chip"), f"CHIP-{uuid.uuid4().hex[:10].upper()}")
+        status = clean_text(data.get("status"), "DISPONIVEL")
+        observacao = clean_text(data.get("observacao"), "")
+        run_op("cadastrar chip", f"CALL `{PROJECT}.{DATASET}.sp_insert_chip`(@p_id_chip,@p_numero,@p_operadora,@p_plano,@p_status,@p_observacao,@p_origem)", [param("p_id_chip", "STRING", id_chip), param("p_numero", "STRING", numero_limpo), param("p_operadora", "STRING", operadora), param("p_plano", "STRING", clean_text(data.get("plano"), "")), param("p_status", "STRING", status), param("p_observacao", "STRING", observacao), param("p_origem", "STRING", "Painel")])
+        chip = chip_by_clean_number(numero_limpo)
+        if not chip or not chip.get("sk_chip"):
+            raise RuntimeError("Chip inserido, mas sk_chip não foi encontrado na dim_chip.")
+        sk_chip = int(chip["sk_chip"])
+        updates = []
+        params = [param("sk_chip", "INT64", sk_chip)]
+        for field, typ, default in [("operador","STRING",None),("tipo_whatsapp","STRING",None),("slot_whatsapp","INT64",None),("qt_disparos","INT64",0),("qt_banimentos","INT64",0),("dt_banimentos","DATE",None)]:
+            val = data.get(field)
+            if field.startswith("qt_"): val = to_int(val, default)
+            elif field == "slot_whatsapp": val = to_int(val)
+            elif field == "dt_banimentos": val = clean_text(val)
+            else: val = clean_text(val)
+            updates.append(f"{field}=@{field}"); params.append(param(field, typ, val))
+        updates.append("ativo=TRUE"); updates.append("total_gasto=COALESCE(total_gasto,0)"); updates.append("updated_at=CURRENT_TIMESTAMP()")
+        run_op("complementar cadastro", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET {', '.join(updates)} WHERE sk_chip=@sk_chip", params)
+        if to_int(data.get("sk_aparelho_atual")):
+            _vincular_chip(sk_chip, to_int(data.get("sk_aparelho_atual")), to_int(data.get("slot_whatsapp")), clean_text(data.get("tipo_whatsapp")))
+        insert_event(sk_chip, "CADASTRO", "Cadastro realizado pelo painel")
+        flash(f"Chip cadastrado com sucesso (SK {sk_chip}).", "success")
     except Exception as e:
-        print("🚨 Erro ao cadastrar chip:", e)
-        return "Erro ao cadastrar chip", 500
+        print(f"🚨 Erro ao cadastrar chip numero={numero_limpo}: {e}")
+        flash(f"Erro ao cadastrar chip: {e}", "error")
+    return redirect(url_for("chips.chips_list"))
 
 
-# ============================================================
-# 🔍 BUSCAR CHIP (MODAL)
-# ============================================================
+def _vincular_chip(sk_chip, sk_aparelho, slot, tipo_whatsapp=None):
+    if not slot: raise ValueError("Slot WhatsApp é obrigatório para vincular aparelho.")
+    dup = fetch_one(f"SELECT sk_chip FROM `{PROJECT}.{DATASET}.dim_chip` WHERE sk_aparelho_atual=@ap AND slot_whatsapp=@slot AND sk_chip!=@sk AND COALESCE(ativo,TRUE)=TRUE LIMIT 1", [param("ap","INT64",sk_aparelho), param("slot","INT64",slot), param("sk","INT64",sk_chip)])
+    if dup: raise ValueError("Este slot já está ocupado no aparelho selecionado.")
+    run_op("vincular aparelho", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET sk_aparelho_atual=@ap, slot_whatsapp=@slot, tipo_whatsapp=@tipo, updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("ap","INT64",sk_aparelho), param("slot","INT64",slot), param("tipo","STRING",tipo_whatsapp), param("sk","INT64",sk_chip)])
+    insert_event(sk_chip, "VINCULO_APARELHO", f"Vinculado ao aparelho {sk_aparelho}, slot {slot}")
+
+
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     try:
-        df = bq.run_df(f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_chips_painel`
-            WHERE sk_chip = {sk_chip}
-            LIMIT 1
-        """)
-
-        if df.empty:
-            return jsonify({"error": "Chip não encontrado"}), 404
-
-        return jsonify(sanitize_df(df).iloc[0].to_dict())
-
+        row = fetch_one(f"SELECT sk_chip,id_chip,numero,operadora,plano,status,operador,observacao,tipo_whatsapp,slot_whatsapp,qt_disparos,qt_banimentos,dt_banimentos,data_status,dt_inicio,sk_aparelho_atual,ultima_recarga_valor,ultima_recarga_data,total_gasto FROM `{PROJECT}.{DATASET}.vw_chips_painel` WHERE sk_chip=@sk LIMIT 1", [param("sk","INT64",sk_chip)])
+        return (jsonify(row), 200) if row else (jsonify({"error":"Chip não encontrado"}),404)
     except Exception as e:
-        print("🚨 Erro modal:", e)
-        return jsonify({"error": "Erro interno"}), 500
+        print("🚨 Erro ao buscar chip:", e); return jsonify({"error":"Erro interno ao buscar chip"}),500
 
 
-# ============================================================
-# 💾 ATUALIZAÇÃO COMPLETA (DADOS + STATUS + DATA + APARELHO)
-# ============================================================
 @chips_bp.route("/chips/update-json", methods=["POST"])
 def chips_update_json():
     try:
-        payload = request.json or {}
-        sk_chip = payload.get("sk_chip")
-
-        if not sk_chip:
-            return jsonify({"error": "sk_chip ausente"}), 400
-
-        df_atual = bq.run_df(f"""
-            SELECT *
+        p = request.json or {}; sk = to_int(p.get("sk_chip"))
+        if not sk: return jsonify({"error":"sk_chip ausente"}),400
+        atual = fetch_one(f"""
+            SELECT sk_chip, numero, operadora, plano, status, operador, observacao, tipo_whatsapp,
+                   slot_whatsapp, qt_disparos, qt_banimentos, dt_banimentos, data_status, sk_aparelho_atual
             FROM `{PROJECT}.{DATASET}.dim_chip`
-            WHERE sk_chip = {int(sk_chip)}
+            WHERE sk_chip=@sk
             LIMIT 1
-        """)
-
-        if df_atual.empty:
-            return jsonify({"error": "Chip não encontrado"}), 404
-
-        atual = df_atual.iloc[0].to_dict()
-
-        # ----------------------------------------------------
-        # 1) DADOS BÁSICOS (sp_upsert_chip)
-        # ----------------------------------------------------
-        numero_novo = norm_str(payload.get("numero"))
-        operadora_novo = norm_str(payload.get("operadora"))
-        plano_novo = norm_str(payload.get("plano"))
-        observacao_novo = norm_str(payload.get("observacao"))
-        operador_novo = norm_str(payload.get("operador"))
-
-        if (
-            numero_novo != norm_str(atual.get("numero"))
-            or operadora_novo != norm_str(atual.get("operadora"))
-            or plano_novo != norm_str(atual.get("plano"))
-            or observacao_novo != norm_str(atual.get("observacao"))
-            or operador_novo != norm_str(atual.get("operador"))
-        ):
-            call_sp(f"""
-                CALL `{PROJECT}.{DATASET}.sp_upsert_chip`(
-                    {int(sk_chip)},
-                    {sql_str(numero_novo)},
-                    {sql_str(operadora_novo)},
-                    {sql_str(plano_novo)},
-                    {sql_str(observacao_novo)},
-                    {sql_str(operador_novo)}
-                )
-            """)
-
-        # ----------------------------------------------------
-        # 2) STATUS + DATA (sp_alterar_status_chip)
-        # ----------------------------------------------------
-        status_atual = norm_str(atual.get("status"))
-        dt_inicio_atual = atual.get("dt_inicio")
-        dt_inicio_atual_str = str(dt_inicio_atual) if dt_inicio_atual is not None else None
-
-        status_payload = norm_str(payload.get("status"))
-        status_final = status_payload if status_payload is not None else status_atual
-
-        dt_inicio_payload_str = norm_str(payload.get("dt_inicio"))
-
-        mudou_status = (status_payload is not None and status_payload != status_atual)
-        mudou_data = (dt_inicio_payload_str is not None and dt_inicio_payload_str != dt_inicio_atual_str)
-
-        if mudou_status or mudou_data:
-            call_sp(f"""
-                CALL `{PROJECT}.{DATASET}.sp_alterar_status_chip`(
-                    {int(sk_chip)},
-                    {sql_str(status_final)},
-                    {sql_date(dt_inicio_payload_str)},
-                    'Painel',
-                    'Alteração via modal (status/data)'
-                )
-            """)
-
-        # ----------------------------------------------------
-        # 2b) CAMPOS ADICIONAIS (qt_banimentos, qt_disparos, dt_banimentos)
-        # ----------------------------------------------------
-        qt_disparos_nova_raw = payload.get("qt_disparos")
-        qt_nova_raw = payload.get("qt_banimentos")
-
-        qt_nova = None
-        qt_disparos_nova = None
-
-        try:
-            if qt_nova_raw is not None and str(qt_nova_raw).strip() != "":
-                qt_nova = int(float(qt_nova_raw))
-        except Exception:
-            qt_nova = None
-
-        try:
-            if qt_disparos_nova_raw is not None and str(qt_disparos_nova_raw).strip() != "":
-                qt_disparos_nova = int(float(qt_disparos_nova_raw))
-        except Exception:
-            qt_disparos_nova = None
-
-        dt_banimentos_nova = norm_str(payload.get("dt_banimentos"))
-
-        qt_atual = None if atual.get("qt_banimentos") is None else int(float(atual.get("qt_banimentos")))
-        qt_disparos_atual = None if atual.get("qt_disparos") is None else int(float(atual.get("qt_disparos")))
-        dt_banimentos_atual = (str(atual.get("dt_banimentos")) if atual.get("dt_banimentos") is not None else None)
-
-        mudou_qt = (qt_nova != qt_atual)
-        mudou_qt_disparos = (qt_disparos_nova != qt_disparos_atual)
-        mudou_dt = (dt_banimentos_nova != dt_banimentos_atual)
-
-        if mudou_qt or mudou_qt_disparos or mudou_dt:
-            call_sp(f"""
-                UPDATE `{PROJECT}.{DATASET}.dim_chip`
-                SET qt_banimentos = {sql_int(qt_nova)},
-                    qt_disparos = {sql_int(qt_disparos_nova)},
-                    dt_banimentos = {sql_date(dt_banimentos_nova)}
-                WHERE sk_chip = {int(sk_chip)}
-            """)
-
-        # ----------------------------------------------------
-        # 3) APARELHO (vincular/desvincular)
-        # ----------------------------------------------------
-        if "sk_aparelho_atual" in payload:
-            novo_aparelho = payload.get("sk_aparelho_atual")
-            antigo_aparelho = atual.get("sk_aparelho_atual")
-
-            novo_aparelho = None if str(novo_aparelho).strip() in ["", "None", "none", "null", "NULL"] else novo_aparelho
-            antigo_aparelho = None if str(antigo_aparelho).strip() in ["", "None", "none", "null", "NULL"] else antigo_aparelho
-
-            if str(novo_aparelho) != str(antigo_aparelho):
-                if novo_aparelho is not None:
-                    slot = payload.get("slot_whatsapp")
-                    if slot in [None, "", "None", "null", "NULL"]:
-                        return jsonify({"error": "slot_whatsapp obrigatório ao vincular"}), 400
-
-                    call_sp(f"""
-                        CALL `{PROJECT}.{DATASET}.sp_vincular_aparelho_chip`(
-                            {int(sk_chip)},
-                            {int(novo_aparelho)},
-                            {int(slot)},
-                            'Painel',
-                            'Vínculo via painel'
-                        )
-                    """)
-                else:
-                    call_sp(f"""
-                        CALL `{PROJECT}.{DATASET}.sp_desvincular_aparelho_chip`(
-                            {int(sk_chip)},
-                            'Painel',
-                            'Desvínculo via painel'
-                        )
-                    """)
-
+        """, [param("sk","INT64",sk)])
+        if not atual: return jsonify({"error":"Chip não encontrado"}),404
+        numero_limpo = only_digits(p.get("numero"))
+        if not numero_limpo: return jsonify({"error":"Número obrigatório"}),400
+        dup = chip_by_clean_number(numero_limpo, exclude_sk=sk)
+        if dup: return jsonify({"error":f"Já existe chip ativo com este número (SK {dup['sk_chip']})."}),409
+        status_novo = clean_text(p.get("status"), atual.get("status") or "DISPONIVEL")
+        set_data_status = "data_status = CURRENT_DATE()," if status_novo != atual.get("status") else "data_status = @data_status,"
+        run_op("editar chip", f"""
+            UPDATE `{PROJECT}.{DATASET}.dim_chip` SET
+              numero=@numero, operadora=@operadora, plano=@plano, status=@status, operador=@operador,
+              observacao=@observacao, tipo_whatsapp=@tipo_whatsapp, slot_whatsapp=@slot_whatsapp,
+              qt_disparos=@qt_disparos, qt_banimentos=@qt_banimentos, dt_banimentos=@dt_banimentos,
+              {set_data_status} updated_at=CURRENT_TIMESTAMP()
+            WHERE sk_chip=@sk
+        """, [param("numero","STRING",numero_limpo), param("operadora","STRING",clean_text(p.get("operadora"))), param("plano","STRING",clean_text(p.get("plano"))), param("status","STRING",status_novo), param("operador","STRING",clean_text(p.get("operador"))), param("observacao","STRING",clean_text(p.get("observacao"))), param("tipo_whatsapp","STRING",clean_text(p.get("tipo_whatsapp"))), param("slot_whatsapp","INT64",to_int(p.get("slot_whatsapp"))), param("qt_disparos","INT64",to_int(p.get("qt_disparos"),0)), param("qt_banimentos","INT64",to_int(p.get("qt_banimentos"),0)), param("dt_banimentos","DATE",clean_text(p.get("dt_banimentos"))), param("data_status","DATE",clean_text(p.get("data_status") or p.get("dt_inicio"))), param("sk","INT64",sk)])
+        if "sk_aparelho_atual" in p:
+            ap = to_int(p.get("sk_aparelho_atual"))
+            if ap: _vincular_chip(sk, ap, to_int(p.get("slot_whatsapp")), clean_text(p.get("tipo_whatsapp")))
+            else:
+                run_op("desvincular aparelho", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET sk_aparelho_atual=NULL, slot_whatsapp=NULL, tipo_whatsapp=NULL, updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("sk","INT64",sk)])
+                insert_event(sk, "DESVINCULO_APARELHO", "Desvinculado pelo painel")
+        insert_event(sk, "EDICAO", "Chip editado pelo painel")
         return jsonify({"success": True})
-
     except Exception as e:
-        print("🚨 Erro update:", e)
-        return jsonify({"error": str(e)}), 500
+        print("🚨 Erro ao editar chip:", e); return jsonify({"error": str(e)}),500
 
 
-# ============================================================
-# 💰 REGISTRAR RECARGA
-# ============================================================
 @chips_bp.route("/chips/recarga", methods=["POST"])
 def chips_recarga():
     try:
-        payload = request.json or {}
-
-        sk_chip = payload.get("sk_chip")
-        valor = payload.get("valor")
-        observacao = payload.get("observacao", "Recarga via painel")
-
-        if not sk_chip or valor in [None, ""]:
-            return jsonify({"error": "sk_chip e valor obrigatórios"}), 400
-
-        call_sp(f"""
-            CALL `{PROJECT}.{DATASET}.sp_registrar_recarga_chip`(
-                {int(sk_chip)},
-                {sql_float(valor)},
-                'Painel',
-                {sql_str(observacao)}
-            )
-        """)
-
+        p = request.json or {}; sk = to_int(p.get("sk_chip")); valor = to_float(p.get("valor"))
+        if not sk or valor is None: return jsonify({"error":"sk_chip e valor obrigatórios"}),400
+        try:
+            run_op("registrar recarga SP", f"CALL `{PROJECT}.{DATASET}.sp_registrar_recarga_chip`(@sk,@valor,@origem,@obs)", [param("sk","INT64",sk), param("valor","FLOAT64",valor), param("origem","STRING","Painel"), param("obs","STRING",clean_text(p.get("observacao"),"Recarga via painel"))])
+        except Exception:
+            run_op("registrar recarga update", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET ultima_recarga_valor=@valor, ultima_recarga_data=CURRENT_DATE(), total_gasto=COALESCE(total_gasto,0)+@valor, updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("valor","FLOAT64",valor), param("sk","INT64",sk)])
+        insert_event(sk, "RECARGA", f"Recarga de R$ {valor:.2f}")
         return jsonify({"success": True})
-
     except Exception as e:
-        print("🚨 Erro recarga:", e)
-        return jsonify({"error": str(e)}), 500
+        print("🚨 Erro ao recarregar chip:", e); return jsonify({"error": str(e)}),500
 
 
-# ============================================================
-# 🧵 TIMELINE
-# ============================================================
+@chips_bp.route("/chips/banir", methods=["POST"])
+def chips_banir():
+    try:
+        sk = to_int((request.json or {}).get("sk_chip"))
+        if not sk: return jsonify({"error":"sk_chip obrigatório"}),400
+        run_op("banir chip", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET status='BANIDO', qt_banimentos=COALESCE(qt_banimentos,0)+1, dt_banimentos=CURRENT_DATE(), data_status=CURRENT_DATE(), updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("sk","INT64",sk)])
+        insert_event(sk, "BANIMENTO", "Banimento registrado pelo painel")
+        return jsonify({"success": True})
+    except Exception as e:
+        print("🚨 Erro ao banir chip:", e); return jsonify({"error":str(e)}),500
+
+
 @chips_bp.route("/chips/timeline/<int:sk_chip>")
 def chips_timeline(sk_chip):
     try:
         df = bq.run_df(f"""
-            SELECT *
-            FROM `{PROJECT}.{DATASET}.vw_chip_timeline`
-            WHERE sk_chip = {int(sk_chip)}
-            ORDER BY data_evento DESC
-        """)
-
-        return jsonify(sanitize_df(df).to_dict(orient="records"))
-
+            SELECT sk_chip, tipo_evento, origem, observacao, created_at AS data_evento
+            FROM `{PROJECT}.{DATASET}.f_chip_evento`
+            WHERE sk_chip=@sk
+            ORDER BY created_at DESC
+            LIMIT 100
+        """, [param("sk","INT64",sk_chip)])
+        return jsonify(sanitize_df(df).to_dict("records"))
     except Exception as e:
-        print("🚨 Erro timeline:", e)
-        return jsonify([]), 500
+        print("🚨 Erro timeline:", e); return jsonify([]),500
+
+
+@chips_bp.route("/admin/diagnostico")
+def diagnostico():
+    checks = []
+    queries = {
+        "dim_chip existe": f"SELECT 1 FROM `{PROJECT}.{DATASET}.dim_chip` LIMIT 1",
+        "vw_chips_painel existe": f"SELECT 1 FROM `{PROJECT}.{DATASET}.vw_chips_painel` LIMIT 1",
+        "chips sem sk_chip": f"SELECT COUNT(*) qtd FROM `{PROJECT}.{DATASET}.dim_chip` WHERE sk_chip IS NULL",
+        "números duplicados ativos": f"SELECT COUNT(*) qtd FROM (SELECT REGEXP_REPLACE(numero, r'[^0-9]', '') n FROM `{PROJECT}.{DATASET}.dim_chip` WHERE COALESCE(ativo,TRUE) GROUP BY n HAVING COUNT(*)>1)",
+        "vínculo inválido": f"SELECT COUNT(*) qtd FROM `{PROJECT}.{DATASET}.dim_chip` c LEFT JOIN `{PROJECT}.{DATASET}.dim_aparelho` a ON c.sk_aparelho_atual=a.sk_aparelho WHERE c.sk_aparelho_atual IS NOT NULL AND a.sk_aparelho IS NULL",
+        "slots duplicados": f"SELECT COUNT(*) qtd FROM (SELECT sk_aparelho_atual, slot_whatsapp FROM `{PROJECT}.{DATASET}.dim_chip` WHERE sk_aparelho_atual IS NOT NULL AND slot_whatsapp IS NOT NULL GROUP BY 1,2 HAVING COUNT(*)>1)",
+    }
+    for nome, sql in queries.items():
+        try:
+            row = fetch_one(sql); checks.append({"check": nome, "ok": True, "resultado": row})
+        except Exception as e:
+            checks.append({"check": nome, "ok": False, "erro": str(e)})
+    return jsonify(checks)

@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
 ============================================================ */
 const ALL_CHIPS = Array.isArray(window.chipsData) ? [...window.chipsData] : [];
 let chipsView = [...ALL_CHIPS];
+console.log("[Chips] Resposta recebida da API:", window.chipsData);
+console.log("[Chips] Total recebido:", ALL_CHIPS.length);
 
 
 /* ============================================================
@@ -113,7 +115,7 @@ function renderRows(lista) {
     if (!lista.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="16" class="empty-message">
+                <td colspan="17" class="empty-message">
                     Nenhum chip encontrado.
                 </td>
             </tr>`;
@@ -198,13 +200,18 @@ function bindEditButtons() {
                 return;
             }
 
-            const res = await fetch(`/chips/sk/${sk}`);
-            if (!res.ok) {
-                notify("Erro ao carregar chip", "error");
-                return;
+            try {
+                const res = await fetch(`/chips/sk/${sk}`);
+                if (!res.ok) {
+                    console.error("[Chips] Erro ao carregar chip", { sk, status: res.status });
+                    notify("Erro ao carregar chip", "error");
+                    return;
+                }
+                abrirModalEdicao(await res.json());
+            } catch (error) {
+                console.error("[Chips] Falha de carregamento do chip", error);
+                notify("Falha de rede ao carregar chip", "error");
             }
-
-            abrirModalEdicao(await res.json());
         };
     });
 }
@@ -312,6 +319,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
             notify(r.error || "Erro ao salvar", "error");
         }
     } catch (e) {
+        console.error("[Chips] Erro de carregamento/salvamento", e);
         notify("Falha de rede ao salvar", "error");
     } finally {
         btn.disabled = false;
@@ -324,9 +332,7 @@ document.getElementById("modalSaveBtn")?.addEventListener("click", async () => {
 ============================================================ */
 document.getElementById("searchInput")?.addEventListener("input", e => {
     const termo = e.target.value.toLowerCase().trim();
-    
-    localStorage.setItem("chipSearchTerm", termo);
-
+    console.log("[Chips] Busca rápida digitada:", termo);
     executarBusca(termo);
 });
 
@@ -346,16 +352,7 @@ function executarBusca(termo) {
 /* ============================================================
    INIT
 ============================================================ */
-const termoSalvo = localStorage.getItem("chipSearchTerm");
-
-if (termoSalvo) {
-    const input = document.getElementById("searchInput");
-    if (input) input.value = termoSalvo;
-    
-    executarBusca(termoSalvo);
-} else {
-    renderRows(ALL_CHIPS);
-}
+renderRows(ALL_CHIPS);
 
 const modalStatusEl = document.getElementById("modal_status");
 if (modalStatusEl) {
@@ -385,7 +382,7 @@ function renderRows(lista) {
     if (!tbody) return;
     tbody.innerHTML = "";
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="16" class="empty-message">Nenhum chip encontrado para os filtros atuais.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="17" class="empty-message">Nenhum chip encontrado com os filtros aplicados.</td></tr>`;
         return;
     }
     tbody.innerHTML = lista.map(c => {
@@ -405,7 +402,7 @@ function renderRows(lista) {
             <td>${escapeHtml(c.tipo_whatsapp || "—")}${c.slot_whatsapp ? ` · Slot ${c.slot_whatsapp}` : ""}</td>
             <td>${c.qt_disparos ?? 0}</td><td>${c.qt_banimentos ?? 0}</td><td>${formatBRDate(c.dt_banimentos)}</td>
             <td>${formatBRDate(c.ultima_recarga_data)}<br><small>${formatBRL(c.ultima_recarga_valor)}</small></td>
-            <td>${formatBRL(c.total_gasto)}</td><td>${aparelho}</td><td>${formatBRDate(c.updated_at || c.data_status)}</td>
+            <td>${formatBRL(c.total_gasto)}</td><td>${aparelho}</td><td>${formatBRDate(c.updated_at || c.data_status)}</td><td>${formatBRDate(c.created_at || c.dt_inicio)}</td>
             <td title="${escapeHtml(c.observacao || '')}">${c.observacao ? '<i class="fas fa-comment-dots obs-icon"></i>' : '—'}</td>
         </tr>`;
     }).join("");
@@ -441,6 +438,6 @@ document.getElementById("timelineCloseBtn")?.addEventListener("click", () => doc
 
 // Re-render after override definitions are loaded.
 if (typeof ALL_CHIPS !== "undefined") {
-    const savedTerm = localStorage.getItem("chipSearchTerm") || "";
-    savedTerm ? executarBusca(savedTerm) : renderRows(ALL_CHIPS);
+    console.log("[Chips] Total renderizado:", ALL_CHIPS.length);
+    renderRows(ALL_CHIPS);
 }

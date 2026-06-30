@@ -78,6 +78,13 @@
      ÁREA PRINCIPAL DO SISTEMA
 ============================================================ -->
 <main class="content" id="mainContent" data-layout="page" tabindex="-1">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
     {% block content %}
     {% endblock %}
 </main>

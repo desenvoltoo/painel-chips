@@ -1,283 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Gestão de Chips{% endblock %}
-
 {% block content %}
+{% set total_chips = total or chips|length %}
 
-<link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- ========================= HEADER ========================= -->
-<header class="chip-header">
-    <div class="container">
-        <div class="chip-header-content">
-            <div class="icon-wrapper">
-                <i class="fas fa-sim-card"></i>
-            </div>
-            <div class="header-text">
-                <h1 class="chip-title">Gestão de Chips</h1>
-                <p class="chip-subtitle">Cadastro, edição e monitoramento</p>
-            </div>
-        </div>
-    </div>
-</header>
-
+<header class="chip-header"><div class="container"><div class="chip-header-content"><div class="icon-wrapper"><i class="fas fa-sim-card"></i></div><div class="header-text"><h1 class="chip-title">Gestão de Chips</h1><p class="chip-subtitle">Operação, recargas, banimentos, vínculos e histórico</p></div></div></div></header>
 <main class="container chip-container">
-
-<!-- ========================= NOVO CHIP ========================= -->
-<section class="chip-card">
-    <div class="chip-card-header">
-        <div class="card-icon"><i class="fas fa-plus"></i></div>
-        <h2 class="card-title">Novo Chip</h2>
-    </div>
-
-    <div class="card-content">
-        <form action="/chips/add" method="POST" class="chip-form">
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>ID do Chip *</label>
-                    <input type="text" name="id_chip" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Número *</label>
-                    <input type="text" name="numero" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Operadora</label>
-                    <select name="operadora">
-                        <option value="VIVO">VIVO</option>
-                        <option value="TIM">TIM</option>
-                        <option value="CLARO">CLARO</option>
-                        <option value="OI">OI</option>
-                        <option value="OUTRA">OUTRA</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Operador</label>
-                    <input type="text" name="operador">
-                </div>
-
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status">
-                        <option>DISPONIVEL</option>
-                        <option>MATURANDO</option>
-                        <option>MATURADO</option>
-                        <option>DESCANSO_1</option>
-                        <option>DESCANSO_2</option>
-                        <option>PRONTO_PARA_MATURAR</option>
-                        <option>DISPARANDO</option>
-                        <option>BANIDO</option>
-                        <option>RESTRINGIDO</option>
-                        <option>ATIVO</option>
-                        <option>BLOQUEADO</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Data do Status</label>
-                    <input type="date" name="data_inicio">
-                </div>
-
-            </div>
-            <div class="form-row">
-                
-                <div class="form-group">
-                    <label>Quantidade de Disparos</label>
-                    <input type="number" name="qt_disparos" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label>Plano</label>
-                    <input type="text" name="plano">
-                </div>
-            </div>
-
-                <div class="form-group">
-                    <label>Aparelho Vinculado</label>
-                    <select name="sk_aparelho_atual">
-                        <option value="">— Nenhum —</option>
-                        {% for ap in aparelhos %}
-                        <option value="{{ ap.sk_aparelho }}">
-                            {{ ap.modelo }} ({{ ap.marca }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="form-group full">
-                    <label>Observação</label>
-                    <textarea name="observacao" rows="3"></textarea>
-                </div>
-
-            <button type="submit" class="chip-btn">
-                <i class="fas fa-plus"></i> Cadastrar Chip
-            </button>
-
-        </form>
-    </div>
+{% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+<section class="kpi-grid chip-kpis">
+  <a class="kpi-card" href="/chips"><span>Total</span><strong>{{ total_chips }}</strong></a>
+  <a class="kpi-card" href="/chips?ativo=true"><span>Ativos</span><strong>{{ stats.ativos or 0 }}</strong></a>
+  <a class="kpi-card danger" href="/chips?quick=banidos"><span>Banidos</span><strong>{{ stats.banidos or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips?status=DISPONIVEL"><span>Disponíveis</span><strong>{{ stats.disponiveis or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips?quick=sem_aparelho"><span>Sem aparelho</span><strong>{{ stats.sem_aparelho or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips"><span>Vinculados</span><strong>{{ stats.vinculados or 0 }}</strong></a>
+  <a class="kpi-card warn" href="/chips?quick=recarga"><span>Precisam recarga</span><strong>{{ stats.precisam_recarga or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips"><span>Total gasto</span><strong>R$ {{ '%.2f'|format(stats.total_gasto or 0) }}</strong></a>
+  <a class="kpi-card" href="/chips"><span>Banimentos</span><strong>{{ stats.total_banimentos or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips?tipo_whatsapp=NORMAL"><span>WhatsApp normal</span><strong>{{ stats.whatsapp_normal or 0 }}</strong></a>
+  <a class="kpi-card" href="/chips?tipo_whatsapp=BUSINESS"><span>WhatsApp business</span><strong>{{ stats.whatsapp_business or 0 }}</strong></a>
 </section>
-
-<!-- ========================= LISTAGEM ========================= -->
-<section class="chip-card">
-    <div class="chip-card-header">
-        <div class="card-icon"><i class="fas fa-list"></i></div>
-        <h2 class="card-title">Chips Cadastrados</h2>
-    </div>
-
-    <div class="card-content">
-        <div class="search-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Buscar chips...">
-        </div>
-
-        <div class="chip-table-wrapper">
-            <table class="chip-table">
-                <thead>
-                    <tr>
-                        <th>Ações</th>
-                        <th>ID</th>
-                        <th>Número</th>
-                        <th>Operadora</th>
-                        <th>Operador</th>
-                        <th>Status</th>
-                        <th>Qtd. disparos</th>
-                        <th>Qtd. ban.</th>
-                        <th>Data Últ. ban.</th>
-                        <th>Plano</th>
-                        <th>Últ. Recarga</th>
-                        <th>Valor</th>
-                        <th>Total</th>
-                        <th>Aparelho</th>
-                        <th>Data do Status</th>
-                        <th>Obs</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-    </div>
-</section>
-
-</main>
-
-<!-- ========================= MODAL EDIÇÃO ========================= -->
-<div id="editModal" class="modal-overlay">
-    <div class="modal-content modal-chip">
-        <h2>Editar Chip</h2>
-
-        <form id="modalForm" class="modal-grid">
-
-            <input type="hidden" id="modal_sk_chip" name="sk_chip">
-
-            <div class="form-group">
-                <label>Número</label>
-                <input type="text" id="modal_numero" name="numero">
-            </div>
-
-            <div class="form-group">
-                <label>Operadora</label>
-                <select id="modal_operadora" name="operadora">
-                    <option value="VIVO">VIVO</option>
-                    <option value="TIM">TIM</option>
-                    <option value="CLARO">CLARO</option>
-                    <option value="OI">OI</option>
-                    <option value="OUTRA">OUTRA</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Operador</label>
-                <input type="text" id="modal_operador" name="operador">
-            </div>
-
-            <div class="form-group">
-                <label>Status</label>
-                <select id="modal_status" name="status">
-                    <option value="DISPONIVEL">DISPONIVEL</option>
-                    <option value="MATURANDO">MATURANDO</option>
-                    <option value="MATURADO">MATURADO</option>
-                    <option value="DESCANSO_1">DESCANSO_1</option>
-                    <option value="DESCANSO_2">DESCANSO_2</option>
-                    <option value="PRONTO_PARA_MATURAR">PRONTO_PARA_MATURAR</option>
-                    <option value="DISPARANDO">DISPARANDO</option>
-                    <option value="BANIDO">BANIDO</option>
-                    <option value="RESTRINGIDO">RESTRINGIDO</option>
-                    <option value="ATIVO">ATIVO</option>
-                    <option value="BLOQUEADO">BLOQUEADO</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Quantidade de Disparos</label>
-                <input type="number" id="modal_qt_disparos" name="qt_disparos" value="0">
-            </div>
-            
-            <div class="form-group">
-                <label>Quantidade de Banimentos</label>
-                <input type="number" id="modal_qt_banimentos" name="qt_banimentos" value="0">
-            </div>
-
-            <div class="form-group">
-                <label>Data do Último Banimento</label>
-                <input type="date" id="modal_dt_banimentos" name="dt_banimentos">
-            </div>
-
-            <div class="form-group">
-                <label>Plano</label>
-                <input type="text" id="modal_plano" name="plano">
-            </div>
-
-            <div class="form-group">
-                <label>Data do Status</label>
-                <input type="date" id="modal_data_inicio" name="data_inicio">
-            </div>
-
-            <div class="form-group">
-                <label>Aparelho Vinculado</label>
-                <select id="modal_sk_aparelho_atual" name="sk_aparelho_atual">
-                    <option value="">— Nenhum —</option>
-                    {% for ap in aparelhos %}
-                    <option value="{{ ap.sk_aparelho }}">
-                        {{ ap.modelo }} ({{ ap.marca }})
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Slot WhatsApp</label>
-                <select id="modal_slot_whatsapp" name="slot_whatsapp">
-                    <option value="">Selecione</option>
-                    <option value="1">Slot 1</option>
-                    <option value="2">Slot 2</option>
-                </select>
-            </div>
-
-            <div class="form-group full">
-                <label>Observação</label>
-                <textarea id="modal_observacao" name="observacao" rows="3"></textarea>
-            </div>
-
-            <div class="modal-actions full">
-                <button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button>
-                <button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button>
-            </div>
-
-        </form>
-    </div>
-</div>
-
-<script>
-    window.chipsData = {{ chips | tojson | safe }};
-    window.aparelhosData = {{ aparelhos | tojson | safe }};
-</script>
-
-<script src="/static/js/app.js"></script>
-
+<section class="chip-card"><div class="chip-card-header"><div class="card-icon"><i class="fas fa-plus"></i></div><h2 class="card-title">Novo Chip</h2></div><div class="card-content">
+<form action="/chips/add" method="POST" class="chip-form">
+ <div class="form-row"><div class="form-group"><label>ID do Chip (opcional)</label><input type="text" name="id_chip" placeholder="Gerado automaticamente se vazio"></div><div class="form-group"><label>Número *</label><input type="text" name="numero" required placeholder="(11) 99999-9999"></div><div class="form-group"><label>Operadora *</label><select name="operadora" required><option value="">Selecione</option><option>VIVO</option><option>TIM</option><option>CLARO</option><option>OI</option><option>OUTRA</option></select></div></div>
+ <div class="form-row"><div class="form-group"><label>Plano</label><input name="plano"></div><div class="form-group"><label>Status inicial</label><select name="status"><option>DISPONIVEL</option><option>ATIVO</option><option>EM_USO</option><option>DESCANSO</option><option>INATIVO</option><option>MANUTENCAO</option><option>BANIDO</option></select></div><div class="form-group"><label>Operador</label><input name="operador"></div></div>
+ <div class="form-row"><div class="form-group"><label>Aparelho opcional</label><select name="sk_aparelho_atual"><option value="">Nenhum</option>{% for ap in aparelhos %}<option value="{{ ap.sk_aparelho }}">{{ ap.marca }} {{ ap.modelo }}</option>{% endfor %}</select></div><div class="form-group"><label>Slot WhatsApp</label><input type="number" name="slot_whatsapp" min="1"></div><div class="form-group"><label>Tipo WhatsApp</label><select name="tipo_whatsapp"><option value="">A definir</option><option>NORMAL</option><option>BUSINESS</option></select></div></div>
+ <div class="form-row"><div class="form-group"><label>Qtd. disparos</label><input type="number" name="qt_disparos" value="0" min="0"></div><div class="form-group"><label>Qtd. banimentos</label><input type="number" name="qt_banimentos" value="0" min="0"></div><div class="form-group"><label>Data banimento</label><input type="date" name="dt_banimentos"></div></div>
+ <div class="form-group full"><label>Observação</label><textarea name="observacao" rows="2"></textarea></div><button class="chip-btn" type="submit"><i class="fas fa-plus"></i> Cadastrar chip</button>
+</form></div></section>
+<section class="chip-card"><div class="chip-card-header"><div class="card-icon"><i class="fas fa-filter"></i></div><h2 class="card-title">Filtros e listagem</h2></div><div class="card-content">
+<form method="GET" action="/chips" class="filters-panel"><input name="q" value="{{ filters.q or '' }}" placeholder="Número ou ID"><select name="status"><option value="">Status</option>{% for s in ['DISPONIVEL','ATIVO','EM_USO','BANIDO','DESCANSO','INATIVO','MANUTENCAO'] %}<option value="{{ s }}" {% if filters.status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select><select name="operadora"><option value="">Operadora</option>{% for o in ['VIVO','TIM','CLARO','OI','OUTRA'] %}<option {% if filters.operadora==o %}selected{% endif %}>{{ o }}</option>{% endfor %}</select><input name="plano" value="{{ filters.plano or '' }}" placeholder="Plano"><input name="operador" value="{{ filters.operador or '' }}" placeholder="Operador"><select name="quick"><option value="">Filtro rápido</option><option value="sem_aparelho" {% if filters.quick=='sem_aparelho' %}selected{% endif %}>Sem aparelho</option><option value="banidos" {% if filters.quick=='banidos' %}selected{% endif %}>Banidos</option><option value="recarga" {% if filters.quick=='recarga' %}selected{% endif %}>Precisam recarga</option></select><button class="chip-btn" type="submit">Aplicar</button><a class="chip-btn cancel" href="/chips">Limpar</a></form>
+<div class="chip-table-wrapper"><table class="chip-table"><thead><tr><th>Ações</th><th>SK</th><th>Número</th><th>Operadora</th><th>Status</th><th>Operador</th><th>Plano</th><th>WhatsApp</th><th>Disparos</th><th>Ban.</th><th>Últ. ban.</th><th>Últ. recarga</th><th>Total</th><th>Aparelho</th><th>Atualizado</th><th>Obs</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+<div class="pagination-bar"><span>Página {{ page }} · {{ chips|length }} de {{ total_chips }} registros</span><div>{% if page>1 %}<a class="chip-btn cancel" href="/chips?page={{ page-1 }}">Anterior</a>{% endif %}{% if total_chips > page*per_page %}<a class="chip-btn" href="/chips?page={{ page+1 }}">Próxima</a>{% endif %}</div></div>
+</div></section></main>
+<div id="editModal" class="modal-overlay"><div class="modal-content modal-chip"><h2>Editar Chip</h2><form id="modalForm" class="modal-grid"><input type="hidden" id="modal_sk_chip" name="sk_chip"><div class="form-group"><label>Número</label><input id="modal_numero" name="numero"></div><div class="form-group"><label>Operadora</label><select id="modal_operadora" name="operadora"><option>VIVO</option><option>TIM</option><option>CLARO</option><option>OI</option><option>OUTRA</option></select></div><div class="form-group"><label>Status</label><select id="modal_status" name="status"><option>DISPONIVEL</option><option>ATIVO</option><option>EM_USO</option><option>BANIDO</option><option>DESCANSO</option><option>INATIVO</option><option>MANUTENCAO</option></select></div><div class="form-group"><label>Operador</label><input id="modal_operador" name="operador"></div><div class="form-group"><label>Plano</label><input id="modal_plano" name="plano"></div><div class="form-group"><label>Tipo WhatsApp</label><select id="modal_tipo_whatsapp" name="tipo_whatsapp"><option value="">A definir</option><option>NORMAL</option><option>BUSINESS</option></select></div><div class="form-group"><label>Slot</label><input type="number" id="modal_slot_whatsapp" name="slot_whatsapp"></div><div class="form-group"><label>Disparos</label><input type="number" id="modal_qt_disparos" name="qt_disparos"></div><div class="form-group"><label>Banimentos</label><input type="number" id="modal_qt_banimentos" name="qt_banimentos"></div><div class="form-group"><label>Data banimento</label><input type="date" id="modal_dt_banimentos" name="dt_banimentos"></div><div class="form-group"><label>Data status</label><input type="date" id="modal_data_status" name="data_status"></div><div class="form-group"><label>Aparelho</label><select id="modal_sk_aparelho_atual" name="sk_aparelho_atual"><option value="">Nenhum</option>{% for ap in aparelhos %}<option value="{{ ap.sk_aparelho }}">{{ ap.marca }} {{ ap.modelo }}</option>{% endfor %}</select></div><div class="form-group full"><label>Observação</label><textarea id="modal_observacao" name="observacao"></textarea></div><div class="modal-actions full"><button type="button" id="modalSaveBtn" class="chip-btn save">Salvar</button><button type="button" id="modalCloseBtn" class="chip-btn cancel">Cancelar</button></div></form></div></div>
+<div id="timelineModal" class="modal-overlay"><div class="modal-content modal-chip"><h2>Histórico do chip</h2><div id="timelineContent" class="timeline-box"></div><button type="button" id="timelineCloseBtn" class="chip-btn cancel">Fechar</button></div></div>
+<script>window.chipsData={{ chips|tojson|safe }}; window.aparelhosData={{ aparelhos|tojson|safe }};</script><script src="/static/js/app.js"></script>
 {% endblock %}

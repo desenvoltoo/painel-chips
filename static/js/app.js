@@ -15,8 +15,51 @@ const ALL_CHIPS = Array.isArray(window.chipsData) ? [...window.chipsData] : [];
 let chipsView = [...ALL_CHIPS];
 console.log("[Chips] Total recebido:", ALL_CHIPS.length);
 
-const STATUS_LIST = ["DISPONIVEL", "MATURANDO", "MATURADO", "DESCANSO_1", "DESCANSO_2", "PRONTO_PARA_MATURAR", "DISPARANDO", "BANIDO", "RESTRINGIDO", "ATIVO", "EM_USO", "INATIVO", "BLOQUEADO", "MANUTENCAO"];
+const STATUS_LIST = ["DISPONIVEL", "MATURANDO", "EM MATURAÇÃO", "MATURACAO", "MATURADO", "DESCANSO_1", "DESCANSO_2", "PRONTO_PARA_MATURAR", "DISPARANDO", "BANIDO", "RESTRINGIDO", "ATIVO", "EM_USO", "INATIVO", "BLOQUEADO", "MANUTENCAO"];
 const OPERADORAS_LIST = ["VIVO", "TIM", "CLARO", "OI", "OUTRA"];
+
+
+function normalizarStatus(status) {
+    return String(status || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .trim();
+}
+function isStatusMaturando(status) {
+    return ["maturando", "em maturacao", "maturacao"].includes(normalizarStatus(status));
+}
+function calcularProgressoMaturacao(maturandoEm) {
+    if (!maturandoEm) return null;
+    const inicio = new Date(maturandoEm);
+    if (Number.isNaN(inicio.getTime())) return null;
+    const diffMs = new Date() - inicio;
+    const totalMs = 7 * 24 * 60 * 60 * 1000;
+    const progresso = Math.round((diffMs / totalMs) * 100);
+    return Math.max(0, Math.min(100, progresso));
+}
+function calcularDiasMaturacao(maturandoEm) {
+    if (!maturandoEm) return null;
+    const inicio = new Date(maturandoEm);
+    if (Number.isNaN(inicio.getTime())) return null;
+    const diffMs = new Date() - inicio;
+    const dias = Math.floor(diffMs / (24 * 60 * 60 * 1000)) + 1;
+    return Math.max(1, Math.min(7, dias));
+}
+function renderMaturacaoBar(chip) {
+    if (!isStatusMaturando(chip.status)) return '<span class="muted">—</span>';
+    const progresso = calcularProgressoMaturacao(chip.maturando_em);
+    const dias = calcularDiasMaturacao(chip.maturando_em);
+    if (progresso === null || dias === null) {
+        return '<div class="maturacao-box maturacao-warning"><span>Sem data de início</span></div>';
+    }
+    const completo = progresso >= 100;
+    return `<div class="maturacao-box">
+        <div class="maturacao-info"><strong>${progresso}%</strong><span>${completo ? "Pronto" : `Dia ${dias}/7`}</span></div>
+        <div class="maturacao-track"><div class="maturacao-fill ${completo ? "is-complete" : ""}" style="width: ${progresso}%"></div></div>
+    </div>`;
+}
 
 function formatDate(value) {
     if (!value) return "";
@@ -135,7 +178,7 @@ function renderRows(lista) {
     const tbody = document.getElementById("tableBody");
     if (!tbody) return;
     if (!lista.length) {
-        tbody.innerHTML = `<tr><td colspan="17" class="empty-message">Nenhum chip encontrado com os filtros aplicados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="18" class="empty-message">Nenhum chip encontrado com os filtros aplicados.</td></tr>`;
         return;
     }
     tbody.innerHTML = lista.map(c => {
@@ -151,7 +194,8 @@ function renderRows(lista) {
             </td>
             <td>${escapeHtml(c.numero || "—")}</td>
             <td>${escapeHtml(c.operadora || "—")}</td>
-            <td><span class="status-badge status-${String(status).toLowerCase()}">${escapeHtml(status)}</span></td>
+            <td><span class="status-badge status-${String(status).toLowerCase().replace(/\s+/g, "_")}">${escapeHtml(status)}</span></td>
+            <td>${renderMaturacaoBar(c)}</td>
             <td>${escapeHtml(c.operador || "—")}</td>
             <td>${escapeHtml(c.plano || "—")}</td>
             <td>${escapeHtml(c.tipo_whatsapp || "—")}${c.slot_whatsapp ? ` · Slot ${escapeHtml(c.slot_whatsapp)}` : ""}</td>

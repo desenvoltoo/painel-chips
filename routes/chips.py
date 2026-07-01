@@ -4,6 +4,8 @@
 import re
 import uuid
 import time
+import unicodedata
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for, flash
 from google.cloud import bigquery
@@ -50,6 +52,51 @@ def param(name, type_, value):
     return bigquery.ScalarQueryParameter(name, type_, value)
 
 
+def normalize_status(value):
+    normalized = unicodedata.normalize("NFD", str(value or ""))
+    normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", normalized.lower().replace("_", " ")).strip()
+
+
+def is_status_maturando(value):
+    return normalize_status(value) in {"maturando", "em maturacao", "maturacao"}
+
+
+def ensure_maturando_em_column():
+    columns = get_table_columns("dim_chip")
+    if "maturando_em" in columns:
+        return True
+    try:
+        run_op("criar campo maturando_em", f"""
+            ALTER TABLE `{PROJECT}.{DATASET}.dim_chip`
+            ADD COLUMN maturando_em TIMESTAMP
+        """)
+        return True
+    except Exception as exc:
+        print(f"[Chips] Aviso: maturando_em não foi criado automaticamente: {exc}")
+        return False
+
+
+def maturando_em_assignment(new_status, previous_status=None):
+    if is_status_maturando(new_status):
+        if not is_status_maturando(previous_status):
+            return "maturando_em=CURRENT_TIMESTAMP()"
+        return "maturando_em=COALESCE(maturando_em, CURRENT_TIMESTAMP())"
+    return "maturando_em=NULL"
+
+
+def maturacao_concluida(value):
+    if not value:
+        return False
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - dt).total_seconds() >= 7 * 24 * 60 * 60
+    except Exception:
+        return False
+
+
 def get_table_columns(table_name):
     try:
         df = bq.run_df(f"""
@@ -94,6 +141,7 @@ def chip_select_expr(columns, aliases=False):
         "sk_aparelho_atual": expr("sk_aparelho_atual", "INT64", "sk_aparelho_atual", "aparelho_id"),
         "ativo": expr("ativo", "BOOL", "ativo", default="TRUE"),
         "updated_at": expr("updated_at", "TIMESTAMP", "updated_at", "data_update", "updatedAt"),
+        "maturando_em": expr("maturando_em", "TIMESTAMP", "maturando_em", "data_maturacao", "maturacao_inicio", "status_changed_at"),
         "created_at": expr("created_at", "TIMESTAMP", "created_at", "data_cadastro", "createdAt", "data_update", "updated_at"),
         "operador": expr("operador", "STRING", "operador", "responsavel", "usuario_nome", "usuario", "responsavel_nome"),
         "observacao": expr("observacao", "STRING", "observacao", "obs"),
@@ -165,10 +213,11 @@ def chips_list():
         ]
         filters = {k: clean_text(request.args.get(k)) for k in filter_names}
 
+        ensure_maturando_em_column()
         view_columns = get_table_columns("vw_chips_painel")
         dim_columns = get_table_columns("dim_chip")
-        source_table = "vw_chips_painel" if view_columns else "dim_chip"
-        source_columns = view_columns or dim_columns
+        source_table = "vw_chips_painel" if view_columns and "maturando_em" in view_columns else "dim_chip"
+        source_columns = view_columns if source_table == "vw_chips_painel" else dim_columns
         if not source_columns:
             raise RuntimeError("Tabela/view de chips não encontrada no dataset configurado.")
         print(f"[Chips] Fonte selecionada: {source_table}. Colunas={sorted(source_columns)}")
@@ -213,6 +262,8 @@ def chips_list():
         if quick == "sem_aparelho": where.append(f"{exprs['sk_aparelho_atual']} IS NULL")
         if quick == "banidos": where.append(f"UPPER(COALESCE({exprs['status']},'')) = 'BANIDO'")
         if quick == "recarga": where.append(f"({exprs['ultima_recarga_data']} IS NULL OR {exprs['ultima_recarga_data']} < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))")
+        if quick == "maturando": where.append(f"LOWER(TRIM(REGEXP_REPLACE(NORMALIZE(COALESCE({exprs['status']}, ''), NFD), r'[\\u0300-\\u036f]', ''))) IN ('maturando', 'em maturacao', 'maturacao')")
+        if quick == "maturacao_concluida": where.append(f"LOWER(TRIM(REGEXP_REPLACE(NORMALIZE(COALESCE({exprs['status']}, ''), NFD), r'[\\u0300-\\u036f]', ''))) IN ('maturando', 'em maturacao', 'maturacao') AND {exprs['maturando_em']} IS NOT NULL AND TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), {exprs['maturando_em']}, SECOND) >= 604800")
 
         base_sql = f"""
             SELECT {chip_select_list(source_columns)}
@@ -247,6 +298,8 @@ def chips_list():
             "sem_aparelho": sum(1 for c in chips_records if not c.get("sk_aparelho_atual")),
             "vinculados": sum(1 for c in chips_records if c.get("sk_aparelho_atual")),
             "precisam_recarga": sum(1 for c in chips_records if not c.get("ultima_recarga_data")),
+            "maturando": sum(1 for c in chips_records if is_status_maturando(c.get("status"))),
+            "maturacao_concluida": sum(1 for c in chips_records if is_status_maturando(c.get("status")) and maturacao_concluida(c.get("maturando_em"))),
             "total_gasto": sum(float(c.get("total_gasto") or 0) for c in chips_records),
         }
         elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
@@ -285,7 +338,8 @@ def chips_add():
             elif field == "dt_banimentos": val = clean_text(val)
             else: val = clean_text(val)
             updates.append(f"{field}=@{field}"); params.append(param(field, typ, val))
-        updates.append("ativo=TRUE"); updates.append("total_gasto=COALESCE(total_gasto,0)"); updates.append("updated_at=CURRENT_TIMESTAMP()")
+        ensure_maturando_em_column()
+        updates.append(maturando_em_assignment(status)); updates.append("ativo=TRUE"); updates.append("total_gasto=COALESCE(total_gasto,0)"); updates.append("updated_at=CURRENT_TIMESTAMP()")
         run_op("complementar cadastro", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET {', '.join(updates)} WHERE sk_chip=@sk_chip", params)
         if to_int(data.get("sk_aparelho_atual")):
             _vincular_chip(sk_chip, to_int(data.get("sk_aparelho_atual")), to_int(data.get("slot_whatsapp")), clean_text(data.get("tipo_whatsapp")))
@@ -308,10 +362,11 @@ def _vincular_chip(sk_chip, sk_aparelho, slot, tipo_whatsapp=None):
 @chips_bp.route("/chips/sk/<int:sk_chip>")
 def chips_get_by_sk(sk_chip):
     try:
+        ensure_maturando_em_column()
         view_columns = get_table_columns("vw_chips_painel")
         dim_columns = get_table_columns("dim_chip")
-        source_table = "vw_chips_painel" if view_columns else "dim_chip"
-        source_columns = view_columns or dim_columns
+        source_table = "vw_chips_painel" if view_columns and "maturando_em" in view_columns else "dim_chip"
+        source_columns = view_columns if source_table == "vw_chips_painel" else dim_columns
         exprs = chip_select_expr(source_columns)
         row = fetch_one(f"""
             SELECT {chip_select_list(source_columns)}
@@ -329,6 +384,7 @@ def chips_update_json():
     try:
         p = request.json or {}; sk = to_int(p.get("sk_chip"))
         if not sk: return jsonify({"error":"sk_chip ausente"}),400
+        ensure_maturando_em_column()
         atual = fetch_one(f"""
             SELECT sk_chip, numero, operadora, plano, status, operador, observacao, tipo_whatsapp,
                    slot_whatsapp, qt_disparos, qt_banimentos, dt_banimentos, data_status, sk_aparelho_atual
@@ -348,7 +404,7 @@ def chips_update_json():
               numero=@numero, operadora=@operadora, plano=@plano, status=@status, operador=@operador,
               observacao=@observacao, tipo_whatsapp=@tipo_whatsapp, slot_whatsapp=@slot_whatsapp,
               qt_disparos=@qt_disparos, qt_banimentos=@qt_banimentos, dt_banimentos=@dt_banimentos,
-              {set_data_status} updated_at=CURRENT_TIMESTAMP()
+              {set_data_status} {maturando_em_assignment(status_novo, atual.get("status"))}, updated_at=CURRENT_TIMESTAMP()
             WHERE sk_chip=@sk
         """, [param("numero","STRING",numero_limpo), param("operadora","STRING",clean_text(p.get("operadora"))), param("plano","STRING",clean_text(p.get("plano"))), param("status","STRING",status_novo), param("operador","STRING",clean_text(p.get("operador"))), param("observacao","STRING",clean_text(p.get("observacao"))), param("tipo_whatsapp","STRING",clean_text(p.get("tipo_whatsapp"))), param("slot_whatsapp","INT64",to_int(p.get("slot_whatsapp"))), param("qt_disparos","INT64",to_int(p.get("qt_disparos"),0)), param("qt_banimentos","INT64",to_int(p.get("qt_banimentos"),0)), param("dt_banimentos","DATE",clean_text(p.get("dt_banimentos"))), param("data_status","DATE",clean_text(p.get("data_status") or p.get("dt_inicio"))), param("sk","INT64",sk)])
         if "sk_aparelho_atual" in p:
@@ -383,7 +439,7 @@ def chips_banir():
     try:
         sk = to_int((request.json or {}).get("sk_chip"))
         if not sk: return jsonify({"error":"sk_chip obrigatório"}),400
-        run_op("banir chip", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET status='BANIDO', qt_banimentos=COALESCE(qt_banimentos,0)+1, dt_banimentos=CURRENT_DATE(), data_status=CURRENT_DATE(), updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("sk","INT64",sk)])
+        run_op("banir chip", f"UPDATE `{PROJECT}.{DATASET}.dim_chip` SET status='BANIDO', maturando_em=NULL, qt_banimentos=COALESCE(qt_banimentos,0)+1, dt_banimentos=CURRENT_DATE(), data_status=CURRENT_DATE(), updated_at=CURRENT_TIMESTAMP() WHERE sk_chip=@sk", [param("sk","INT64",sk)])
         insert_event(sk, "BANIMENTO", "Banimento registrado pelo painel")
         return jsonify({"success": True})
     except Exception as e:
